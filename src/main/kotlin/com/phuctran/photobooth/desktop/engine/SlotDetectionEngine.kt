@@ -190,91 +190,87 @@ class SlotDetectionEngine(private val config: DetectionConfig = DetectionConfig(
             }
         }
 
-        // 5. Two-Phase Consensus Bounding Box Refinement
-        val strictWidths = mutableListOf<Int>()
-        val strictHeights = mutableListOf<Int>()
-        
-        // Phase 1: Compute Strict Sizes using 50% threshold
-        for (c in nonEnclosingCandidates) {
-            val bboxWidth = c.maxX - c.minX + 1
-            val bboxHeight = c.maxY - c.minY + 1
-            val projX = IntArray(bboxWidth)
-            val projY = IntArray(bboxHeight)
-            for (y in c.minY..c.maxY) {
-                for (x in c.minX..c.maxX) {
-                    if (componentId[y * width + x] == c.id) {
-                        projX[x - c.minX]++
-                        projY[y - c.minY]++
-                    }
-                }
-            }
-            val maxProjX = projX.maxOrNull() ?: 0
-            val maxProjY = projY.maxOrNull() ?: 0
-            var strictW = 0
-            var strictH = 0
-            
-            val thresholdX = maxProjX * 0.50f
-            var sMinX = c.minX; var sMaxX = c.maxX
-            for (i in 0 until bboxWidth) if (projX[i] >= thresholdX) { sMinX = c.minX + i; break }
-            for (i in bboxWidth - 1 downTo 0) if (projX[i] >= thresholdX) { sMaxX = c.minX + i; break }
-            strictW = sMaxX - sMinX + 1
-            
-            val thresholdY = maxProjY * 0.50f
-            var sMinY = c.minY; var sMaxY = c.maxY
-            for (i in 0 until bboxHeight) if (projY[i] >= thresholdY) { sMinY = c.minY + i; break }
-            for (i in bboxHeight - 1 downTo 0) if (projY[i] >= thresholdY) { sMaxY = c.minY + i; break }
-            strictH = sMaxY - sMinY + 1
-            
-            strictWidths.add(strictW)
-            strictHeights.add(strictH)
-        }
-        
+        // 5. Grid Snapping via Extreme-Bound Alignment
         val candidates = mutableListOf<ComponentStats>()
         if (nonEnclosingCandidates.isNotEmpty()) {
-            strictWidths.sort()
-            strictHeights.sort()
-            val targetW = strictWidths[strictWidths.size / 2]
-            val targetH = strictHeights[strictHeights.size / 2]
-            
-            // Phase 2: Greedily trim raw bounding boxes to target dimensions
+            // 1. Determine target dimensions based on the MAX raw sizes
+            // Since stickers can only push bounds inward, the max raw size is the closest to the true slot size.
+            var targetW = 0
+            var targetH = 0
             for (c in nonEnclosingCandidates) {
-                val bboxWidth = c.maxX - c.minX + 1
-                val bboxHeight = c.maxY - c.minY + 1
-                var trueMinX = c.minX
-                var trueMaxX = c.maxX
-                var trueMinY = c.minY
-                var trueMaxY = c.maxY
-                
-                val projX = IntArray(bboxWidth)
-                val projY = IntArray(bboxHeight)
-                for (y in c.minY..c.maxY) {
-                    for (x in c.minX..c.maxX) {
-                        if (componentId[y * width + x] == c.id) {
-                            projX[x - c.minX]++
-                            projY[y - c.minY]++
-                        }
+                val w = c.maxX - c.minX + 1
+                val h = c.maxY - c.minY + 1
+                if (w > targetW) targetW = w
+                if (h > targetH) targetH = h
+            }
+
+            // 2. Group into Rows and Columns
+            val rowCenters = mutableMapOf<Int, Int>() // c.id -> row center Y
+            val colCenters = mutableMapOf<Int, Int>() // c.id -> col center X
+            
+            val yAssigned = mutableSetOf<Int>()
+            for (c1 in nonEnclosingCandidates) {
+                if (yAssigned.contains(c1.id)) continue
+                val rowGroup = mutableListOf<ComponentStats>()
+                for (c2 in nonEnclosingCandidates) {
+                    val overlapMinY = maxOf(c1.minY, c2.minY)
+                    val overlapMaxY = minOf(c1.maxY, c2.maxY)
+                    val h1 = c1.maxY - c1.minY + 1
+                    if (overlapMaxY >= overlapMinY && (overlapMaxY - overlapMinY + 1).toFloat() / h1 > 0.5f) {
+                        rowGroup.add(c2)
                     }
                 }
-                
-                var trimX = bboxWidth - targetW
-                while (trimX > 0) {
-                    val leftProj = projX[trueMinX - c.minX]
-                    val rightProj = projX[trueMaxX - c.minX]
-                    if (leftProj <= rightProj) trueMinX++ else trueMaxX--
-                    trimX--
+                var rowMinY = Int.MAX_VALUE
+                var rowMaxY = -1
+                for (c in rowGroup) {
+                    if (c.minY < rowMinY) rowMinY = c.minY
+                    if (c.maxY > rowMaxY) rowMaxY = c.maxY
+                    yAssigned.add(c.id)
                 }
-                
-                var trimY = bboxHeight - targetH
-                while (trimY > 0) {
-                    val topProj = projY[trueMinY - c.minY]
-                    val bottomProj = projY[trueMaxY - c.minY]
-                    if (topProj <= bottomProj) trueMinY++ else trueMaxY--
-                    trimY--
+                val rowCenterY = (rowMinY + rowMaxY) / 2
+                for (c in rowGroup) {
+                    rowCenters[c.id] = rowCenterY
                 }
+            }
+
+            val xAssigned = mutableSetOf<Int>()
+            for (c1 in nonEnclosingCandidates) {
+                if (xAssigned.contains(c1.id)) continue
+                val colGroup = mutableListOf<ComponentStats>()
+                for (c2 in nonEnclosingCandidates) {
+                    val overlapMinX = maxOf(c1.minX, c2.minX)
+                    val overlapMaxX = minOf(c1.maxX, c2.maxX)
+                    val w1 = c1.maxX - c1.minX + 1
+                    if (overlapMaxX >= overlapMinX && (overlapMaxX - overlapMinX + 1).toFloat() / w1 > 0.5f) {
+                        colGroup.add(c2)
+                    }
+                }
+                var colMinX = Int.MAX_VALUE
+                var colMaxX = -1
+                for (c in colGroup) {
+                    if (c.minX < colMinX) colMinX = c.minX
+                    if (c.maxX > colMaxX) colMaxX = c.maxX
+                    xAssigned.add(c.id)
+                }
+                val colCenterX = (colMinX + colMaxX) / 2
+                for (c in colGroup) {
+                    colCenters[c.id] = colCenterX
+                }
+            }
+
+            // 3. Apply perfect uniform boxes
+            for (c in nonEnclosingCandidates) {
+                val cY = rowCenters[c.id] ?: ((c.minY + c.maxY) / 2)
+                val cX = colCenters[c.id] ?: ((c.minX + c.maxX) / 2)
+                
+                val trueMinY = cY - targetH / 2
+                val trueMaxY = trueMinY + targetH - 1
+                val trueMinX = cX - targetW / 2
+                val trueMaxX = trueMinX + targetW - 1
                 
                 var newPixelArea = 0
-                for (y in trueMinY..trueMaxY) {
-                    for (x in trueMinX..trueMaxX) {
+                for (y in maxOf(0, trueMinY)..minOf(height - 1, trueMaxY)) {
+                    for (x in maxOf(0, trueMinX)..minOf(width - 1, trueMaxX)) {
                         if (componentId[y * width + x] == c.id) newPixelArea++
                     }
                 }
@@ -362,31 +358,38 @@ class SlotDetectionEngine(private val config: DetectionConfig = DetectionConfig(
             val minDist = 15f
             val maxDist = 60f
             
-            // Generate a mathematical forcefield to protect delicate sticker outlines and highlights.
-            // Any pixel within a 2-pixel radius of a NON-WHITE foreground pixel is protected.
+            // Find Trapped Islands (e.g., holes inside bows)
+            // A trapped island is a component inside the bounding box that is WHITE, but disconnected from c.id.
+            // We use an area threshold (> 150 pixels) to distinguish true holes from tiny highlights on stickers.
+            val localArea = mutableMapOf<Int, Int>()
             val bWidth = c.maxX - c.minX + 1
-            val bHeight = c.maxY - c.minY + 1
-            val forcefield = BooleanArray(bWidth * bHeight)
-            val radius = 2
-            
             for (y in c.minY..c.maxY) {
                 for (x in c.minX..c.maxX) {
                     val pIdx = y * width + x
-                    if (componentId[pIdx] != c.id) {
-                        val p = pixels[pIdx]
-                        val r = (p ushr 16) and 0xFF; val g = (p ushr 8) and 0xFF; val b = p and 0xFF
-                        val isWhite = r > 240 && g > 240 && b > 240
-                        if (!isWhite) {
-                            for (dy in -radius..radius) {
-                                for (dx in -radius..radius) {
-                                    val nx = x + dx
-                                    val ny = y + dy
-                                    if (nx in c.minX..c.maxX && ny in c.minY..c.maxY) {
-                                        forcefield[(ny - c.minY) * bWidth + (nx - c.minX)] = true
-                                    }
+                    val cid = componentId[pIdx]
+                    localArea[cid] = (localArea[cid] ?: 0) + 1
+                }
+            }
+
+            val trappedIslands = mutableSetOf<Int>()
+            for ((cid, area) in localArea) {
+                if (cid != c.id && area > 150) {
+                    // Sample its color to see if it's white
+                    for (y in c.minY..c.maxY) {
+                        var found = false
+                        for (x in c.minX..c.maxX) {
+                            val pIdx = y * width + x
+                            if (componentId[pIdx] == cid) {
+                                val p = pixels[pIdx]
+                                val r = (p ushr 16) and 0xFF; val g = (p ushr 8) and 0xFF; val b = p and 0xFF
+                                if (r > 240 && g > 240 && b > 240) {
+                                    trappedIslands.add(cid)
                                 }
+                                found = true
+                                break
                             }
                         }
+                        if (found) break
                     }
                 }
             }
@@ -394,92 +397,70 @@ class SlotDetectionEngine(private val config: DetectionConfig = DetectionConfig(
             for (y in c.minY..c.maxY) {
                 for (x in c.minX..c.maxX) {
                     val i = y * width + x
+                    val cid = componentId[i]
+                    val isBackgroundOrTrapped = cid == c.id || trappedIslands.contains(cid)
                     
                     if (isTransparentSlot) {
-                        if (componentId[i] == c.id) {
+                        if (isBackgroundOrTrapped) {
                             punchedPixels[i] = 0x00000000
                         }
                     } else {
-                        val inForcefield = forcefield[(y - c.minY) * bWidth + (x - c.minX)]
-                        
-                        if (componentId[i] == c.id) {
-                            if (!inForcefield) {
-                                punchedPixels[i] = 0x00000000 // Punch normal background
-                            }
-                            // Else: It's a protected white outline/highlight! Leave it opaque.
+                        if (isBackgroundOrTrapped) {
+                            punchedPixels[i] = 0x00000000
                         } else {
-                            val p = pixels[i]
-                            val r = (p ushr 16) and 0xFF; val g = (p ushr 8) and 0xFF; val b = p and 0xFF
-                            val isWhite = r > 240 && g > 240 && b > 240
-                            
-                            if (isWhite && !inForcefield) {
-                                // It's a trapped island (e.g. bow loop hole). Punch it!
-                                punchedPixels[i] = 0x00000000
-                            } else {
-                                // Boundary check for Alpha Matting (smooth edges of stickers)
-                                var isBoundary = false
-                                for (dy in -4..4) {
-                                    for (dx in -4..4) {
-                                        val nx = x + dx
-                                        val ny = y + dy
-                                        if (nx in c.minX..c.maxX && ny in c.minY..c.maxY) {
-                                            val nIdx = ny * width + nx
-                                            val nInForcefield = forcefield[(ny - c.minY) * bWidth + (nx - c.minX)]
-                                            
-                                            // It is a boundary if it touches a pixel that was actually PUNCHED
-                                            if (componentId[nIdx] == c.id && !nInForcefield) {
-                                                isBoundary = true
-                                                break
-                                            }
-                                            
-                                            val np = pixels[nIdx]
-                                            val nr = (np ushr 16) and 0xFF; val ng = (np ushr 8) and 0xFF; val nb = np and 0xFF
-                                            val nWhite = nr > 240 && ng > 240 && nb > 240
-                                            if (componentId[nIdx] != c.id && nWhite && !nInForcefield) {
-                                                isBoundary = true
-                                                break
-                                            }
+                            // Boundary check for Alpha Matting
+                            var isBoundary = false
+                            for (dy in -4..4) {
+                                for (dx in -4..4) {
+                                    val nx = x + dx
+                                    val ny = y + dy
+                                    if (nx in c.minX..c.maxX && ny in c.minY..c.maxY) {
+                                        val nCid = componentId[ny * width + nx]
+                                        if (nCid == c.id || trappedIslands.contains(nCid)) {
+                                            isBoundary = true
+                                            break
                                         }
                                     }
-                                    if (isBoundary) break
                                 }
+                                if (isBoundary) break
+                            }
 
-                                if (isBoundary) {
-                                    val pr = (p ushr 16) and 0xFF
-                                    val pg = (p ushr 8) and 0xFF
-                                    val pb = p and 0xFF
+                            if (isBoundary) {
+                                val pixel = punchedPixels[i]
+                                val pr = (pixel ushr 16) and 0xFF
+                                val pg = (pixel ushr 8) and 0xFF
+                                val pb = pixel and 0xFF
 
-                                    var ar = 0f
-                                    if (pr < bR && bR > 0) ar = (pr - bR).toFloat() / (0f - bR)
-                                    else if (pr > bR && bR < 255) ar = (pr - bR).toFloat() / (255f - bR)
+                                var ar = 0f
+                                if (pr < bR && bR > 0) ar = (pr - bR).toFloat() / (0f - bR)
+                                else if (pr > bR && bR < 255) ar = (pr - bR).toFloat() / (255f - bR)
 
-                                    var ag = 0f
-                                    if (pg < bG && bG > 0) ag = (pg - bG).toFloat() / (0f - bG)
-                                    else if (pg > bG && bG < 255) ag = (pg - bG).toFloat() / (255f - bG)
+                                var ag = 0f
+                                if (pg < bG && bG > 0) ag = (pg - bG).toFloat() / (0f - bG)
+                                else if (pg > bG && bG < 255) ag = (pg - bG).toFloat() / (255f - bG)
 
-                                    var ab = 0f
-                                    if (pb < bB && bB > 0) ab = (pb - bB).toFloat() / (0f - bB)
-                                    else if (pb > bB && bB < 255) ab = (pb - bB).toFloat() / (255f - bB)
+                                var ab = 0f
+                                if (pb < bB && bB > 0) ab = (pb - bB).toFloat() / (0f - bB)
+                                else if (pb > bB && bB < 255) ab = (pb - bB).toFloat() / (255f - bB)
 
-                                    val a = maxOf(ar, ag, ab)
-                                    if (a <= 0.05f) {
-                                        punchedPixels[i] = 0x00000000
-                                    } else if (a >= 0.95f) {
-                                        // Keep original
-                                    } else {
-                                        var nr = bR + (pr - bR) / a
-                                        var ng = bG + (pg - bG) / a
-                                        var nb = bB + (pb - bB) / a
-                                        
-                                        nr = nr.coerceIn(0f, 255f)
-                                        ng = ng.coerceIn(0f, 255f)
-                                        nb = nb.coerceIn(0f, 255f)
-                                        
-                                        val currentA = (p ushr 24) and 0xFF
-                                        val finalA = (currentA * a).toInt().coerceIn(0, 255)
-                                        
-                                        punchedPixels[i] = (finalA shl 24) or (nr.toInt() shl 16) or (ng.toInt() shl 8) or nb.toInt()
-                                    }
+                                val a = maxOf(ar, ag, ab)
+                                if (a <= 0.05f) {
+                                    punchedPixels[i] = 0x00000000
+                                } else if (a >= 0.95f) {
+                                    // Keep original
+                                } else {
+                                    var nr = bR + (pr - bR) / a
+                                    var ng = bG + (pg - bG) / a
+                                    var nb = bB + (pb - bB) / a
+                                    
+                                    nr = nr.coerceIn(0f, 255f)
+                                    ng = ng.coerceIn(0f, 255f)
+                                    nb = nb.coerceIn(0f, 255f)
+                                    
+                                    val currentA = (pixel ushr 24) and 0xFF
+                                    val finalA = (currentA * a).toInt().coerceIn(0, 255)
+                                    
+                                    punchedPixels[i] = (finalA shl 24) or (nr.toInt() shl 16) or (ng.toInt() shl 8) or nb.toInt()
                                 }
                             }
                         }
