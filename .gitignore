@@ -1,0 +1,11 @@
+.gradle/
+build/
+out/
+.env
+data/sessions/
+data/output/
+release/*.exe
+release/*.msi
+release/SHA256SUMS.txt
+*.iml
+.idea/

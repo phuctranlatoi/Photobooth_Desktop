@@ -1,0 +1,49 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Install WiX Toolset
+        shell: powershell
+        run: |
+          choco install wixtoolset --yes --no-progress
+          $wixPath = Join-Path ${env:ProgramFiles(x86)} "WiX Toolset v3.11\bin"
+          if (Test-Path $wixPath) {
+            $wixPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+
+      - name: Build installer
+        shell: powershell
+        run: .\build-windows-installer.ps1
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrettyBoothDesktop-Windows-Installer
+          path: |
+            release/*.exe
+            release/*.msi
+            release/SHA256SUMS.txt
+          if-no-files-found: error
