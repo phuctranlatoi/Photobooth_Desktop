@@ -31,11 +31,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import com.phuctran.photobooth.desktop.remote.FirebaseManager
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import java.io.ByteArrayOutputStream
+
 fun main() = application {
+    FirebaseManager.initialize()
     Window(
         onCloseRequest = ::exitApplication,
         title = "Photobooth Layout Calculator",
-        state = rememberWindowState(width = 1000.dp, height = 800.dp)
+        state = rememberWindowState(width = 1200.dp, height = 800.dp)
     ) {
         MaterialTheme(
             colors = darkColors(
@@ -52,17 +58,46 @@ fun main() = application {
 }
 
 @Composable
-fun CalculatorApp() {
+fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothConfig? = null) {
     val coroutineScope = rememberCoroutineScope()
     var selectedFile by remember { mutableStateOf<File?>(null) }
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var generatedCode by remember { mutableStateOf("Vui lòng chọn một file PNG có nền trong suốt (đục lỗ) để bắt đầu tính toán.") }
     var isProcessing by remember { mutableStateOf(false) }
     var currentResult by remember { mutableStateOf<DetectionResult?>(null) }
+    
+    var layoutIdInput by remember { mutableStateOf("") }
+    var frameIdInput by remember { mutableStateOf("") }
+    var isSpecialFrame by remember { mutableStateOf(false) }
+    var specialEventName by remember { mutableStateOf("") }
+    var detectedSizeInput by remember { mutableStateOf("") }
+    
+    val projectDir = com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir()
+    val frameStore = remember { com.phuctran.photobooth.desktop.storage.FrameStore(projectDir) }
+    var existingLayoutIds by remember { mutableStateOf(emptyList<String>()) }
+    var isAddingNewLayout by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val frames = frameStore.loadFrames()
+        existingLayoutIds = (com.phuctran.photobooth.desktop.model.DefaultLayoutModes.map { it.id } + frames.mapNotNull { it.targetLayoutId }).distinct().sorted()
+    }
+
+    fun detectPrintSize(w: Int, h: Int): String {
+        val ratio = w.toFloat() / h.toFloat()
+        return when {
+            Math.abs(ratio - (5f/15f)) < 0.05 -> "5x15"
+            Math.abs(ratio - (10f/15f)) < 0.05 -> "10x15"
+            Math.abs(ratio - (15f/10f)) < 0.05 -> "15x10"
+            Math.abs(ratio - (15f/20f)) < 0.05 -> "15x20"
+            else -> "${w}x${h}"
+        }
+    }
 
     fun processImage(file: File) {
         coroutineScope.launch {
             isProcessing = true
+            layoutIdInput = file.nameWithoutExtension
+            frameIdInput = file.nameWithoutExtension
             try {
                 val image = withContext(Dispatchers.IO) { ImageIO.read(file) }
                 if (image != null) {
@@ -74,8 +109,10 @@ fun CalculatorApp() {
                         currentResult = null
                         previewBitmap = image.toComposeImageBitmap()
                     } else {
-                        generatedCode = generateKotlinCode(file.nameWithoutExtension, result)
                         currentResult = result
+                        val sizeLabel = "${detectPrintSize(result.width, result.height)}_${result.slots.size}_anh"
+                        detectedSizeInput = sizeLabel
+                        generatedCode = generateKotlinCode(layoutIdInput, result)
                         
                         if (result.punchedImage != null) {
                             previewBitmap = result.punchedImage.toComposeImageBitmap()
@@ -119,6 +156,69 @@ fun CalculatorApp() {
     fun copyToClipboard() {
         val selection = StringSelection(generatedCode)
         Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
+    }
+    
+    fun saveLayoutToFirebase() {
+        val result = currentResult ?: return
+        val id = layoutIdInput.trim()
+        if (id.isEmpty()) return
+        
+        coroutineScope.launch(Dispatchers.IO) {
+            val layoutData = mapOf(
+                "id" to id,
+                "width" to result.width,
+                "height" to result.height,
+                "slots" to result.slots.map { slot ->
+                    mapOf(
+                        "index" to slot.index,
+                        "x" to slot.x,
+                        "y" to slot.y,
+                        "width" to slot.width,
+                        "height" to slot.height,
+                        "centerX" to slot.centerX,
+                        "centerY" to slot.centerY,
+                        "areaRatio" to slot.areaRatio
+                    )
+                },
+                "createdAt" to System.currentTimeMillis()
+            )
+            FirebaseManager.uploadLayout(id, layoutData)
+            generatedCode = "ĐÃ LƯU BỐ CỤC: $id lên Firebase Firestore thành công!\n\n" + generatedCode
+        }
+    }
+
+    fun saveFrameToFirebase() {
+        val result = currentResult ?: return
+        val file = selectedFile ?: return
+        val lId = layoutIdInput.trim()
+        val fId = frameIdInput.trim()
+        if (lId.isEmpty() || fId.isEmpty() || result.punchedImage == null) return
+        
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                // Save locally using FrameStore
+                val tempFile = java.io.File(file.parentFile, "$fId.png")
+                javax.imageio.ImageIO.write(result.punchedImage, "png", tempFile)
+                
+                val eventSuffix = if (isSpecialFrame) {
+                    val evt = specialEventName.trim().replace(Regex("[^a-zA-Z0-9_]+"), "_").ifEmpty { "Event" }
+                    "Special/$evt"
+                } else {
+                    "Standard"
+                }
+                val hierarchy = "${detectedSizeInput.trim()}/${lId}/$eventSuffix"
+                
+                val projectDir = com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir()
+                val frameStore = com.phuctran.photobooth.desktop.storage.FrameStore(projectDir)
+                val newFrame = frameStore.addCustomFrame(tempFile.toPath(), lId, hierarchy)
+                
+                tempFile.delete() // Clean up temp file
+                
+                generatedCode = "ĐÃ LƯU KHUNG ẢNH: $fId vào ổ đĩa nội bộ thành công!\nĐường dẫn: ${newFrame.customImagePath}\n\n" + generatedCode
+            } catch (e: Exception) {
+                generatedCode = "LỖI LƯU KHUNG: ${e.message}\n\n" + generatedCode
+            }
+        }
     }
 
     Row(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -256,10 +356,127 @@ fun CalculatorApp() {
             }
         }
 
-        // Right Column (Result Code)
+        // Right Column (Result Code & Firebase Actions)
         Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            // Firebase Actions
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colors.surface,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Xuất Dữ Liệu Firebase", color = Color.White, style = MaterialTheme.typography.subtitle1)
+                    
+                    OutlinedTextField(
+                        value = detectedSizeInput,
+                        onValueChange = { detectedSizeInput = it },
+                        label = { Text("Kích thước in & Số lượng ảnh") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                    )
+                    
+                    var layoutDropdownExpanded by remember { mutableStateOf(false) }
+                    if (isAddingNewLayout) {
+                        OutlinedTextField(
+                            value = layoutIdInput,
+                            onValueChange = { layoutIdInput = it },
+                            label = { Text("Mã Bố cục MỚI (VD: strip_4_doc)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White),
+                            trailingIcon = {
+                                androidx.compose.material.IconButton(onClick = { isAddingNewLayout = false; layoutIdInput = "" }) {
+                                    Text("Hủy", color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
+                                }
+                            }
+                        )
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedButton(onClick = { layoutDropdownExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(if (layoutIdInput.isEmpty()) "Chọn Bố cục khung..." else layoutIdInput)
+                                }
+                                DropdownMenu(
+                                    expanded = layoutDropdownExpanded,
+                                    onDismissRequest = { layoutDropdownExpanded = false }
+                                ) {
+                                    existingLayoutIds.forEach { lId ->
+                                        DropdownMenuItem(onClick = {
+                                            layoutIdInput = lId
+                                            layoutDropdownExpanded = false
+                                        }) {
+                                            Text(lId)
+                                        }
+                                    }
+                                }
+                            }
+                            OutlinedButton(onClick = { isAddingNewLayout = true; layoutIdInput = "" }) {
+                                Text("+ Thêm Mới")
+                            }
+                        }
+                    }
+                    
+                    OutlinedTextField(
+                        value = frameIdInput,
+                        onValueChange = { frameIdInput = it },
+                        label = { Text("Mã Khung (Frame ID)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                    )
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material.Checkbox(
+                            checked = isSpecialFrame,
+                            onCheckedChange = { isSpecialFrame = it },
+                            colors = androidx.compose.material.CheckboxDefaults.colors(checkmarkColor = Color.Black, checkedColor = Color.White, uncheckedColor = Color.Gray)
+                        )
+                        Text("Khung sự kiện đặc biệt (Special)", color = Color.White)
+                    }
+                    
+                    if (isSpecialFrame) {
+                        OutlinedTextField(
+                            value = specialEventName,
+                            onValueChange = { specialEventName = it },
+                            label = { Text("Tên sự kiện (VD: Quoc_khanh_2_9)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                        )
+                    }
+                    
+                    val pathPreview = if (detectedSizeInput.isNotBlank() && layoutIdInput.isNotBlank()) {
+                        val evt = if (isSpecialFrame) "Special/" + specialEventName.trim().replace(Regex("[^a-zA-Z0-9_]+"), "_").ifEmpty { "Event" } else "Standard"
+                        "${detectedSizeInput.trim()}/${layoutIdInput.trim()}/$evt"
+                    } else {
+                        "..."
+                    }
+                    Text("Thư mục lưu: data/frames/$pathPreview", color = Color(0xFF64B5F6), fontSize = 12.sp)
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { saveLayoutToFirebase() },
+                            modifier = Modifier.weight(1f),
+                            enabled = currentResult != null && layoutIdInput.isNotBlank()
+                        ) {
+                            Text("1. LƯU BỐ CỤC")
+                        }
+                        
+                        Button(
+                            onClick = { saveFrameToFirebase() },
+                            modifier = Modifier.weight(1f),
+                            enabled = currentResult != null && layoutIdInput.isNotBlank() && frameIdInput.isNotBlank()
+                        ) {
+                            Text("2. LƯU KHUNG (Local)")
+                        }
+                    }
+                    Text("Quy trình: Nếu chưa có layout, bấm lưu Bố cục trước. Nếu layout đã tồn tại, chỉ cần lưu Khung trỏ tới Layout ID đó.", color = Color.Gray, fontSize = 12.sp)
+                }
+            }
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Kết quả Code", style = MaterialTheme.typography.h6, color = Color.White)
+                Text("Kết quả Code (Legacy)", style = MaterialTheme.typography.h6, color = Color.White)
                 Button(onClick = { copyToClipboard() }, enabled = previewBitmap != null) {
                     Text("Copy Code")
                 }

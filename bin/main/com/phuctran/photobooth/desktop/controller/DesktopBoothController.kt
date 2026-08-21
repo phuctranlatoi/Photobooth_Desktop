@@ -560,7 +560,7 @@ class DesktopBoothController(
 
     private fun refreshFramesForLayout(layout: LayoutMode, preserveSelection: Boolean) {
         val customPacks = frameStore.loadFrames()
-            .filter { it.isCustom && (it.targetLayoutId == null || it.targetLayoutId == layout.id) }
+            .filter { it.isCustom && it.targetLayoutId == layout.id }
             .sortedWith(
                 compareBy(
                     { if (it.targetPrintSize == layout.printSizeLabel || it.targetPrintSize == null) 0 else 1 },
@@ -568,7 +568,14 @@ class DesktopBoothController(
                     { it.title }
                 )
             )
-        val allFrames = DefaultFramePacks + customPacks
+        val allFrames = customPacks.ifEmpty { 
+            listOf(com.phuctran.photobooth.desktop.model.FramePack(
+                id = "empty",
+                title = "Chưa có khung ảnh",
+                description = "Vui lòng vào Cài Đặt -> Tạo Layout/Frame để lưu khung ảnh cho bố cục này.",
+                accentColor = 0xFF5F6B7A
+            ))
+        }
         val previousFrameId = _selectedFrame.value.id
         _availableFrames.value = allFrames
         _selectedFrame.value = if (preserveSelection) {

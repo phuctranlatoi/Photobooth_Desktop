@@ -16,7 +16,7 @@ class DesktopCloudinaryClient(
         .followRedirects(HttpClient.Redirect.NORMAL)
         .build()
 ) {
-    fun uploadJpegToCloudinary(
+    fun uploadImageToCloudinary(
         config: DesktopBoothConfig,
         sessionId: String,
         file: Path,
@@ -25,17 +25,18 @@ class DesktopCloudinaryClient(
     ): UploadedCloudAsset? {
         if (!Files.isRegularFile(file) || Files.size(file) <= 0L) return null
         val extension = file.fileName.toString().substringAfterLast('.', "").lowercase()
-        if (extension != "jpg" && extension != "jpeg") return null
+        if (extension != "jpg" && extension != "jpeg" && extension != "png") return null
         if (config.cloudinaryCloudName.isBlank() || config.cloudinaryUploadPreset.isBlank()) return null
 
         val uploadUrl = "https://api.cloudinary.com/v1_1/${config.cloudinaryCloudName}/image/upload"
         val boundary = "----PrettyBooth${UUID.randomUUID().toString().replace("-", "")}"
+        val mimeType = if (extension == "png") "image/png" else "image/jpeg"
         val body = multipartBody(
             boundary = boundary,
             fields = mapOf("upload_preset" to config.cloudinaryUploadPreset),
             fileField = "file",
             fileName = file.fileName.toString(),
-            mimeType = "image/jpeg",
+            mimeType = mimeType,
             fileBytes = Files.readAllBytes(file)
         )
 

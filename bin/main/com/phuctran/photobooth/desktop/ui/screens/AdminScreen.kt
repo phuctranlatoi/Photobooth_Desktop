@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.IntrinsicSize
 import com.phuctran.photobooth.desktop.services.NativeEosCaptureService
 import com.phuctran.photobooth.desktop.ui.components.*
@@ -27,6 +28,7 @@ import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.model.FramePack
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.ui.graphics.toComposeImageBitmap
 
 @Composable
 fun AdminScreen(
@@ -38,8 +40,40 @@ fun AdminScreen(
     onBack: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    var selectedLayoutForFrame by remember { mutableStateOf<LayoutMode>(DefaultLayoutModes.first()) }
     var expanded by remember { mutableStateOf(false) }
+    var selectedHierarchy by remember { mutableStateOf<String?>(null) }
+    var allHierarchies by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    val projectDir = com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir()
+    val frameStore = remember { com.phuctran.photobooth.desktop.storage.FrameStore(projectDir) }
+    var adminFrames by remember { mutableStateOf(emptyList<FramePack>()) }
+
+    fun refreshAdminFrames() {
+        val customFrames = frameStore.loadFrames().filter { it.isCustom }
+        allHierarchies = customFrames.mapNotNull { frame ->
+            frame.customImagePath?.parent?.let { parent ->
+                frameStore.frameDir.relativize(parent).toString().replace("\\", " / ")
+            }
+        }.distinct().sorted()
+        
+        if (selectedHierarchy != null && !allHierarchies.contains(selectedHierarchy)) {
+            selectedHierarchy = null
+        }
+        
+        adminFrames = if (selectedHierarchy == null) {
+            customFrames
+        } else {
+            customFrames.filter { frame ->
+                frame.customImagePath?.parent?.let { parent ->
+                    frameStore.frameDir.relativize(parent).toString().replace("\\", " / ")
+                } == selectedHierarchy
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshAdminFrames()
+    }
 
     var enablePrint by remember { mutableStateOf(config.enableSystemPrint) }
     var useHotFolder by remember { mutableStateOf(config.useHotFolder) }
@@ -68,45 +102,65 @@ fun AdminScreen(
                 )
             }
         ) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) { Text("Khung ảnh", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) { Text("Quản lý khung", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) { Text("Cài đặt", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) { Text("Tạo Layout/Frame", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
         }
 
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             if (selectedTab == 0) {
                 // Frames
                 Column(Modifier.fillMaxSize()) {
-                    SectionHeader("Quản lý Khung ảnh (Frame)", "Thêm frame PNG tương ứng với layout để khách hàng chọn.", "")
+                    SectionHeader("Quản lý Khung ảnh (Frame)", "Xem, lọc và xóa các khung ảnh đã lưu trên hệ thống.", "")
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("Chọn Layout:", fontWeight = FontWeight.Medium)
+                            Text("Lọc theo Phân cấp:", fontWeight = FontWeight.Medium)
                             Box {
                                 OutlinedButton(onClick = { expanded = true }) {
-                                    Text(selectedLayoutForFrame.mediaLabel)
+                                    Text(selectedHierarchy ?: "Tất cả các khung")
                                 }
                                 DropdownMenu(
                                     expanded = expanded,
                                     onDismissRequest = { expanded = false }
                                 ) {
-                                    DefaultLayoutModes.forEach { layout ->
+                                    DropdownMenuItem(onClick = {
+                                        selectedHierarchy = null
+                                        refreshAdminFrames()
+                                        expanded = false
+                                    }) {
+                                        Text("Tất cả các khung")
+                                    }
+                                    allHierarchies.forEach { hierarchy ->
                                         DropdownMenuItem(onClick = {
-                                            selectedLayoutForFrame = layout
+                                            selectedHierarchy = hierarchy
+                                            refreshAdminFrames()
                                             expanded = false
                                         }) {
-                                            Text(layout.mediaLabel)
+                                            Text(hierarchy)
                                         }
                                     }
                                 }
                             }
-                            OutlinedButton(onClick = { onAddFrame(selectedLayoutForFrame.id) }) { Text("Thêm frame PNG") }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
                     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        frames.forEach { frame -> FrameChoice(frame, false) {} }
+                        if (adminFrames.isEmpty()) {
+                            Text("Chưa có khung ảnh nào cho layout này.", color = Color.Gray, modifier = Modifier.padding(16.dp))
+                        } else {
+                            adminFrames.forEach { frame -> 
+                                FrameAdminCard(frame) {
+                                    if (frame.customImagePath != null) {
+                                        java.nio.file.Files.deleteIfExists(frame.customImagePath)
+                                        refreshAdminFrames()
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            } else {
+            } else if (selectedTab == 1) {
+
                 // Settings
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     SectionHeader("Cài đặt", "Thiết bị ngoại vi", "Lưu ý: Bạn cần khởi động lại ứng dụng sau khi lưu để áp dụng.")
@@ -249,6 +303,22 @@ fun AdminScreen(
                         Text("Lưu cài đặt", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp))
                     }
                 }
+            } else if (selectedTab == 2) {
+                // Calculator App (Firebase Tool)
+                androidx.compose.material.MaterialTheme(
+                    colors = androidx.compose.material.darkColors(
+                        primary = androidx.compose.ui.graphics.Color(0xFF6366F1),
+                        background = androidx.compose.ui.graphics.Color(0xFF1E1E2E),
+                        surface = androidx.compose.ui.graphics.Color(0xFF27273A)
+                    )
+                ) {
+                    androidx.compose.material.Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = androidx.compose.material.MaterialTheme.colors.background
+                    ) {
+                        com.phuctran.photobooth.desktop.engine.CalculatorApp(config)
+                    }
+                }
             }
         }
     }
@@ -363,6 +433,42 @@ fun HardcodedCameraParamDropdown(
                     expanded = false
                 }) {
                     Text(optLabel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDelete: () -> Unit) {
+    androidx.compose.material.Card(modifier = Modifier.fillMaxWidth(), backgroundColor = Color(0xFF27273A), elevation = 4.dp) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (frame.customImagePath != null) {
+                val imageBitmap = remember(frame.customImagePath) {
+                    try {
+                        if (java.nio.file.Files.exists(frame.customImagePath)) {
+                            val stream = java.nio.file.Files.newInputStream(frame.customImagePath)
+                            javax.imageio.ImageIO.read(stream)?.toComposeImageBitmap()
+                        } else null
+                    } catch(e: Exception) { null }
+                }
+                if (imageBitmap != null) {
+                    androidx.compose.foundation.Image(bitmap = imageBitmap, contentDescription = null, modifier = Modifier.height(100.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(frame.title, color = Color.White, fontWeight = FontWeight.Bold)
+                if (frame.customImagePath != null) {
+                    Text(frame.customImagePath.toString(), color = Color.Gray, fontSize = 10.sp)
+                }
+            }
+            if (frame.customImagePath != null) {
+                androidx.compose.material.OutlinedButton(
+                    onClick = onDelete,
+                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = Color.Red, backgroundColor = Color.Transparent)
+                ) {
+                    Text("Xóa khung này", fontWeight = FontWeight.Bold)
                 }
             }
         }

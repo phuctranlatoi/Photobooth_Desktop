@@ -11,7 +11,7 @@ import java.util.Locale
 import java.util.stream.Collectors
 
 class FrameStore(projectDir: Path) {
-    private val frameDir = projectDir.resolve("data").resolve("frames")
+    val frameDir = projectDir.resolve("data").resolve("frames")
 
     fun loadFrames(): List<FramePack> {
         Files.createDirectories(frameDir)
@@ -26,7 +26,7 @@ class FrameStore(projectDir: Path) {
         return DefaultFramePacks + customFrames
     }
 
-    fun addCustomFrame(source: Path, layoutId: String): FramePack {
+    fun addCustomFrame(source: Path, layoutId: String, hierarchyPath: String = ""): FramePack {
         require(Files.isRegularFile(source)) {
             "Không tìm thấy file frame: $source"
         }
@@ -34,7 +34,11 @@ class FrameStore(projectDir: Path) {
             "Frame cần là PNG trong suốt."
         }
 
-        val targetDir = frameDir.resolve(layoutId)
+        val targetDir = if (hierarchyPath.isNotBlank()) {
+            frameDir.resolve(hierarchyPath).resolve(layoutId)
+        } else {
+            frameDir.resolve(layoutId)
+        }
         Files.createDirectories(targetDir)
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val slug = source.fileName.toString()

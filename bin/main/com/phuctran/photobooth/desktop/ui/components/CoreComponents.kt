@@ -191,14 +191,54 @@ fun LayoutChoice(layout: LayoutMode, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
-    ChoiceRow(
-        title = frame.title,
-        subtitle = frame.description,
-        selected = selected,
-        accent = AccentNude,
-        onClick = onClick,
-        trailing = if (frame.isCustom) "Custom" else null
-    )
+    if (frame.customImagePath != null) {
+        val imageBitmap = remember(frame.customImagePath) {
+            try {
+                if (Files.exists(frame.customImagePath)) {
+                    val stream = Files.newInputStream(frame.customImagePath)
+                    val img = javax.imageio.ImageIO.read(stream)
+                    img?.toComposeImageBitmap()
+                } else null
+            } catch (e: Exception) {
+                null
+            }
+        }
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(NeutralBg)
+                .border(
+                    if (selected) 3.dp else 1.dp,
+                    if (selected) Color(frame.accentColor) else NeutralBorder,
+                    RoundedCornerShape(12.dp)
+                )
+                .bouncyClickable(onClick = onClick)
+                .padding(12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (imageBitmap != null) {
+                Image(
+                    bitmap = imageBitmap,
+                    contentDescription = frame.title,
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 250.dp),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Text("Lỗi tải ảnh: ${frame.title}", color = NeutralMuted)
+            }
+        }
+    } else {
+        ChoiceRow(
+            title = frame.title,
+            subtitle = frame.description,
+            selected = selected,
+            accent = AccentNude,
+            onClick = onClick,
+            trailing = if (frame.isCustom) "Custom" else null
+        )
+    }
 }
 
 @Composable

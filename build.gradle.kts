@@ -17,9 +17,10 @@ dependencies {
     implementation("com.github.sarxos:webcam-capture:0.3.12")
     implementation("net.java.dev.jna:jna:4.5.2")
     implementation("net.java.dev.jna:jna-platform:4.5.2")
-    implementation("org.slf4j:slf4j-simple:1.7.36")
+    implementation("org.slf4j:slf4j-simple:2.0.12")
     implementation("com.bitplan:edsdk4j:0.0.1")
     implementation("vn.payos:payos-java:2.0.1")
+    implementation("com.google.firebase:firebase-admin:9.3.0")
 }
 
 compose.desktop {

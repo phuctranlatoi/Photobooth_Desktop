@@ -45,7 +45,7 @@ class DesktopAlbumUploader(
             }
 
             val uploadedOriginalAssets = originalJpegs.mapIndexedNotNull { index, file ->
-                cloudinaryClient.uploadJpegToCloudinary(
+                cloudinaryClient.uploadImageToCloudinary(
                     config = config,
                     sessionId = sessionId,
                     file = file,
@@ -57,7 +57,7 @@ class DesktopAlbumUploader(
             val uploadedFinalAsset = masterPrint?.let { file ->
                 val jpeg = imageProcessor.ensureJpeg(file, exportDir, "final")
                 jpeg?.let {
-                    cloudinaryClient.uploadJpegToCloudinary(
+                    cloudinaryClient.uploadImageToCloudinary(
                         config = config,
                         sessionId = sessionId,
                         file = it,

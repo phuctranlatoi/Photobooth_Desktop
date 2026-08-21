@@ -14,7 +14,12 @@ import com.phuctran.photobooth.desktop.ui.components.AppShell
 import com.phuctran.photobooth.desktop.ui.screens.*
 import com.phuctran.photobooth.desktop.ui.theme.PhotoboothTheme
 
+import com.phuctran.photobooth.desktop.remote.FirebaseManager
+
 fun main() = application {
+    // Initialize Firebase Admin SDK
+    FirebaseManager.initialize()
+    
     Window(
         onCloseRequest = ::exitApplication,
         title = "Photobooth Kiosk"

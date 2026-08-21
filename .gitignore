@@ -9,3 +9,5 @@ release/*.msi
 release/SHA256SUMS.txt
 *.iml
 .idea/
+
+serviceAccountKey.json

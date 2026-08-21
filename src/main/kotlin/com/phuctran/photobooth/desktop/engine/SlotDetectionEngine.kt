@@ -96,47 +96,101 @@ class SlotDetectionEngine {
         val detectPixels = sourcePixels.copyOf()
         compositeTransparentOnWhite(detectPixels)
 
-        val passes = listOf(SeedType.TRANSPARENT, SeedType.DARK, SeedType.LIGHT)
+        // UNIFORM_COLOR is analyzed on a lightly box-filtered copy. This is detection-only:
+        // the exported frame still uses the original sourcePixels bit-for-bit. The filter
+        // suppresses high-resolution Canva/JPEG/PNG micro-noise that is invisible at preview
+        // size but would otherwise make a visually flat slot fail pixel-level uniformity tests.
+        val uniformAnalysisPixels = buildUniformAnalysisPixels(detectPixels, width, height)
+
+        val passes = listOf(SeedType.TRANSPARENT, SeedType.DARK, SeedType.LIGHT, SeedType.UNIFORM_COLOR)
         var bestSlots = emptyList<SlotBounds>()
         var bestScore = -1f
         var bestComponentIdArray: IntArray? = null
         var bestSlotSeed: BooleanArray? = null
         var bestRadius = 2
+        var bestPass: SeedType? = null
 
         for (pass in passes) {
-            val slotSeed = buildSeedMask(sourcePixels, detectPixels, pass)
+            val passPixels = if (pass == SeedType.UNIFORM_COLOR) uniformAnalysisPixels else detectPixels
+            val slotSeed = buildSeedMask(sourcePixels, passPixels, width, height, pass)
 
             val radius = max(2, (min(width, height) * 0.0035f).roundToInt()).coerceAtMost(14)
             val erodedSeed = erodeSquareWithIntegralImage(slotSeed, width, height, radius)
 
             val componentIdArray = IntArray(totalPixels) { -1 }
-            val components = findComponents(erodedSeed, componentIdArray, width, height)
+            val components = if (pass == SeedType.UNIFORM_COLOR) {
+                findUniformColorComponents(
+                    mask = erodedSeed,
+                    componentId = componentIdArray,
+                    pixels = passPixels,
+                    width = width,
+                    height = height
+                )
+            } else {
+                findComponents(erodedSeed, componentIdArray, width, height)
+            }
 
-            val candidates = components
+            var candidates = components
                 .filter { isPlausibleSlotComponent(it, width, height, radius) }
                 .mapNotNull { component ->
-                    val fitted = fitTrueRectangle(
-                        component = component,
-                        componentId = componentIdArray,
-                        slotSeed = slotSeed,
-                        width = width,
-                        height = height,
-                        radius = radius
-                    )
+                    val fitted = if (pass == SeedType.UNIFORM_COLOR) {
+                        fitUniformColorRectangle(
+                            component = component,
+                            width = width,
+                            height = height,
+                            radius = radius
+                        )
+                    } else {
+                        fitTrueRectangle(
+                            component = component,
+                            componentId = componentIdArray,
+                            slotSeed = slotSeed,
+                            width = width,
+                            height = height,
+                            radius = radius
+                        )
+                    }
                     if (fitted == null) null else {
                         val coverage = seedCoverage(fitted, slotSeed, width)
-                        if (coverage < 0.42f) null else fitted
+                        if (coverage < 0.42f) {
+                            null
+                        } else if (pass == SeedType.UNIFORM_COLOR) {
+                            expandUniformRectangleToTrueBoundary(
+                                initial = fitted,
+                                pixels = detectPixels,
+                                width = width,
+                                height = height,
+                                searchRadius = max(3, radius + 3)
+                            )
+                        } else {
+                            fitted
+                        }
                     }
                 }
                 .let { removeNearDuplicateRects(it) }
 
-            val score = candidates.size * 1000f + candidates.sumOf { it.pixelArea.toDouble() / totalPixels.toDouble() }.toFloat()
+            // UNIFORM_COLOR is a generic fallback for any flat/slowly-varying slot color.
+            // It can also see other smooth areas in the frame, so keep the dominant
+            // same-size rectangle family before scoring. This matches the photobooth
+            // convention that slots in one template are usually the same size.
+            if (pass == SeedType.UNIFORM_COLOR) {
+                candidates = selectDominantUniformSlotFamily(candidates)
+            }
+
+            val score = scoreCandidateSet(
+                candidates = candidates,
+                slotSeed = slotSeed,
+                width = width,
+                totalPixels = totalPixels,
+                uniformPass = pass == SeedType.UNIFORM_COLOR
+            )
             if (score > bestScore && candidates.isNotEmpty()) {
                 bestScore = score
                 bestSlots = candidates
                 bestComponentIdArray = componentIdArray
                 bestSlotSeed = slotSeed
                 bestRadius = radius
+                bestPass = pass
             }
         }
 
@@ -177,6 +231,7 @@ class SlotDetectionEngine {
         val punchedPixels = sourcePixels.copyOf()
         val componentId = bestComponentIdArray!!
         val slotSeed = bestSlotSeed!!
+        val selectedPass = bestPass
 
         for (b in sortedBounds) {
             val background = estimateSlotBackground(
@@ -193,6 +248,25 @@ class SlotDetectionEngine {
                 width = width,
                 background = background
             )
+
+            // Generic colored slots need a different matte model. A single RGB median is
+            // inappropriate for a gentle orange/pink/blue gradient: pixels at the far side
+            // of the rectangle can be far from the median even though they are still slot
+            // background. Use the definite uniform component to learn a robust RGB envelope,
+            // then make the whole rectangle transparent except decoration components outside
+            // that envelope. This branch NEVER writes outside [b].
+            if (selectedPass == SeedType.UNIFORM_COLOR) {
+                applyUniformColorRobustMatte(
+                    slot = b,
+                    sourcePixels = sourcePixels,
+                    detectPixels = detectPixels,
+                    punchedPixels = punchedPixels,
+                    componentId = componentId,
+                    width = width,
+                    height = height
+                )
+                continue
+            }
 
             val clearThreshold = if (isDarkRgb(background)) {
                 max(2.0f, noise95 + 0.8f).coerceAtMost(8f)
@@ -587,18 +661,12 @@ class SlotDetectionEngine {
             // --- END STAGE 3 ---
 
             // --- STAGE 4: PIXEL-EXACT HYSTERESIS MATTE ---
-            // Keep a local snapshot of the already-good Stage 1/2/3 result.
-            // Stage 4 is intentionally aggressive at removing the last background pixels, so a
-            // tiny background-colored highlight INSIDE a real decoration can occasionally be
-            // removed too. The snapshot lets us restore only those MICRO-NOTCHES afterwards,
-            // without restoring the larger background residue that Stage 4 was created to remove.
-            val beforeStage4 = captureSlotPixels(
-                slot = b,
-                pixels = punchedPixels,
-                width = width
-            )
-
             // Final authoritative cleanup, strictly INSIDE this detected slot only.
+            // Purpose:
+            // 1) remove every remaining background pixel, including pure-white / pure-black residue,
+            // 2) preserve decoration pixels bit-for-bit from sourcePixels,
+            // 3) recover very bright decoration highlights that are numerically almost identical
+            //    to the slot background by bridging only SHORT gaps enclosed by foreground.
             applyPixelExactHysteresisMatte(
                 slot = b,
                 sourcePixels = sourcePixels,
@@ -608,20 +676,6 @@ class SlotDetectionEngine {
                 height = height,
                 background = background,
                 noise95 = noise95
-            )
-
-            // Repair only tiny concave bites/holes created BY STAGE 4 itself.
-            // The restored pixels come bit-for-bit from sourcePixels.
-            // Large/open background regions are never restored.
-            restoreStage4MicroNotches(
-                slot = b,
-                beforeStage4 = beforeStage4,
-                sourcePixels = sourcePixels,
-                punchedPixels = punchedPixels,
-                detectPixels = detectPixels,
-                width = width,
-                background = background,
-                strongThreshold = max(5.0f, noise95 + 4.0f).coerceAtMost(18.0f)
             )
             // --- END STAGE 4 ---
         }
@@ -707,13 +761,96 @@ class SlotDetectionEngine {
         }
     }
 
-    enum class SeedType {
-        TRANSPARENT, LIGHT, DARK
+
+    /**
+     * Detection-only box filter for the generic uniform-color pass.
+     *
+     * Native template files can contain fine export noise/texture that disappears when
+     * the UI scales the image down. Judging "uniform" on raw pixels therefore gives a
+     * false negative. This integral-image box filter removes only high-frequency noise;
+     * it never modifies the returned/punched image.
+     */
+    private fun buildUniformAnalysisPixels(
+        pixels: IntArray,
+        width: Int,
+        height: Int
+    ): IntArray {
+        val radius = max(1, (min(width, height) * 0.0025f).roundToInt()).coerceAtMost(5)
+        if (radius <= 0) return pixels.copyOf()
+
+        val stride = width + 1
+        val sumR = LongArray((width + 1) * (height + 1))
+        val sumG = LongArray((width + 1) * (height + 1))
+        val sumB = LongArray((width + 1) * (height + 1))
+
+        for (y in 0 until height) {
+            var rr = 0L
+            var gg = 0L
+            var bb = 0L
+            for (x in 0 until width) {
+                val p = pixels[y * width + x]
+                rr += ((p ushr 16) and 0xFF).toLong()
+                gg += ((p ushr 8) and 0xFF).toLong()
+                bb += (p and 0xFF).toLong()
+                val dst = (y + 1) * stride + (x + 1)
+                sumR[dst] = sumR[y * stride + (x + 1)] + rr
+                sumG[dst] = sumG[y * stride + (x + 1)] + gg
+                sumB[dst] = sumB[y * stride + (x + 1)] + bb
+            }
+        }
+
+        fun rectSum(sum: LongArray, x0: Int, y0: Int, x1: Int, y1: Int): Long {
+            val ax = x0
+            val ay = y0
+            val bx = x1 + 1
+            val by = y1 + 1
+            return sum[by * stride + bx] - sum[ay * stride + bx] -
+                sum[by * stride + ax] + sum[ay * stride + ax]
+        }
+
+        val out = IntArray(width * height)
+        for (y in 0 until height) {
+            val y0 = max(0, y - radius)
+            val y1 = min(height - 1, y + radius)
+            for (x in 0 until width) {
+                val x0 = max(0, x - radius)
+                val x1 = min(width - 1, x + radius)
+                val count = (x1 - x0 + 1) * (y1 - y0 + 1)
+                val r = (rectSum(sumR, x0, y0, x1, y1) / count).toInt().coerceIn(0, 255)
+                val g = (rectSum(sumG, x0, y0, x1, y1) / count).toInt().coerceIn(0, 255)
+                val b = (rectSum(sumB, x0, y0, x1, y1) / count).toInt().coerceIn(0, 255)
+                out[y * width + x] = (255 shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        }
+        return out
     }
 
-    private fun buildSeedMask(sourcePixels: IntArray, detectPixels: IntArray, type: SeedType): BooleanArray {
+    enum class SeedType {
+        TRANSPARENT, LIGHT, DARK, UNIFORM_COLOR
+    }
+
+    /**
+     * Build a seed mask for slot discovery.
+     *
+     * TRANSPARENT / LIGHT / DARK keep the old fast paths exactly as before.
+     * UNIFORM_COLOR is color-agnostic: it asks only whether a pixel sits inside a
+     * locally smooth, opaque region. It does NOT care if that region is orange,
+     * pink, blue, purple, beige, etc.
+     */
+    private fun buildSeedMask(
+        sourcePixels: IntArray,
+        detectPixels: IntArray,
+        width: Int,
+        height: Int,
+        type: SeedType
+    ): BooleanArray {
         val totalPixels = sourcePixels.size
         val mask = BooleanArray(totalPixels)
+
+        if (type == SeedType.UNIFORM_COLOR) {
+            return buildUniformColorSeedMask(sourcePixels, detectPixels, width, height)
+        }
+
         for (i in 0 until totalPixels) {
             val src = sourcePixels[i]
             val srcA = (src ushr 24) and 0xFF
@@ -731,7 +868,9 @@ class SlotDetectionEngine {
                 val avg = (r + gCh + b) / 3f
 
                 if (type == SeedType.LIGHT) {
-                    if (avg >= 252f && range <= 10 && distanceFromWhite(r, gCh, b) <= 6f) mask[i] = true
+                    if (avg >= 252f && range <= 10 && distanceFromWhite(r, gCh, b) <= 6f) {
+                        mask[i] = true
+                    }
                 } else if (type == SeedType.DARK) {
                     val darkNeutral = avg <= 28f && range <= 20
                     val darkGrayNeutral = avg <= 42f && range <= 10
@@ -740,6 +879,239 @@ class SlotDetectionEngine {
             }
         }
         return mask
+    }
+
+    /**
+     * Detect interiors that are locally color-uniform WITHOUT assuming any hue.
+     *
+     * The metric is deliberately local rather than "same exact RGB everywhere":
+     * a Canva/PNG slot may contain a tiny amount of compression, antialiasing, or
+     * a very gentle gradient. We therefore measure the color difference to nearby
+     * pixels and keep a pixel when most of its neighborhood is very similar.
+     *
+     * Decorations and frame textures naturally have higher local variation, which
+     * cuts holes in this mask; connected-component + rectangle fitting later still
+     * recovers the complete rectangular slot.
+     */
+    private fun buildUniformColorSeedMask(
+        sourcePixels: IntArray,
+        detectPixels: IntArray,
+        width: Int,
+        height: Int
+    ): BooleanArray {
+        val mask = BooleanArray(width * height)
+        if (width < 5 || height < 5) return mask
+
+        // A clean PNG is often 0..1 distance. 3.25 still accepts very gentle gradients
+        // while rejecting most textured scrapbook/background detail.
+        val nearTolerance = 5.50f
+        val farTolerance = 9.00f
+
+        for (y in 2 until height - 2) {
+            val row = y * width
+            for (x in 2 until width - 2) {
+                val i = row + x
+                val srcA = (sourcePixels[i] ushr 24) and 0xFF
+                if (srcA < 245) continue
+
+                val p = detectPixels[i]
+                val cr = (p ushr 16) and 0xFF
+                val cg = (p ushr 8) and 0xFF
+                val cb = p and 0xFF
+
+                // Radius-1: require a clear majority of immediate neighbors to match.
+                var nearGood = 0
+                var nearSeen = 0
+                for (dy in -1..1) {
+                    for (dx in -1..1) {
+                        if (dx == 0 && dy == 0) continue
+                        val np = detectPixels[(y + dy) * width + (x + dx)]
+                        val nr = (np ushr 16) and 0xFF
+                        val ng = (np ushr 8) and 0xFF
+                        val nb = np and 0xFF
+                        if (colorDistance(cr, cg, cb, nr, ng, nb) <= nearTolerance) nearGood++
+                        nearSeen++
+                    }
+                }
+                if (nearGood < 5 || nearSeen < 8) continue
+
+                // Radius-2 cardinal samples prevent a noisy/finely textured region from
+                // passing only because its immediately adjacent pixels happen to match.
+                var farGood = 0
+                val offsets = intArrayOf(-2, 0, 2, 0, 0, -2, 0, 2)
+                var k = 0
+                while (k < offsets.size) {
+                    val nx = x + offsets[k]
+                    val ny = y + offsets[k + 1]
+                    val np = detectPixels[ny * width + nx]
+                    val nr = (np ushr 16) and 0xFF
+                    val ng = (np ushr 8) and 0xFF
+                    val nb = np and 0xFF
+                    if (colorDistance(cr, cg, cb, nr, ng, nb) <= farTolerance) farGood++
+                    k += 2
+                }
+                if (farGood < 3) continue
+
+                mask[i] = true
+            }
+        }
+
+        return mask
+    }
+
+    /**
+     * Uniform-color discovery may find several smooth rectangles. Photobooth layouts
+     * overwhelmingly use same-size photo windows, so retain the largest mutually
+     * consistent width/height family. If there is no family of at least 2, keep all
+     * candidates so a one-slot freeform template still works.
+     */
+    private fun selectDominantUniformSlotFamily(input: List<SlotBounds>): List<SlotBounds> {
+        if (input.size <= 1) return input
+
+        var best: List<SlotBounds> = emptyList()
+        var bestArea = -1L
+
+        for (anchor in input) {
+            val wTol = max(8f, anchor.width * 0.22f)
+            val hTol = max(8f, anchor.height * 0.22f)
+            val family = input.filter {
+                abs(it.width - anchor.width) <= wTol &&
+                    abs(it.height - anchor.height) <= hTol
+            }
+            val area = family.sumOf { it.width.toLong() * it.height.toLong() }
+            if (family.size > best.size || (family.size == best.size && area > bestArea)) {
+                best = family
+                bestArea = area
+            }
+        }
+
+        return if (best.size >= 2) best else input
+    }
+
+    /**
+     * Score a pass by slot count, rectangular seed coverage and same-size consistency.
+     * A small penalty makes the legacy TRANSPARENT/LIGHT/DARK passes win ties, so
+     * existing templates keep their old behavior and UNIFORM_COLOR acts as a safe
+     * generic fallback.
+     */
+    private fun scoreCandidateSet(
+        candidates: List<SlotBounds>,
+        slotSeed: BooleanArray,
+        width: Int,
+        totalPixels: Int,
+        uniformPass: Boolean
+    ): Float {
+        if (candidates.isEmpty()) return -1f
+
+        val countScore = candidates.size * 1000f
+        val coverage = candidates.map { seedCoverage(it, slotSeed, width) }.average().toFloat()
+        val coverageScore = coverage * 220f
+        val areaScore = candidates.sumOf {
+            (it.width.toDouble() * it.height.toDouble()) / totalPixels.toDouble()
+        }.toFloat() * 120f
+
+        val consistencyScore = if (candidates.size >= 2) {
+            val ws = candidates.map { it.width }.sorted()
+            val hs = candidates.map { it.height }.sorted()
+            val mw = ws[ws.size / 2].toFloat().coerceAtLeast(1f)
+            val mh = hs[hs.size / 2].toFloat().coerceAtLeast(1f)
+            val meanDeviation = candidates.map {
+                abs(it.width - mw) / mw + abs(it.height - mh) / mh
+            }.average().toFloat() / 2f
+            (1f - meanDeviation.coerceIn(0f, 1f)) * 260f
+        } else 0f
+
+        val uniformPenalty = if (uniformPass) 40f else 0f
+        return countScore + coverageScore + areaScore + consistencyScore - uniformPenalty
+    }
+
+    /**
+     * Connected components for the generic uniform-color pass.
+     *
+     * A plain Boolean "smooth pixel" mask is not enough: two different flat colors
+     * can be connected by a gentle antialiased transition. This region-grower adds
+     * a SECOND condition: every accepted pixel must remain close to the component's
+     * seed color. Therefore an orange slot cannot leak into a mint frame even when
+     * both are individually smooth.
+     */
+    private fun findUniformColorComponents(
+        mask: BooleanArray,
+        componentId: IntArray,
+        pixels: IntArray,
+        width: Int,
+        height: Int
+    ): List<Component> {
+        val total = width * height
+        val queue = IntArray(total)
+        val result = mutableListOf<Component>()
+        var nextId = 0
+
+        // RMS RGB distance. This allows small export noise / gentle gradients while
+        // keeping clearly different frame and slot colors in separate components.
+        // Do NOT lock a component to its very first pixel color. A visually uniform
+        // slot may contain a slow gradient whose opposite corner differs by > 18 RGB
+        // levels. Only local smoothness matters here; the seed mask already blocks
+        // high-contrast boundaries.
+        val stepColorTolerance = 10.0f
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val start = y * width + x
+                if (!mask[start] || componentId[start] != -1) continue
+
+                var head = 0
+                var tail = 0
+                queue[tail++] = start
+                componentId[start] = nextId
+
+                var minX = x
+                var maxX = x
+                var minY = y
+                var maxY = y
+                var area = 0
+
+                while (head < tail) {
+                    val curr = queue[head++]
+                    val cx = curr % width
+                    val cy = curr / width
+                    val cp = pixels[curr]
+                    val cr = (cp ushr 16) and 0xFF
+                    val cg = (cp ushr 8) and 0xFF
+                    val cb = cp and 0xFF
+
+                    area++
+                    if (cx < minX) minX = cx
+                    if (cx > maxX) maxX = cx
+                    if (cy < minY) minY = cy
+                    if (cy > maxY) maxY = cy
+
+                    fun tryAdd(n: Int) {
+                        if (!mask[n] || componentId[n] != -1) return
+                        val np = pixels[n]
+                        val nr = (np ushr 16) and 0xFF
+                        val ng = (np ushr 8) and 0xFF
+                        val nb = np and 0xFF
+
+                        // Also require a small local step. This blocks a long smooth ramp from
+                        // slowly walking from the slot color into a different frame color.
+                        val stepDistance = colorDistance(nr, ng, nb, cr, cg, cb)
+                        if (stepDistance > stepColorTolerance) return
+
+                        componentId[n] = nextId
+                        queue[tail++] = n
+                    }
+
+                    if (cx > 0) tryAdd(curr - 1)
+                    if (cx + 1 < width) tryAdd(curr + 1)
+                    if (cy > 0) tryAdd(curr - width)
+                    if (cy + 1 < height) tryAdd(curr + width)
+                }
+
+                result += Component(nextId, minX, maxX, minY, maxY, area)
+                nextId++
+            }
+        }
+        return result
     }
 
     private fun erodeSquareWithIntegralImage(
@@ -897,6 +1269,257 @@ class SlotDetectionEngine {
         }
 
         return true
+    }
+
+    /**
+     * Dedicated rectangle recovery for UNIFORM_COLOR.
+     *
+     * The uniform seed is already a clean interior region. The morphology erosion
+     * shrinks every true slot edge by exactly [radius], so the safest reconstruction
+     * is to add that radius back. We intentionally DO NOT run the legacy edge-refine
+     * search here because that search can walk into a smooth outer frame of another
+     * color and make the slot too large.
+     */
+    private fun fitUniformColorRectangle(
+        component: Component,
+        width: Int,
+        height: Int,
+        radius: Int
+    ): SlotBounds? {
+        val left = (component.minX - radius).coerceIn(0, width - 1)
+        val right = (component.maxX + radius).coerceIn(0, width - 1)
+        val top = (component.minY - radius).coerceIn(0, height - 1)
+        val bottom = (component.maxY + radius).coerceIn(0, height - 1)
+
+        if (right <= left || bottom <= top) return null
+        val rectW = right - left + 1
+        val rectH = bottom - top + 1
+        if (rectW < width * 0.10f || rectH < height * 0.10f) return null
+
+        return SlotBounds(
+            minX = left,
+            maxX = right,
+            minY = top,
+            maxY = bottom,
+            pixelArea = component.area,
+            id = component.id
+        )
+    }
+
+    /**
+     * Recover the real outer boundary of a generic colored slot after local-uniformity
+     * analysis + morphology have shrunk it by a few pixels.
+     *
+     * We scan outward from the detected interior and ask whether each candidate row/column
+     * is still mostly the dominant slot color.  Only READS happen outside [initial]; the
+     * returned rectangle is then used as the authoritative write boundary.  Decorations may
+     * cover part of an edge, so the decision uses a robust majority instead of requiring
+     * every pixel to match.
+     */
+    private fun expandUniformRectangleToTrueBoundary(
+        initial: SlotBounds,
+        pixels: IntArray,
+        width: Int,
+        height: Int,
+        searchRadius: Int
+    ): SlotBounds {
+        if (initial.width <= 0 || initial.height <= 0) return initial
+
+        // Robust RGB center from the middle of the already-safe interior.
+        val xInset = max(2, (initial.width * 0.12f).roundToInt())
+        val yInset = max(2, (initial.height * 0.12f).roundToInt())
+        val sx0 = min(initial.maxX, initial.minX + xInset)
+        val sx1 = max(initial.minX, initial.maxX - xInset)
+        val sy0 = min(initial.maxY, initial.minY + yInset)
+        val sy1 = max(initial.minY, initial.maxY - yInset)
+
+        val hr = IntArray(256)
+        val hg = IntArray(256)
+        val hb = IntArray(256)
+        var count = 0
+        for (y in sy0..sy1) {
+            val row = y * width
+            for (x in sx0..sx1) {
+                val p = pixels[row + x]
+                hr[(p ushr 16) and 0xFF]++
+                hg[(p ushr 8) and 0xFF]++
+                hb[p and 0xFF]++
+                count++
+            }
+        }
+        if (count == 0) return initial
+
+        val cr = histogramMedian(hr, count)
+        val cg = histogramMedian(hg, count)
+        val cb = histogramMedian(hb, count)
+
+        // Learn real background variation from the safe interior.
+        val dh = IntArray(256)
+        var dCount = 0
+        for (y in sy0..sy1) {
+            val row = y * width
+            for (x in sx0..sx1) {
+                val p = pixels[row + x]
+                val d = colorDistance(
+                    (p ushr 16) and 0xFF,
+                    (p ushr 8) and 0xFF,
+                    p and 0xFF,
+                    cr, cg, cb
+                ).roundToInt().coerceIn(0, 255)
+                dh[d]++
+                dCount++
+            }
+        }
+
+        fun dPercentile(q: Float): Float {
+            val target = max(1, (dCount * q).roundToInt())
+            var seen = 0
+            for (d in dh.indices) {
+                seen += dh[d]
+                if (seen >= target) return d.toFloat()
+            }
+            return 255f
+        }
+
+        val edgeColorThreshold = max(10f, dPercentile(0.92f) + 8f).coerceAtMost(48f)
+
+        fun rowMedianDistance(y: Int, left: Int, right: Int): Float {
+            if (y !in 0 until height || right < left) return 255f
+            val inset = max(1, ((right - left + 1) * 0.06f).roundToInt())
+            val x0 = (left + inset).coerceAtMost(right)
+            val x1 = (right - inset).coerceAtLeast(left)
+            val values = FloatArray(max(1, x1 - x0 + 1))
+            var n = 0
+            val row = y * width
+            for (x in x0..x1) {
+                val p = pixels[row + x]
+                values[n++] = colorDistance(
+                    (p ushr 16) and 0xFF,
+                    (p ushr 8) and 0xFF,
+                    p and 0xFF,
+                    cr, cg, cb
+                )
+            }
+            if (n == 0) return 255f
+            java.util.Arrays.sort(values, 0, n)
+            return values[n / 2]
+        }
+
+        fun colMedianDistance(x: Int, top: Int, bottom: Int): Float {
+            if (x !in 0 until width || bottom < top) return 255f
+            val inset = max(1, ((bottom - top + 1) * 0.06f).roundToInt())
+            val y0 = (top + inset).coerceAtMost(bottom)
+            val y1 = (bottom - inset).coerceAtLeast(top)
+            val values = FloatArray(max(1, y1 - y0 + 1))
+            var n = 0
+            for (y in y0..y1) {
+                val p = pixels[y * width + x]
+                values[n++] = colorDistance(
+                    (p ushr 16) and 0xFF,
+                    (p ushr 8) and 0xFF,
+                    p and 0xFF,
+                    cr, cg, cb
+                )
+            }
+            if (n == 0) return 255f
+            java.util.Arrays.sort(values, 0, n)
+            return values[n / 2]
+        }
+
+        // A PNG edge often has one anti-aliased transition line whose RGB is neither the
+        // slot color nor the outer frame color.  Absolute thresholding leaves this exact
+        // line behind.  We therefore include ONE transition line when the following line
+        // makes a large color-distance jump (slot -> AA edge -> frame).
+        fun shouldIncludeTransition(current: Float, next: Float): Boolean {
+            val transitionMax = max(52f, edgeColorThreshold * 3.6f)
+            val jump = next - current
+            return current <= transitionMax &&
+                next >= max(current * 1.85f, current + 28f) &&
+                jump >= 28f
+        }
+
+        var left = initial.minX
+        var right = initial.maxX
+        var top = initial.minY
+        var bottom = initial.maxY
+
+        fun expandLeft() {
+            for (step in 1..searchRadius) {
+                val x = initial.minX - step
+                if (x < 0) break
+                val score = colMedianDistance(x, top, bottom)
+                if (score <= edgeColorThreshold) {
+                    left = x
+                    continue
+                }
+                val nextX = x - 1
+                val nextScore = if (nextX >= 0) colMedianDistance(nextX, top, bottom) else 255f
+                if (shouldIncludeTransition(score, nextScore)) left = x
+                break
+            }
+        }
+
+        fun expandRight() {
+            for (step in 1..searchRadius) {
+                val x = initial.maxX + step
+                if (x >= width) break
+                val score = colMedianDistance(x, top, bottom)
+                if (score <= edgeColorThreshold) {
+                    right = x
+                    continue
+                }
+                val nextX = x + 1
+                val nextScore = if (nextX < width) colMedianDistance(nextX, top, bottom) else 255f
+                if (shouldIncludeTransition(score, nextScore)) right = x
+                break
+            }
+        }
+
+        fun expandTop() {
+            for (step in 1..searchRadius) {
+                val y = initial.minY - step
+                if (y < 0) break
+                val score = rowMedianDistance(y, left, right)
+                if (score <= edgeColorThreshold) {
+                    top = y
+                    continue
+                }
+                val nextY = y - 1
+                val nextScore = if (nextY >= 0) rowMedianDistance(nextY, left, right) else 255f
+                if (shouldIncludeTransition(score, nextScore)) top = y
+                break
+            }
+        }
+
+        fun expandBottom() {
+            for (step in 1..searchRadius) {
+                val y = initial.maxY + step
+                if (y >= height) break
+                val score = rowMedianDistance(y, left, right)
+                if (score <= edgeColorThreshold) {
+                    bottom = y
+                    continue
+                }
+                val nextY = y + 1
+                val nextScore = if (nextY < height) rowMedianDistance(nextY, left, right) else 255f
+                if (shouldIncludeTransition(score, nextScore)) bottom = y
+                break
+            }
+        }
+
+        expandLeft()
+        expandRight()
+        expandTop()
+        expandBottom()
+
+        return SlotBounds(
+            minX = left,
+            maxX = right,
+            minY = top,
+            maxY = bottom,
+            pixelArea = initial.pixelArea,
+            id = initial.id
+        )
     }
 
     private fun fitTrueRectangle(
@@ -1462,6 +2085,20 @@ class SlotDetectionEngine {
 
         fun localIndex(x: Int, y: Int): Int = (y - slot.minY) * sw + (x - slot.minX)
 
+        // Snapshot of the Stage 1/2/3 result. Stage 4 is intentionally aggressive,
+        // so this snapshot lets us restore only tiny notches that Stage 4 creates
+        // inside already-preserved decoration. It is local to the detected slot;
+        // nothing outside slot bounds can be restored or modified here.
+        val preStage4Opaque = BooleanArray(area)
+        for (y in slot.minY..slot.maxY) {
+            val row = y * width
+            for (x in slot.minX..slot.maxX) {
+                val gi = row + x
+                val li = localIndex(x, y)
+                preStage4Opaque[li] = ((punchedPixels[gi] ushr 24) and 0xFF) > 0
+            }
+        }
+
         for (y in slot.minY..slot.maxY) {
             val row = y * width
             for (x in slot.minX..slot.maxX) {
@@ -1538,6 +2175,25 @@ class SlotDetectionEngine {
         val maxTinyHoleArea = max(24, (area * 0.0015f).roundToInt()).coerceAtMost(900)
         fillTinyEnclosedHoles(protect, sw, sh, maxTinyHoleArea)
 
+        // Repair only micro-notches that were present after Stage 1/2/3 but were
+        // accidentally removed by Stage 4. This is designed for cases such as a
+        // tiny black/white dash punched into a silver bow highlight.
+        //
+        // Important safety rules:
+        // - candidate pixels must have been opaque before Stage 4,
+        // - the candidate component must be small,
+        // - it must NOT touch the slot border,
+        // - it must be enclosed/sandwiched by already-protected decoration,
+        // - restoration copies the exact source ARGB pixel; no blur/interpolation.
+        val maxMicroNotchArea = max(8, (area * 0.00045f).roundToInt()).coerceAtMost(120)
+        repairMicroNotches(
+            protect = protect,
+            preStage4Opaque = preStage4Opaque,
+            w = sw,
+            h = sh,
+            maxArea = maxMicroNotchArea
+        )
+
         // Authoritative write. NOTHING outside the red/detected rectangle is touched.
         for (y in slot.minY..slot.maxY) {
             val row = y * width
@@ -1545,183 +2201,6 @@ class SlotDetectionEngine {
                 val gi = row + x
                 val li = localIndex(x, y)
                 punchedPixels[gi] = if (protect[li]) sourcePixels[gi] else 0x00000000
-            }
-        }
-    }
-
-
-    /** Copy exactly one detected slot from an image-sized pixel buffer. */
-    private fun captureSlotPixels(
-        slot: SlotBounds,
-        pixels: IntArray,
-        width: Int
-    ): IntArray {
-        val local = IntArray(slot.width * slot.height)
-        var dst = 0
-        for (y in slot.minY..slot.maxY) {
-            val row = y * width
-            for (x in slot.minX..slot.maxX) {
-                local[dst++] = pixels[row + x]
-            }
-        }
-        return local
-    }
-
-    /**
-     * Restore only tiny pieces of REAL decoration that Stage 4 accidentally bites away.
-     *
-     * Why this is safer than lowering Stage-4 thresholds:
-     * - we ONLY inspect pixels that were opaque before Stage 4 and transparent after Stage 4;
-     * - we group those pixels into connected components;
-     * - a component is restored only when it is a small concave notch/hole strongly surrounded
-     *   by surviving decoration;
-     * - open/large background residue has much more contact with transparency and is not restored;
-     * - every restored ARGB value is copied EXACTLY from sourcePixels.
-     *
-     * This specifically fixes tiny rectangular/curved holes inside metallic bows, white highlights,
-     * flower petals, text strokes, etc., while preserving the aggressive pixel-exact cleanup of the
-     * actual photo-slot background.
-     */
-    private fun restoreStage4MicroNotches(
-        slot: SlotBounds,
-        beforeStage4: IntArray,
-        sourcePixels: IntArray,
-        punchedPixels: IntArray,
-        detectPixels: IntArray,
-        width: Int,
-        background: Rgb,
-        strongThreshold: Float
-    ) {
-        val sw = slot.width
-        val sh = slot.height
-        val area = sw * sh
-        if (area <= 0 || beforeStage4.size != area) return
-
-        // Pixels removed specifically by Stage 4.
-        val removed = BooleanArray(area)
-        for (ly in 0 until sh) {
-            val gy = slot.minY + ly
-            val row = gy * width
-            for (lx in 0 until sw) {
-                val li = ly * sw + lx
-                val gi = row + slot.minX + lx
-                val beforeA = (beforeStage4[li] ushr 24) and 0xFF
-                val afterA = (punchedPixels[gi] ushr 24) and 0xFF
-                removed[li] = beforeA > 0 && afterA == 0
-            }
-        }
-
-        val visited = BooleanArray(area)
-        val queue = IntArray(area)
-
-        // A real accidental bite is normally tiny compared with the photo slot.
-        // The cap scales with resolution, but remains conservative.
-        val maxNotchArea = max(36, (area * 0.0025f).roundToInt()).coerceAtMost(700)
-        val maxNotchSpan = max(10, (min(sw, sh) * 0.09f).roundToInt()).coerceAtMost(48)
-
-        for (start in 0 until area) {
-            if (!removed[start] || visited[start]) continue
-
-            var head = 0
-            var tail = 0
-            queue[tail++] = start
-            visited[start] = true
-
-            var minX = start % sw
-            var maxX = minX
-            var minY = start / sw
-            var maxY = minY
-            var touchesSlotBorder = false
-            var detailBoundary = 0
-            var transparentBoundary = 0
-            var strongDetailBoundary = 0
-
-            while (head < tail) {
-                val li = queue[head++]
-                val lx = li % sw
-                val ly = li / sw
-                if (lx < minX) minX = lx
-                if (lx > maxX) maxX = lx
-                if (ly < minY) minY = ly
-                if (ly > maxY) maxY = ly
-                if (lx == 0 || ly == 0 || lx == sw - 1 || ly == sh - 1) touchesSlotBorder = true
-
-                fun inspect(nx: Int, ny: Int) {
-                    if (nx !in 0 until sw || ny !in 0 until sh) {
-                        touchesSlotBorder = true
-                        return
-                    }
-                    val ni = ny * sw + nx
-                    if (removed[ni]) {
-                        if (!visited[ni]) {
-                            visited[ni] = true
-                            queue[tail++] = ni
-                        }
-                        return
-                    }
-
-                    val gx = slot.minX + nx
-                    val gy = slot.minY + ny
-                    val gi = gy * width + gx
-                    val outA = (punchedPixels[gi] ushr 24) and 0xFF
-                    if (outA > 0) {
-                        detailBoundary++
-
-                        // Strong-color support says this boundary is genuinely decoration,
-                        // not merely a surviving background speck.
-                        val dp = detectPixels[gi]
-                        val r = (dp ushr 16) and 0xFF
-                        val g = (dp ushr 8) and 0xFF
-                        val b = dp and 0xFF
-                        if (colorDistance(r, g, b, background.r, background.g, background.b) > strongThreshold) {
-                            strongDetailBoundary++
-                        }
-                    } else {
-                        transparentBoundary++
-                    }
-                }
-
-                inspect(lx - 1, ly)
-                inspect(lx + 1, ly)
-                inspect(lx, ly - 1)
-                inspect(lx, ly + 1)
-            }
-
-            val compArea = tail
-            if (compArea > maxNotchArea) continue
-
-            val boxW = maxX - minX + 1
-            val boxH = maxY - minY + 1
-            if (boxW > maxNotchSpan && boxH > maxNotchSpan) continue
-
-            val boundaryTotal = detailBoundary + transparentBoundary
-            if (boundaryTotal <= 0) continue
-
-            val detailSupport = detailBoundary.toFloat() / boundaryTotal.toFloat()
-            val strongSupport = if (detailBoundary == 0) 0f
-                else strongDetailBoundary.toFloat() / detailBoundary.toFloat()
-
-            // Two safe restoration cases:
-            // A) a closed tiny hole fully inside decoration;
-            // B) a small concave bite with >= 62% of its perimeter touching decoration and
-            //    some strong-color support around it.
-            val closedHole = !touchesSlotBorder && transparentBoundary == 0 && detailBoundary >= 4
-            val concaveBite = !touchesSlotBorder &&
-                detailSupport >= 0.62f &&
-                strongSupport >= 0.12f &&
-                detailBoundary >= 4
-
-            if (!closedHole && !concaveBite) continue
-
-            // Restore EXACT original ARGB, never synthesized/blurred pixels.
-            for (k in 0 until tail) {
-                val li = queue[k]
-                val lx = li % sw
-                val ly = li / sw
-                val gx = slot.minX + lx
-                val gy = slot.minY + ly
-                val gi = gy * width + gx
-                punchedPixels[gi] = sourcePixels[gi]
             }
         }
     }
@@ -1811,6 +2290,626 @@ class SlotDetectionEngine {
 
             if (!touchesBorder && tail <= maxArea) {
                 for (i in 0 until tail) mask[queue[i]] = true
+            }
+        }
+    }
+
+    /**
+     * Restore tiny notches that Stage 4 punched into a decoration.
+     *
+     * A candidate is a pixel that:
+     * - was still opaque after Stage 1/2/3, and
+     * - Stage 4 currently plans to make transparent.
+     *
+     * We restore only small connected candidate components that are geometrically
+     * enclosed by protected decoration. This catches tiny horizontal/vertical dashes
+     * inside a bow highlight while refusing large/open slot-background regions.
+     */
+    private fun repairMicroNotches(
+        protect: BooleanArray,
+        preStage4Opaque: BooleanArray,
+        w: Int,
+        h: Int,
+        maxArea: Int
+    ) {
+        if (w <= 0 || h <= 0 || protect.isEmpty()) return
+
+        val candidate = BooleanArray(protect.size)
+        for (i in protect.indices) {
+            candidate[i] = preStage4Opaque[i] && !protect[i]
+        }
+
+        val visited = BooleanArray(candidate.size)
+        val queue = IntArray(candidate.size)
+
+        for (start in candidate.indices) {
+            if (!candidate[start] || visited[start]) continue
+
+            var head = 0
+            var tail = 0
+            queue[tail++] = start
+            visited[start] = true
+
+            var minX = w
+            var maxX = -1
+            var minY = h
+            var maxY = -1
+            var touchesBorder = false
+
+            var leftProtected = 0
+            var rightProtected = 0
+            var topProtected = 0
+            var bottomProtected = 0
+            var protectedAdjacency = 0
+            var exposedAdjacency = 0
+
+            while (head < tail) {
+                val curr = queue[head++]
+                val x = curr % w
+                val y = curr / w
+
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+
+                if (x == 0 || y == 0 || x == w - 1 || y == h - 1) {
+                    touchesBorder = true
+                }
+
+                // 8-connected component of pixels Stage 4 would newly remove.
+                for (dy in -1..1) {
+                    for (dx in -1..1) {
+                        if (dx == 0 && dy == 0) continue
+                        val nx = x + dx
+                        val ny = y + dy
+                        if (nx !in 0 until w || ny !in 0 until h) continue
+                        val ni = ny * w + nx
+                        if (candidate[ni] && !visited[ni]) {
+                            visited[ni] = true
+                            queue[tail++] = ni
+                        }
+                    }
+                }
+
+                // 4-neighbour enclosure evidence. We intentionally keep directional
+                // counts because a thin horizontal notch only needs strong top/bottom
+                // support, while a vertical notch needs strong left/right support.
+                fun inspect(nx: Int, ny: Int, direction: Int) {
+                    if (nx !in 0 until w || ny !in 0 until h) {
+                        exposedAdjacency++
+                        return
+                    }
+                    val ni = ny * w + nx
+                    if (protect[ni]) {
+                        protectedAdjacency++
+                        when (direction) {
+                            0 -> leftProtected++
+                            1 -> rightProtected++
+                            2 -> topProtected++
+                            3 -> bottomProtected++
+                        }
+                    } else if (!candidate[ni]) {
+                        exposedAdjacency++
+                    }
+                }
+
+                inspect(x - 1, y, 0)
+                inspect(x + 1, y, 1)
+                inspect(x, y - 1, 2)
+                inspect(x, y + 1, 3)
+            }
+
+            val compArea = tail
+            if (compArea <= 0 || compArea > maxArea || touchesBorder) continue
+
+            val compW = maxX - minX + 1
+            val compH = maxY - minY + 1
+            if (compW <= 0 || compH <= 0) continue
+
+            val hasHorizontalSandwich = leftProtected > 0 && rightProtected > 0
+            val hasVerticalSandwich = topProtected > 0 && bottomProtected > 0
+
+            // Tiny round/square chip fully embedded in a decoration.
+            val compactNotch =
+                compW <= 10 && compH <= 10 &&
+                    hasHorizontalSandwich && hasVerticalSandwich
+
+            // Thin horizontal dash, like the small cut visible in the bow highlight.
+            // It may be longer than 10 px, but must be shallow and sandwiched by
+            // protected decoration above and below.
+            val thinHorizontalNotch =
+                compH <= 5 && compW <= 28 && hasVerticalSandwich
+
+            // Symmetric case for a vertical scratch/notch.
+            val thinVerticalNotch =
+                compW <= 5 && compH <= 28 && hasHorizontalSandwich
+
+            // Boundary confidence: true notches are mostly surrounded by decoration,
+            // while real photo-slot background tends to open into a much larger region.
+            val totalAdjacency = protectedAdjacency + exposedAdjacency
+            val protectedBoundaryRatio = if (totalAdjacency == 0) {
+                0f
+            } else {
+                protectedAdjacency.toFloat() / totalAdjacency.toFloat()
+            }
+
+            val safeToRestore =
+                (compactNotch || thinHorizontalNotch || thinVerticalNotch) &&
+                    protectedBoundaryRatio >= 0.58f
+
+            if (safeToRestore) {
+                for (i in 0 until tail) {
+                    protect[queue[i]] = true
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Final matte for a generic colored slot.
+     *
+     * The detected rectangle is authoritative: every pixel starts as background. We learn
+     * the slot's RGB distribution only from the eroded, definite uniform component and
+     * restore decoration pixels that fall outside a robust background envelope. This makes
+     * orange/red/blue/pink/etc. slots work without hard-coded colors and avoids leaving
+     * colored residue around the bow or stars.
+     */
+    private fun applyUniformColorRobustMatte(
+        slot: SlotBounds,
+        sourcePixels: IntArray,
+        detectPixels: IntArray,
+        punchedPixels: IntArray,
+        componentId: IntArray,
+        width: Int,
+        height: Int
+    ) {
+        val sw = slot.width
+        val sh = slot.height
+        val localArea = sw * sh
+        if (sw <= 0 || sh <= 0 || localArea <= 0) return
+
+        fun localIndex(x: Int, y: Int): Int = (y - slot.minY) * sw + (x - slot.minX)
+
+        // ---------------------------------------------------------------------
+        // V15: ROBUST DOMINANT-COLOR MATTE
+        // ---------------------------------------------------------------------
+        // A colored photo slot normally occupies most of its detected rectangle, while
+        // decorations (bow/star/text/sticker) occupy a much smaller percentage.  Instead
+        // of learning a very tight RGB envelope from only the eroded seed component, learn
+        // the dominant slot color from the whole rectangle using robust percentiles.
+        //
+        // This deliberately treats small color fluctuations, PNG/JPEG noise and gentle
+        // gradients as BACKGROUND.  Decoration is accepted only when it is a coherent,
+        // sufficiently large color outlier.  Therefore:
+        //   * tiny orange/red/blue speckles disappear,
+        //   * the 1-2 px colored residue along the detected rectangle disappears,
+        //   * large stars/bows remain exactly sourcePixels (bit-for-bit),
+        //   * writes remain strictly inside [slot].
+        // ---------------------------------------------------------------------
+
+        val hr = IntArray(256)
+        val hg = IntArray(256)
+        val hb = IntArray(256)
+        var opaqueCount = 0
+
+        // Prefer the definite uniform component for the first estimate, but fall back to
+        // the entire slot if a regularized rectangle no longer shares the original id well.
+        for (y in slot.minY..slot.maxY) {
+            val row = y * width
+            for (x in slot.minX..slot.maxX) {
+                val gi = row + x
+                if (componentId[gi] != slot.id) continue
+                val srcA = (sourcePixels[gi] ushr 24) and 0xFF
+                if (srcA < 8) continue
+                val p = detectPixels[gi]
+                hr[(p ushr 16) and 0xFF]++
+                hg[(p ushr 8) and 0xFF]++
+                hb[p and 0xFF]++
+                opaqueCount++
+            }
+        }
+
+        if (opaqueCount < max(32, (localArea * 0.01f).roundToInt())) {
+            hr.fill(0); hg.fill(0); hb.fill(0); opaqueCount = 0
+            for (y in slot.minY..slot.maxY) {
+                val row = y * width
+                for (x in slot.minX..slot.maxX) {
+                    val gi = row + x
+                    val srcA = (sourcePixels[gi] ushr 24) and 0xFF
+                    if (srcA < 8) continue
+                    val p = detectPixels[gi]
+                    hr[(p ushr 16) and 0xFF]++
+                    hg[(p ushr 8) and 0xFF]++
+                    hb[p and 0xFF]++
+                    opaqueCount++
+                }
+            }
+        }
+        if (opaqueCount == 0) return
+
+        fun histPercentile(hist: IntArray, count: Int, q: Float): Int {
+            val target = max(1, (count * q.coerceIn(0f, 1f)).roundToInt())
+            var seen = 0
+            for (v in hist.indices) {
+                seen += hist[v]
+                if (seen >= target) return v
+            }
+            return 255
+        }
+
+        val r50 = histPercentile(hr, opaqueCount, 0.50f)
+        val g50 = histPercentile(hg, opaqueCount, 0.50f)
+        val b50 = histPercentile(hb, opaqueCount, 0.50f)
+
+        // Build a distance histogram against the robust center.  The dominant slot color
+        // is expected to cover far more than decoration; P82/P90 therefore describe real
+        // background variation rather than rare decorative outliers.
+        val distanceHist = IntArray(256)
+        var distanceCount = 0
+        for (y in slot.minY..slot.maxY) {
+            val row = y * width
+            for (x in slot.minX..slot.maxX) {
+                val gi = row + x
+                val srcA = (sourcePixels[gi] ushr 24) and 0xFF
+                if (srcA < 8) continue
+                val p = detectPixels[gi]
+                val r = (p ushr 16) and 0xFF
+                val g = (p ushr 8) and 0xFF
+                val b = p and 0xFF
+                val d = colorDistance(r, g, b, r50, g50, b50)
+                    .roundToInt().coerceIn(0, 255)
+                distanceHist[d]++
+                distanceCount++
+            }
+        }
+
+        fun distancePercentile(q: Float): Float {
+            val target = max(1, (distanceCount * q.coerceIn(0f, 1f)).roundToInt())
+            var seen = 0
+            for (d in distanceHist.indices) {
+                seen += distanceHist[d]
+                if (seen >= target) return d.toFloat()
+            }
+            return 255f
+        }
+
+        val d75 = distancePercentile(0.75f)
+        val d82 = distancePercentile(0.82f)
+        val d90 = distancePercentile(0.90f)
+
+        // Background thresholds are intentionally generous.  A true decoration on a
+        // colored slot is usually much farther away in RGB than slot texture/noise.
+        val backgroundCoreThreshold = max(5.0f, d75 + 3.0f).coerceAtMost(32f)
+        val backgroundWideThreshold = max(backgroundCoreThreshold + 5.0f, d82 + 7.0f)
+            .coerceAtMost(46f)
+        val strongDetailThreshold = max(backgroundWideThreshold + 14.0f, d90 + 12.0f)
+            .coerceAtMost(82f)
+
+        val bgCandidate = BooleanArray(localArea)
+        val strongDetail = BooleanArray(localArea)
+        val localDistance = FloatArray(localArea)
+
+        for (y in slot.minY..slot.maxY) {
+            val row = y * width
+            for (x in slot.minX..slot.maxX) {
+                val gi = row + x
+                val li = localIndex(x, y)
+                val src = sourcePixels[gi]
+                val srcA = (src ushr 24) and 0xFF
+                if (srcA == 0) {
+                    bgCandidate[li] = true
+                    continue
+                }
+
+                val p = detectPixels[gi]
+                val r = (p ushr 16) and 0xFF
+                val g = (p ushr 8) and 0xFF
+                val b = p and 0xFF
+                val d = colorDistance(r, g, b, r50, g50, b50)
+                localDistance[li] = d
+
+                bgCandidate[li] = d <= backgroundWideThreshold
+                strongDetail[li] = d >= strongDetailThreshold ||
+                    (srcA in 1..220 && d > backgroundWideThreshold + 4f)
+            }
+        }
+
+        // Local 3x3 support removes isolated color-noise outliers from foreground candidacy.
+        // A decoration edge has many neighboring outliers; a lone orange/red speck does not.
+        fun outlierNeighborCount(li: Int): Int {
+            val x = li % sw
+            val y = li / sw
+            var count = 0
+            for (dy in -1..1) {
+                for (dx in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    val nx = x + dx
+                    val ny = y + dy
+                    if (nx !in 0 until sw || ny !in 0 until sh) continue
+                    val ni = ny * sw + nx
+                    if (!bgCandidate[ni]) count++
+                }
+            }
+            return count
+        }
+
+        val weakDetail = BooleanArray(localArea)
+        for (li in 0 until localArea) {
+            if (bgCandidate[li]) continue
+            val neighbors = outlierNeighborCount(li)
+            weakDetail[li] = strongDetail[li] || neighbors >= 2
+        }
+
+        // Group decoration candidates.  Small isolated components are treated as background
+        // even if their color is far from the median; this is the key anti-speckle guard.
+        val protect = BooleanArray(localArea)
+        val visited = BooleanArray(localArea)
+        val queue = IntArray(localArea)
+        val minDetailArea = max(18, (localArea * 0.00012f).roundToInt()).coerceAtMost(140)
+        val minThinDetailSpan = max(10, (min(sw, sh) * 0.025f).roundToInt()).coerceAtMost(34)
+
+        for (start in 0 until localArea) {
+            if (!weakDetail[start] || visited[start]) continue
+
+            var head = 0
+            var tail = 0
+            var strongCount = 0
+            var minX = sw
+            var maxX = -1
+            var minY = sh
+            var maxY = -1
+
+            queue[tail++] = start
+            visited[start] = true
+
+            while (head < tail) {
+                val curr = queue[head++]
+                val cx = curr % sw
+                val cy = curr / sw
+                if (strongDetail[curr]) strongCount++
+                if (cx < minX) minX = cx
+                if (cx > maxX) maxX = cx
+                if (cy < minY) minY = cy
+                if (cy > maxY) maxY = cy
+
+                for (dy in -1..1) {
+                    for (dx in -1..1) {
+                        if (dx == 0 && dy == 0) continue
+                        val nx = cx + dx
+                        val ny = cy + dy
+                        if (nx !in 0 until sw || ny !in 0 until sh) continue
+                        val ni = ny * sw + nx
+                        if (weakDetail[ni] && !visited[ni]) {
+                            visited[ni] = true
+                            queue[tail++] = ni
+                        }
+                    }
+                }
+            }
+
+            val compArea = tail
+            val compW = maxX - minX + 1
+            val compH = maxY - minY + 1
+            val longThin = max(compW, compH) >= minThinDetailSpan && min(compW, compH) >= 2
+            val keep = strongCount > 0 && (compArea >= minDetailArea || longThin)
+            if (keep) {
+                for (k in 0 until tail) protect[queue[k]] = true
+            }
+        }
+
+        // Grow protected decoration only through pixels that are STILL clearly outside the
+        // background core.  This recovers anti-aliased silver edges without allowing a bow
+        // to expand through orange/red background noise.
+        val growLimit = max(backgroundCoreThreshold + 4f, backgroundWideThreshold - 4f)
+        val growQueue = IntArray(localArea)
+        var gHead = 0
+        var gTail = 0
+        for (i in 0 until localArea) {
+            if (protect[i]) growQueue[gTail++] = i
+        }
+        while (gHead < gTail) {
+            val curr = growQueue[gHead++]
+            val cx = curr % sw
+            val cy = curr / sw
+            for (dy in -1..1) {
+                for (dx in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    val nx = cx + dx
+                    val ny = cy + dy
+                    if (nx !in 0 until sw || ny !in 0 until sh) continue
+                    val ni = ny * sw + nx
+                    if (!protect[ni] && localDistance[ni] > growLimit) {
+                        protect[ni] = true
+                        growQueue[gTail++] = ni
+                    }
+                }
+            }
+        }
+
+        // Preserve tiny pure-color highlight gaps only when fully enclosed by decoration.
+        val bridge = max(3, (min(sw, sh) * 0.012f).roundToInt()).coerceAtMost(8)
+        bridgeShortEnclosedGaps(protect, sw, sh, bridge)
+        val tinyHole = max(8, (localArea * 0.00035f).roundToInt()).coerceAtMost(90)
+        fillTinyEnclosedHoles(protect, sw, sh, tinyHole)
+
+        // Border-residue guard.  The rectangle itself is authoritative, so a background-like
+        // pixel on its 1-3 px inner ring must be transparent.  Decoration crossing the border
+        // is kept because only background-colored pixels are cleared here.
+        val borderRing = max(1, (min(sw, sh) * 0.004f).roundToInt()).coerceAtMost(3)
+        for (ly in 0 until sh) {
+            for (lx in 0 until sw) {
+                val li = ly * sw + lx
+                val nearBorder = lx < borderRing || ly < borderRing ||
+                    lx >= sw - borderRing || ly >= sh - borderRing
+                if (nearBorder && localDistance[li] <= backgroundWideThreshold + 4f) {
+                    protect[li] = false
+                }
+            }
+        }
+
+        // Final isolated-speckle suppression after all repair operations.  Any protected
+        // component smaller than this is noise, not a meaningful overlay decoration.
+        suppressTinyProtectedComponents(
+            mask = protect,
+            w = sw,
+            h = sh,
+            maxNoiseArea = max(10, (localArea * 0.00006f).roundToInt()).coerceAtMost(60)
+        )
+
+        // V16: remove the colored 1-3 px rim caused by anti-aliasing at the slot boundary.
+        // A real decoration crossing the red rectangle (star/bow) has protected pixels
+        // continuing inward, so it survives.  A slot-color rim has no inward support.
+        reconstructBorderFromInterior(
+            mask = protect,
+            w = sw,
+            h = sh,
+            borderBand = max(2, (min(sw, sh) * 0.0045f).roundToInt()).coerceAtMost(4)
+        )
+
+        // One more tiny-component pass after border cleanup because cutting the rim can
+        // disconnect little compression islands that were previously attached to it.
+        suppressTinyProtectedComponents(
+            mask = protect,
+            w = sw,
+            h = sh,
+            maxNoiseArea = max(10, (localArea * 0.00008f).roundToInt()).coerceAtMost(72)
+        )
+
+        // Authoritative rectangle-only write: outside the detected slot remains untouched.
+        // Protected decoration is restored EXACTLY from sourcePixels; all slot background
+        // becomes fully transparent (no partial alpha / no colored fringe).
+        for (y in slot.minY..slot.maxY) {
+            val row = y * width
+            for (x in slot.minX..slot.maxX) {
+                val gi = row + x
+                val li = localIndex(x, y)
+                punchedPixels[gi] = if (protect[li]) sourcePixels[gi] else 0x00000000
+            }
+        }
+    }
+
+    /**
+     * Remove unsupported residue in the inner border band of a detected slot.
+     *
+     * We do NOT blindly clear the whole band because real decorations can overlap a slot
+     * boundary.  A border pixel survives only if the protected object continues inward
+     * for several pixels along the corresponding edge normal.  This removes the thin
+     * orange/red/blue outline while preserving stars and the center bow.
+     */
+    /**
+     * Reconstruct only decoration that genuinely crosses the slot border.
+     *
+     * The anti-aliased slot rim is a thin protected ring at the exact rectangle edge.
+     * Clearing it blindly would also cut stars/bows that cross that edge.  So we:
+     *  1) remember the original protected mask,
+     *  2) clear the inner border band completely,
+     *  3) regrow ONLY original protected pixels from decoration that still exists deeper
+     *     inside the slot, for at most borderBand+1 steps.
+     *
+     * A real star/bow has interior support and grows back to its original edge.  A colored
+     * frame/rim has no deep interior body, so it cannot grow back across the whole border.
+     */
+    private fun reconstructBorderFromInterior(
+        mask: BooleanArray,
+        w: Int,
+        h: Int,
+        borderBand: Int
+    ) {
+        if (w <= 0 || h <= 0 || borderBand <= 0) return
+
+        val original = mask.copyOf()
+
+        fun isBorderBand(x: Int, y: Int): Boolean =
+            x < borderBand || y < borderBand ||
+                x >= w - borderBand || y >= h - borderBand
+
+        // Remove every protected pixel in the slot's inner rim first.
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                if (isBorderBand(x, y)) mask[y * w + x] = false
+            }
+        }
+
+        // Grow original decoration back from the surviving interior body.  Using only a
+        // few iterations prevents growth from travelling sideways along a frame-colored rim.
+        val add = BooleanArray(mask.size)
+        repeat(borderBand + 1) {
+            java.util.Arrays.fill(add, false)
+            var changed = false
+
+            for (y in 0 until h) {
+                for (x in 0 until w) {
+                    if (!isBorderBand(x, y)) continue
+                    val i = y * w + x
+                    if (mask[i] || !original[i]) continue
+
+                    var touchesInteriorDecoration = false
+                    loop@ for (dy in -1..1) {
+                        for (dx in -1..1) {
+                            if (dx == 0 && dy == 0) continue
+                            val nx = x + dx
+                            val ny = y + dy
+                            if (nx !in 0 until w || ny !in 0 until h) continue
+                            if (mask[ny * w + nx]) {
+                                touchesInteriorDecoration = true
+                                break@loop
+                            }
+                        }
+                    }
+
+                    if (touchesInteriorDecoration) {
+                        add[i] = true
+                        changed = true
+                    }
+                }
+            }
+
+            for (i in mask.indices) if (add[i]) mask[i] = true
+            if (!changed) return
+        }
+    }
+
+    /** Remove tiny disconnected protected islands left by compression/noise. */
+    private fun suppressTinyProtectedComponents(
+        mask: BooleanArray,
+        w: Int,
+        h: Int,
+        maxNoiseArea: Int
+    ) {
+        if (maxNoiseArea <= 0) return
+        val visited = BooleanArray(mask.size)
+        val queue = IntArray(mask.size)
+
+        for (start in mask.indices) {
+            if (!mask[start] || visited[start]) continue
+            var head = 0
+            var tail = 0
+            queue[tail++] = start
+            visited[start] = true
+
+            while (head < tail) {
+                val curr = queue[head++]
+                val cx = curr % w
+                val cy = curr / w
+                for (dy in -1..1) {
+                    for (dx in -1..1) {
+                        if (dx == 0 && dy == 0) continue
+                        val nx = cx + dx
+                        val ny = cy + dy
+                        if (nx !in 0 until w || ny !in 0 until h) continue
+                        val ni = ny * w + nx
+                        if (mask[ni] && !visited[ni]) {
+                            visited[ni] = true
+                            queue[tail++] = ni
+                        }
+                    }
+                }
+            }
+
+            if (tail <= maxNoiseArea) {
+                for (i in 0 until tail) mask[queue[i]] = false
             }
         }
     }
