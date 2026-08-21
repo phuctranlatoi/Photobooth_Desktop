@@ -23,6 +23,7 @@ import androidx.compose.ui.window.rememberWindowState
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.File
+import java.util.Locale
 import javax.imageio.ImageIO
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -286,143 +287,307 @@ fun CalculatorApp() {
     }
 }
 
+private data class CenterCluster(
+    val center: Float,
+    val members: List<Float>
+)
+
+private data class GridAnalysis(
+    val isRegular: Boolean,
+    val columns: List<Float>,
+    val rows: List<Float>,
+    val slotWidth: Float,
+    val slotHeight: Float,
+    val gapX: Float,
+    val gapY: Float,
+    val reason: String
+)
+
 private fun generateKotlinCode(idName: String, result: DetectionResult): String {
     val width = result.width.toFloat()
     val height = result.height.toFloat()
-    val slots = result.slots
-    val firstSlot = slots.first()
+    val slots = result.slots.sortedBy { it.index }
+
+    if (slots.isEmpty()) return "// Không tìm thấy slot ảnh."
 
     val rawAspectRatio = width / height
-    
-    // Auto-detect standard frame sizes
-    var printSizeLabel = "Tùy chỉnh"
-    var idealAspectRatio = rawAspectRatio
-    var printAspectRatioStr = String.format("%.4f", rawAspectRatio)
+    val printInfo = detectPrintSize(rawAspectRatio)
+    val grid = analyzeGrid(slots)
 
-    if (Math.abs(rawAspectRatio - (5f / 15f)) < 0.05f) {
-        printSizeLabel = "5 x 15 cm"
-        idealAspectRatio = 5f / 15f
-        printAspectRatioStr = "5f / 15f"
-    } else if (Math.abs(rawAspectRatio - (10f / 15f)) < 0.05f) {
-        printSizeLabel = "10 x 15 cm"
-        idealAspectRatio = 10f / 15f
-        printAspectRatioStr = "10f / 15f"
-    } else if (Math.abs(rawAspectRatio - (15f / 10f)) < 0.05f) {
-        printSizeLabel = "15 x 10 cm"
-        idealAspectRatio = 15f / 10f
-        printAspectRatioStr = "15f / 10f"
-    }
-    
-    // Tự động nhận diện lưới nhiều cột (Multi-column)
-    val centerXs = slots.map { it.centerX }.sorted()
-    val distinctColumns = mutableListOf<Float>()
-    for (cx in centerXs) {
-        if (distinctColumns.isEmpty() || cx - distinctColumns.last() > 0.05f) {
-            distinctColumns.add(cx)
+    val absoluteSlotsCode = buildString {
+        appendLine("// ============================================================")
+        appendLine("// SLOT COORDINATES - NGUỒN CHÍNH XÁC NHẤT")
+        appendLine("// Tọa độ normalized 0..1, KHÔNG suy ngược từ grid/gap.")
+        appendLine("// Frame sau crop: ${result.width}px x ${result.height}px")
+        appendLine("// Khổ nhận diện: ${printInfo.label}")
+        appendLine("// ============================================================")
+        appendLine("val detectedSlots = listOf(")
+
+        slots.forEachIndexed { index, slot ->
+            val pxX = (slot.x * width).toInt()
+            val pxY = (slot.y * height).toInt()
+            val pxW = (slot.width * width).toInt()
+            val pxH = (slot.height * height).toInt()
+
+            appendLine("    // Slot ${index + 1}: x=${pxX}px, y=${pxY}px, w=${pxW}px, h=${pxH}px")
+            appendLine("    FrameSlot(")
+            appendLine("        id = \"slot_${index + 1}\",")
+            appendLine("        index = $index,")
+            appendLine("        x = ${f6(slot.x)}f,")
+            appendLine("        y = ${f6(slot.y)}f,")
+            appendLine("        width = ${f6(slot.width)}f,")
+            appendLine("        height = ${f6(slot.height)}f,")
+            appendLine("        centerX = ${f6(slot.centerX)}f,")
+            appendLine("        centerY = ${f6(slot.centerY)}f,")
+            appendLine("        areaRatio = ${f6(slot.areaRatio)}f,")
+            appendLine("        shape = \"RECT\"")
+            append("    )")
+            if (index != slots.lastIndex) append(",")
+            appendLine()
         }
-    }
-    val gridColumns = distinctColumns.size
-
-    val centerYs = slots.map { it.centerY }.sorted()
-    val distinctRows = mutableListOf<Float>()
-    for (cy in centerYs) {
-        if (distinctRows.isEmpty() || cy - distinctRows.last() > 0.05f) {
-            distinctRows.add(cy)
-        }
-    }
-    val gridRows = distinctRows.size
-
-    val bleedPixels = 5f
-    val bleedX = bleedPixels / width
-    val bleedY = bleedPixels / height
-
-    var maxSlotWidthPercent = 0f
-    var maxSlotHeightPercent = 0f
-    for (slot in slots) {
-        if (slot.width > maxSlotWidthPercent) maxSlotWidthPercent = slot.width
-        if (slot.height > maxSlotHeightPercent) maxSlotHeightPercent = slot.height
+        appendLine(")")
     }
 
-    val trueSlotWidthPercent = maxSlotWidthPercent + 2 * bleedX
-    val trueSlotHeightPercent = maxSlotHeightPercent + 2 * bleedY
-
-    var strideYPercent = 0f
-    if (gridRows > 1) {
-        val distancesY = mutableListOf<Float>()
-        for (i in 1 until distinctRows.size) {
-            distancesY.add(distinctRows[i] - distinctRows[i-1])
-        }
-        distancesY.sort()
-        strideYPercent = distancesY[distancesY.size / 2]
+    if (!grid.isRegular) {
+        return buildString {
+            append(absoluteSlotsCode)
+            appendLine()
+            appendLine("// ============================================================")
+            appendLine("// FREEFORM / IRREGULAR LAYOUT")
+            appendLine("// ${grid.reason}")
+            appendLine("//")
+            appendLine("// QUAN TRỌNG:")
+            appendLine("// Không chuyển layout này thành gridColumns + gap + padding.")
+            appendLine("// Renderer phải dùng detectedSlots trực tiếp để đặt từng ảnh.")
+            appendLine("// Mỗi slot có x/y/width/height riêng nên các bố cục lệch nhau vẫn đúng.")
+            appendLine("//")
+            appendLine("// Photo bleed chỉ dùng KHI VẼ ẢNH, không được cộng vào tọa độ lỗ:")
+            val bleed = maxOf(2, (minOf(result.width, result.height) * 0.003f).toInt())
+            appendLine("// val photoBleedPx = ${bleed}")
+            appendLine("// drawPhoto(slotRect.expand(photoBleedPx))")
+            appendLine("// drawFrameOnTop(punchedFrame)")
+            appendLine("// ============================================================")
+        }.trimEnd()
     }
 
-    var strideXPercent = 0f
-    if (gridColumns > 1) {
-        val distancesX = mutableListOf<Float>()
-        for (i in 1 until distinctColumns.size) {
-            distancesX.add(distinctColumns[i] - distinctColumns[i-1])
-        }
-        distancesX.sort()
-        strideXPercent = distancesX[distancesX.size / 2]
-    }
+    val idealAspectRatio = printInfo.aspectRatio
+    val slotWidth = grid.slotWidth
+    val slotHeight = grid.slotHeight
 
-    val trueGapYPercent = Math.max(0f, strideYPercent - trueSlotHeightPercent)
-    val trueGapXPercent = Math.max(0f, strideXPercent - trueSlotWidthPercent)
+    val left = (grid.columns.first() - slotWidth / 2f).coerceAtLeast(0f)
+    val right = (grid.columns.last() + slotWidth / 2f).coerceAtMost(1f)
+    val top = (grid.rows.first() - slotHeight / 2f).coerceAtLeast(0f)
+    val bottom = (grid.rows.last() + slotHeight / 2f).coerceAtMost(1f)
 
-    val trueTopPercent = distinctRows.first() - (trueSlotHeightPercent / 2f)
-    val trueLeftPercent = distinctColumns.first() - (trueSlotWidthPercent / 2f)
+    // Giữ đúng quy ước ratio của LayoutMode hiện tại:
+    // X normalized theo frame width, Y normalized theo frame height.
+    val paddingTopRatio = top / idealAspectRatio
+    val paddingBottomRatio = (1f - bottom) / idealAspectRatio
+    val paddingLeftRatio = left
+    val paddingRightRatio = 1f - right
+    val gapHorizontalRatio = grid.gapX.coerceAtLeast(0f)
+    val gapVerticalRatio = grid.gapY.coerceAtLeast(0f) / idealAspectRatio
+    val photoAspectRatio = (slotWidth * idealAspectRatio) / slotHeight
 
-    val trueBottomPercent = trueTopPercent + gridRows * trueSlotHeightPercent + (gridRows - 1) * trueGapYPercent
-    val trueRightPercent = trueLeftPercent + gridColumns * trueSlotWidthPercent + (gridColumns - 1) * trueGapXPercent
+    val rawSlotW = (slotWidth * width).toInt()
+    val rawSlotH = (slotHeight * height).toInt()
+    val rawGapX = (grid.gapX * width).toInt().coerceAtLeast(0)
+    val rawGapY = (grid.gapY * height).toInt().coerceAtLeast(0)
+    val rawPadLeft = (left * width).toInt()
+    val rawPadRight = ((1f - right) * width).toInt()
+    val rawPadTop = (top * height).toInt()
+    val rawPadBottom = ((1f - bottom) * height).toInt()
+    val bleed = maxOf(2, (minOf(result.width, result.height) * 0.003f).toInt())
 
-    val paddingTopRatio = trueTopPercent / idealAspectRatio
-    val paddingBottomRatio = (1f - trueBottomPercent) / idealAspectRatio
-    val paddingLeftRatio = trueLeftPercent
-    val paddingRightRatio = 1f - trueRightPercent
-    
-    val gapVerticalRatio = if (gridRows > 1) trueGapYPercent / idealAspectRatio else trueGapXPercent
-    val gapHorizontalRatio = if (gridColumns > 1) trueGapXPercent else gapVerticalRatio
-
-    val photoAspectRatio = (trueSlotWidthPercent * idealAspectRatio) / trueSlotHeightPercent
-
-    // Raw Pixel Data for user information
-    val rawSlotW = (trueSlotWidthPercent * width).toInt()
-    val rawSlotH = (trueSlotHeightPercent * height).toInt()
-    val rawPadTop = (trueTopPercent * height).toInt()
-    val rawPadBottom = ((1f - trueBottomPercent) * height).toInt()
-    val rawPadLeft = (trueLeftPercent * width).toInt()
-    val rawPadRight = ((1f - trueRightPercent) * width).toInt()
-    val rawGapY = (trueGapYPercent * height).toInt()
-    val rawGapX = (trueGapXPercent * width).toInt()
-
-    return """
-    // --- BẢNG THÔNG SỐ PIXEL THẬT (PRO MODE) ---
-    // Khung lưới: $gridColumns cột x $gridRows hàng
-    // Kích thước ảnh thật (sau bleed): ${rawSlotW}px x ${rawSlotH}px
-    // Khoảng cách (Gap X/Y): ${rawGapX}px / ${rawGapY}px
-    // Padding (T/B/L/R): ${rawPadTop}px / ${rawPadBottom}px / ${rawPadLeft}px / ${rawPadRight}px
-    // -------------------------------------------
-    LayoutMode(
-        id = "$idName",
-        title = "Tên Khung",
-        subtitle = "$printSizeLabel",
-        description = "Mô tả khung",
-        family = LayoutFamily.Grid,
-        shotCount = ${slots.size},
-        selectCount = ${slots.size},
-        basePrice = 50000L,
-        mediaLabel = "In 1 ảnh $printSizeLabel",
-        accentColor = 0xFF475569,
-        gridColumns = $gridColumns,
-        printSizeLabel = "$printSizeLabel",
-        printAspectRatio = $printAspectRatioStr,
-        photoAspectRatio = ${String.format("%.4f", photoAspectRatio)}f,
-        paddingTopRatio = ${String.format("%.4f", paddingTopRatio)}f,
-        paddingBottomRatio = ${String.format("%.4f", paddingBottomRatio)}f,
-        paddingLeftRatio = ${String.format("%.4f", paddingLeftRatio)}f,
-        paddingRightRatio = ${String.format("%.4f", paddingRightRatio)}f,
-        gapHorizontalRatio = ${String.format("%.4f", gapHorizontalRatio)}f,
-        gapVerticalRatio = ${String.format("%.4f", gapVerticalRatio)}f
-    )
-    """.trimIndent()
+    return buildString {
+        append(absoluteSlotsCode)
+        appendLine()
+        appendLine("// ============================================================")
+        appendLine("// REGULAR GRID - có thể dùng LayoutMode legacy")
+        appendLine("// Grid: ${grid.columns.size} cột x ${grid.rows.size} hàng")
+        appendLine("// Slot thật: ${rawSlotW}px x ${rawSlotH}px")
+        appendLine("// Gap X/Y thật: ${rawGapX}px / ${rawGapY}px")
+        appendLine("// Padding T/B/L/R: ${rawPadTop}px / ${rawPadBottom}px / ${rawPadLeft}px / ${rawPadRight}px")
+        appendLine("// Photo bleed đề xuất khi render: ${bleed}px (KHÔNG cộng vào hole/slot)")
+        appendLine("// ============================================================")
+        appendLine("LayoutMode(")
+        appendLine("    id = \"$idName\",")
+        appendLine("    title = \"Tên Khung\",")
+        appendLine("    subtitle = \"${printInfo.label}\",")
+        appendLine("    description = \"Mô tả khung\",")
+        appendLine("    family = LayoutFamily.Grid,")
+        appendLine("    shotCount = ${slots.size},")
+        appendLine("    selectCount = ${slots.size},")
+        appendLine("    basePrice = 50000L,")
+        appendLine("    mediaLabel = \"In 1 ảnh ${printInfo.label}\",")
+        appendLine("    accentColor = 0xFF475569,")
+        appendLine("    gridColumns = ${grid.columns.size},")
+        appendLine("    printSizeLabel = \"${printInfo.label}\",")
+        appendLine("    printAspectRatio = ${printInfo.kotlinRatio},")
+        appendLine("    photoAspectRatio = ${f4(photoAspectRatio)}f,")
+        appendLine("    paddingTopRatio = ${f4(paddingTopRatio)}f,")
+        appendLine("    paddingBottomRatio = ${f4(paddingBottomRatio)}f,")
+        appendLine("    paddingLeftRatio = ${f4(paddingLeftRatio)}f,")
+        appendLine("    paddingRightRatio = ${f4(paddingRightRatio)}f,")
+        appendLine("    gapHorizontalRatio = ${f4(gapHorizontalRatio)}f,")
+        appendLine("    gapVerticalRatio = ${f4(gapVerticalRatio)}f")
+        appendLine(")")
+    }.trimEnd()
 }
+
+private data class PrintInfo(
+    val label: String,
+    val aspectRatio: Float,
+    val kotlinRatio: String
+)
+
+private fun detectPrintSize(rawAspectRatio: Float): PrintInfo {
+    val standards = listOf(
+        PrintInfo("5 x 15 cm", 5f / 15f, "5f / 15f"),
+        PrintInfo("10 x 15 cm", 10f / 15f, "10f / 15f"),
+        PrintInfo("15 x 10 cm", 15f / 10f, "15f / 10f")
+    )
+
+    val closest = standards.minByOrNull { kotlin.math.abs(rawAspectRatio - it.aspectRatio) }!!
+    return if (kotlin.math.abs(rawAspectRatio - closest.aspectRatio) <= 0.055f) {
+        closest
+    } else {
+        PrintInfo(
+            label = "Tùy chỉnh",
+            aspectRatio = rawAspectRatio,
+            kotlinRatio = "${f6(rawAspectRatio)}f"
+        )
+    }
+}
+
+/**
+ * Chỉ gọi là Grid khi thật sự có đủ mọi giao điểm row x column, kích thước slot gần bằng nhau
+ * và khoảng cách giữa các hàng/cột gần đều. Nhờ vậy layout chéo/lệch không còn bị ép sai thành grid.
+ */
+private fun analyzeGrid(slots: List<FrameSlot>): GridAnalysis {
+    val widths = slots.map { it.width }.sorted()
+    val heights = slots.map { it.height }.sorted()
+    val medianW = widths[widths.size / 2]
+    val medianH = heights[heights.size / 2]
+
+    val xTolerance = maxOf(0.012f, medianW * 0.18f)
+    val yTolerance = maxOf(0.012f, medianH * 0.18f)
+
+    val columns = clusterCenters(slots.map { it.centerX }, xTolerance).map { it.center }.sorted()
+    val rows = clusterCenters(slots.map { it.centerY }, yTolerance).map { it.center }.sorted()
+
+    if (columns.isEmpty() || rows.isEmpty()) {
+        return GridAnalysis(false, columns, rows, medianW, medianH, 0f, 0f, "Không tạo được cụm hàng/cột.")
+    }
+
+    if (slots.size != columns.size * rows.size) {
+        return GridAnalysis(
+            false, columns, rows, medianW, medianH, 0f, 0f,
+            "Số slot (${slots.size}) không bằng số giao điểm grid (${columns.size} x ${rows.size} = ${columns.size * rows.size})."
+        )
+    }
+
+    if (relativeSpread(widths) > 0.065f || relativeSpread(heights) > 0.065f) {
+        return GridAnalysis(
+            false, columns, rows, medianW, medianH, 0f, 0f,
+            "Kích thước các slot không đồng đều đủ để biểu diễn bằng một grid duy nhất."
+        )
+    }
+
+    val occupied = mutableSetOf<Pair<Int, Int>>()
+    for (slot in slots) {
+        val col = nearestCenterIndex(slot.centerX, columns)
+        val row = nearestCenterIndex(slot.centerY, rows)
+
+        if (kotlin.math.abs(slot.centerX - columns[col]) > xTolerance ||
+            kotlin.math.abs(slot.centerY - rows[row]) > yTolerance
+        ) {
+            return GridAnalysis(
+                false, columns, rows, medianW, medianH, 0f, 0f,
+                "Có slot lệch khỏi tâm hàng/cột vượt tolerance."
+            )
+        }
+
+        if (!occupied.add(col to row)) {
+            return GridAnalysis(
+                false, columns, rows, medianW, medianH, 0f, 0f,
+                "Có nhiều slot rơi vào cùng một ô grid."
+            )
+        }
+    }
+
+    val xDistances = columns.zipWithNext { a, b -> b - a }
+    val yDistances = rows.zipWithNext { a, b -> b - a }
+
+    if (relativeSpread(xDistances) > 0.08f || relativeSpread(yDistances) > 0.08f) {
+        return GridAnalysis(
+            false, columns, rows, medianW, medianH, 0f, 0f,
+            "Khoảng cách giữa các hàng/cột không đều; dùng absolute slots sẽ chính xác hơn."
+        )
+    }
+
+    val strideX = if (xDistances.isEmpty()) 0f else xDistances.sorted()[xDistances.size / 2]
+    val strideY = if (yDistances.isEmpty()) 0f else yDistances.sorted()[yDistances.size / 2]
+    val gapX = if (columns.size > 1) (strideX - medianW).coerceAtLeast(0f) else 0f
+    val gapY = if (rows.size > 1) (strideY - medianH).coerceAtLeast(0f) else 0f
+
+    return GridAnalysis(
+        isRegular = true,
+        columns = columns,
+        rows = rows,
+        slotWidth = medianW,
+        slotHeight = medianH,
+        gapX = gapX,
+        gapY = gapY,
+        reason = "REGULAR_GRID"
+    )
+}
+
+private fun clusterCenters(values: List<Float>, tolerance: Float): List<CenterCluster> {
+    if (values.isEmpty()) return emptyList()
+
+    val sorted = values.sorted()
+    val clusters = mutableListOf<MutableList<Float>>()
+
+    for (value in sorted) {
+        val last = clusters.lastOrNull()
+        if (last == null) {
+            clusters += mutableListOf(value)
+        } else {
+            val mean = last.average().toFloat()
+            if (kotlin.math.abs(value - mean) <= tolerance) {
+                last += value
+            } else {
+                clusters += mutableListOf(value)
+            }
+        }
+    }
+
+    return clusters.map { group ->
+        CenterCluster(group.average().toFloat(), group.toList())
+    }
+}
+
+private fun nearestCenterIndex(value: Float, centers: List<Float>): Int {
+    var bestIndex = 0
+    var bestDistance = Float.MAX_VALUE
+    centers.forEachIndexed { index, center ->
+        val d = kotlin.math.abs(value - center)
+        if (d < bestDistance) {
+            bestDistance = d
+            bestIndex = index
+        }
+    }
+    return bestIndex
+}
+
+private fun relativeSpread(values: List<Float>): Float {
+    if (values.size <= 1) return 0f
+    val sorted = values.sorted()
+    val median = sorted[sorted.size / 2]
+    if (median <= 0.000001f) return 0f
+    return (sorted.last() - sorted.first()) / median
+}
+
+private fun f4(value: Float): String = String.format(Locale.US, "%.4f", value)
+private fun f6(value: Float): String = String.format(Locale.US, "%.6f", value)
