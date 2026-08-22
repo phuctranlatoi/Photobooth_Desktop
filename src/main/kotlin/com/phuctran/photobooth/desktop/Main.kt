@@ -15,7 +15,13 @@ import com.phuctran.photobooth.desktop.ui.screens.*
 import com.phuctran.photobooth.desktop.ui.theme.PhotoboothTheme
 
 import com.phuctran.photobooth.desktop.remote.FirebaseManager
-
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.material.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 fun main() = application {
     // Initialize Firebase Admin SDK
     FirebaseManager.initialize()
@@ -42,22 +48,34 @@ fun main() = application {
         val totalPrice by controller.totalPrice.collectAsState()
         val statusMessage by controller.statusMessage.collectAsState()
 
+        val isAppReady by controller.isAppReady.collectAsState()
+        val availableLayouts by controller.availableLayouts.collectAsState()
+
         PhotoboothTheme {
             AppShell(state) {
-                when (state) {
-                    SessionState.IDLE -> StartScreen(
-                        onStart = { controller.transitionTo(SessionState.SELECTING) },
-                        onAdmin = { controller.transitionTo(SessionState.ADMIN) }
-                    )
-                    SessionState.SELECTING -> StudioModeScreen(
-                        layouts = com.phuctran.photobooth.desktop.model.DefaultLayoutModes,
-                        effects = com.phuctran.photobooth.desktop.model.DefaultEffectModes,
-                        selectedLayout = layout,
-                        selectedEffect = effect,
-                        onLayoutSelected = { controller.chooseLayout(it) },
-                        onEffectSelected = { controller.chooseEffect(it) },
-                        onConfirm = { controller.confirmStudioSetup() }
-                    )
+                if (!isAppReady) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            CircularProgressIndicator(color = Color.White)
+                            Text("Đang tải dữ liệu Layout từ Firebase...", color = Color.White)
+                        }
+                    }
+                } else {
+                    when (state) {
+                        SessionState.IDLE -> StartScreen(
+                            onStart = { controller.transitionTo(SessionState.SELECTING) },
+                            onAdmin = { controller.transitionTo(SessionState.ADMIN) }
+                        )
+                        SessionState.SELECTING -> StudioModeScreen(
+                            layouts = availableLayouts,
+                            effects = com.phuctran.photobooth.desktop.model.DefaultEffectModes,
+                            selectedLayout = layout,
+                            selectedEffect = effect,
+                            onLayoutSelected = { controller.chooseLayout(it) },
+                            onEffectSelected = { controller.chooseEffect(it) },
+                            onConfirm = { controller.confirmStudioSetup() },
+                            onBack = { controller.transitionTo(SessionState.IDLE) }
+                        )
                     SessionState.SELECTING_QUANTITY -> QuantityScreen(
                         layout = layout,
                         effect = effect,
@@ -117,12 +135,12 @@ fun main() = application {
                         selectedMoments = selectedMoments,
                         selectedFrame = frame,
                         onFrameSelected = { controller.chooseFrame(it) },
-                        onAddFrame = {
+                        onAddFrame = { isSpecial ->
                             val chooser = javax.swing.JFileChooser().apply { 
                                 fileFilter = javax.swing.filechooser.FileNameExtensionFilter("PNG Frame", "png")
                             }
                             if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
-                                controller.addCustomFrame(chooser.selectedFile.toPath(), layout.id)
+                                controller.addCustomFrame(chooser.selectedFile.toPath(), layout, isSpecial)
                             }
                         },
                         onConfirm = { controller.confirmFrameSelection() },
@@ -150,6 +168,7 @@ fun main() = application {
                     SessionState.ADMIN -> {
                         val currentConfig by controller.activeConfig.collectAsState()
                         AdminScreen(
+                            layouts = availableLayouts,
                             frames = availableFrames,
                             config = currentConfig,
                             nativeCamera = controller.nativeCamera,
@@ -158,8 +177,14 @@ fun main() = application {
                                     fileFilter = javax.swing.filechooser.FileNameExtensionFilter("PNG Frame", "png")
                                 }
                                 if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
-                                    controller.addCustomFrame(chooser.selectedFile.toPath(), layoutId)
+                                    val targetLayout = availableLayouts.firstOrNull { it.id == layoutId }
+                                    if (targetLayout != null) {
+                                        controller.addCustomFrame(chooser.selectedFile.toPath(), targetLayout, isSpecial = false)
+                                    }
                                 }
+                            },
+                            onDeleteLayout = { layoutId ->
+                                controller.deleteLayout(layoutId)
                             },
                             onSaveSettings = { enablePrint, useHotFolder, hotFolderPath ->
                                 controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath)
@@ -168,6 +193,7 @@ fun main() = application {
                         )
                     }
                     else -> {}
+                }
                 }
             }
         }

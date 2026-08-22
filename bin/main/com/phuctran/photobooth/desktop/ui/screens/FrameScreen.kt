@@ -20,6 +20,7 @@ import com.phuctran.photobooth.desktop.ui.theme.*
 
 
 import java.nio.file.Path
+import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 
 @Composable
 fun FrameScreen(
@@ -28,21 +29,50 @@ fun FrameScreen(
     selectedMoments: List<CapturedMoment>,
     selectedFrame: FramePack,
     onFrameSelected: (String) -> Unit,
-    onAddFrame: () -> Unit,
+    onAddFrame: (Boolean) -> Unit,
     onConfirm: () -> Unit,
     onBack: () -> Unit
 ) {
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PrintPreview(layout, selectedMoments, selectedFrame, Modifier.weight(0.8f).fillMaxHeight())
         PanelBox(Modifier.weight(1f).fillMaxHeight()) {
+            var selectedTab by remember { mutableStateOf(0) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 SectionHeader("Bước 6", "Chọn khung ảnh", "Bấm vào khung để thay đổi.")
-                OutlinedButton(onClick = onAddFrame) { Text("Thêm PNG") }
+                OutlinedButton(onClick = { onAddFrame(selectedTab == 1) }) { Text("Thêm PNG") }
             }
             Spacer(Modifier.height(12.dp))
+            val standardFrames = frames.filter { !it.isSpecial }
+            val specialFrames = frames.filter { it.isSpecial }
+            
+            TabRow(
+                selectedTabIndex = selectedTab,
+                backgroundColor = Color.Transparent,
+                contentColor = MaterialTheme.colors.primary,
+                indicator = { tabPositions ->
+                    TabRowDefaults.Indicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = MaterialTheme.colors.primary
+                    )
+                }
+            ) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) { 
+                    Text("Khung Tiêu Chuẩn", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, color = if (selectedTab == 0) MaterialTheme.colors.primary else NeutralMuted) 
+                }
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) { 
+                    Text("Sự Kiện Đặc Biệt", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, color = if (selectedTab == 1) MaterialTheme.colors.primary else NeutralMuted) 
+                }
+            }
+            
+            Spacer(Modifier.height(12.dp))
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                frames.forEach { frame ->
-                    FrameChoice(frame, frame.id == selectedFrame.id) { onFrameSelected(frame.id) }
+                val displayFrames = if (selectedTab == 0) standardFrames else specialFrames
+                if (displayFrames.isEmpty()) {
+                    Text("Chưa có khung ảnh nào.", color = NeutralMuted, modifier = Modifier.padding(16.dp))
+                } else {
+                    displayFrames.forEach { frame ->
+                        FrameChoice(frame, frame.id == selectedFrame.id) { onFrameSelected(frame.id) }
+                    }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

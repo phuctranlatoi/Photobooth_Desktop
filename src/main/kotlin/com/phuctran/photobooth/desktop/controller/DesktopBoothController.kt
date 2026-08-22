@@ -9,7 +9,6 @@ import com.phuctran.photobooth.desktop.imaging.DesktopImageProcessor
 import com.phuctran.photobooth.desktop.model.BoothSession
 import com.phuctran.photobooth.desktop.model.CapturedMoment
 import com.phuctran.photobooth.desktop.model.DefaultEffectModes
-import com.phuctran.photobooth.desktop.model.DefaultFramePacks
 import com.phuctran.photobooth.desktop.model.DefaultLayoutModes
 import com.phuctran.photobooth.desktop.model.EffectMode
 import com.phuctran.photobooth.desktop.model.ExportSummary
@@ -69,16 +68,27 @@ class DesktopBoothController(
 
     val sessionState: StateFlow<SessionState> = stateMachine.currentState
 
+    private val _isAppReady = MutableStateFlow(false)
+    val isAppReady = _isAppReady.asStateFlow()
+
+    private val _availableLayouts = MutableStateFlow(DefaultLayoutModes)
+    val availableLayouts = _availableLayouts.asStateFlow()
+
     private val _selectedLayout = MutableStateFlow(DefaultLayoutModes.first())
     val selectedLayout = _selectedLayout.asStateFlow()
 
     private val _selectedEffect = MutableStateFlow(DefaultEffectModes.first())
     val selectedEffect = _selectedEffect.asStateFlow()
 
-    private val _availableFrames = MutableStateFlow(DefaultFramePacks)
+    private val _availableFrames = MutableStateFlow<List<com.phuctran.photobooth.desktop.model.FramePack>>(emptyList())
     val availableFrames = _availableFrames.asStateFlow()
 
-    private val _selectedFrame = MutableStateFlow(DefaultFramePacks.first())
+    private val _selectedFrame = MutableStateFlow(com.phuctran.photobooth.desktop.model.FramePack(
+        id = "empty",
+        title = "Chưa có khung ảnh",
+        description = "Vui lòng vào Cài Đặt -> Tạo Layout/Frame để lưu khung ảnh cho bố cục này.",
+        accentColor = 0xFF5F6B7A
+    ))
     val selectedFrame = _selectedFrame.asStateFlow()
 
     private val _printCopies = MutableStateFlow(1)
@@ -124,9 +134,21 @@ class DesktopBoothController(
     }
 
     init {
-        refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
-        refreshCameraDevices()
-        localServer?.start()
+        scope.launch {
+            try {
+                val layoutsFromFirebase = com.phuctran.photobooth.desktop.remote.FirebaseManager.fetchLayouts()
+                if (layoutsFromFirebase.isNotEmpty()) {
+                    _availableLayouts.value = layoutsFromFirebase
+                    _selectedLayout.value = layoutsFromFirebase.first()
+                }
+            } catch (e: Exception) {
+                println("Failed to fetch layouts from Firebase: ${e.message}")
+            }
+            refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
+            refreshCameraDevices()
+            localServer?.start()
+            _isAppReady.value = true
+        }
     }
 
     fun transitionTo(newState: SessionState) {
@@ -134,7 +156,7 @@ class DesktopBoothController(
     }
 
     fun chooseLayout(layoutId: String) {
-        val layout = DefaultLayoutModes.firstOrNull { it.id == layoutId } ?: return
+        val layout = _availableLayouts.value.firstOrNull { it.id == layoutId } ?: return
         _selectedLayout.value = layout
         _selectedMoments.value = emptyList()
         _capturedMoments.value = emptyList()
@@ -279,7 +301,17 @@ class DesktopBoothController(
                         java.nio.file.Files.createDirectories(dummyPath.parent)
                         val img = java.awt.image.BufferedImage(1200, 1800, java.awt.image.BufferedImage.TYPE_INT_RGB)
                         val g = img.createGraphics()
-                        g.color = java.awt.Color.DARK_GRAY
+                        val colors = arrayOf(
+                            java.awt.Color(220, 53, 69),   // Red
+                            java.awt.Color(40, 167, 69),   // Green
+                            java.awt.Color(0, 123, 255),   // Blue
+                            java.awt.Color(255, 193, 7),   // Yellow
+                            java.awt.Color(23, 162, 184),  // Cyan
+                            java.awt.Color(111, 66, 193),  // Purple
+                            java.awt.Color(253, 126, 20),  // Orange
+                            java.awt.Color(32, 201, 151)   // Teal
+                        )
+                        g.color = colors[(index - 1) % colors.size]
                         g.fillRect(0, 0, 1200, 1800)
                         g.color = java.awt.Color.WHITE
                         g.font = java.awt.Font("Arial", java.awt.Font.BOLD, 150)
@@ -374,8 +406,8 @@ class DesktopBoothController(
         }
     }
 
-    fun addCustomFrame(path: Path, layoutId: String) {
-        runCatching { frameStore.addCustomFrame(path, layoutId) }
+    fun addCustomFrame(path: Path, layout: LayoutMode, isSpecial: Boolean = false) {
+        runCatching { frameStore.addCustomFrame(path, layout.printSizeLabel, layout.id, isSpecial) }
             .onSuccess { frame ->
                 refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
                 _selectedFrame.value = frame
@@ -529,7 +561,12 @@ class DesktopBoothController(
         _selectedMoments.value = emptyList()
         _countdown.value = 0
         _printCopies.value = 1
-        _selectedFrame.value = DefaultFramePacks.first()
+        _selectedFrame.value = _availableFrames.value.firstOrNull() ?: com.phuctran.photobooth.desktop.model.FramePack(
+            id = "empty",
+            title = "Chưa có khung ảnh",
+            description = "Vui lòng vào Cài Đặt -> Tạo Layout/Frame để lưu khung ảnh cho bố cục này.",
+            accentColor = 0xFF5F6B7A
+        )
         _exportSummary.value = ExportSummary(0, 0, 0)
         _statusMessage.value = "Sẵn sàng."
         stateMachine.reset()
@@ -611,4 +648,13 @@ class DesktopBoothController(
         )
     }
 
+    fun deleteLayout(layoutId: String) {
+        scope.launch {
+            com.phuctran.photobooth.desktop.remote.FirebaseManager.deleteLayout(layoutId)
+            val updatedLayouts = com.phuctran.photobooth.desktop.remote.FirebaseManager.fetchLayouts()
+            if (updatedLayouts.isNotEmpty()) {
+                _availableLayouts.value = updatedLayouts
+            }
+        }
+    }
 }

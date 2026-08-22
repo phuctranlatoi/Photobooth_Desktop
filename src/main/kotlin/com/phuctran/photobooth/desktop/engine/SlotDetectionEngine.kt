@@ -1626,6 +1626,12 @@ class SlotDetectionEngine {
         val rectH = bottom - top + 1
         if (rectW < width * 0.10f || rectH < height * 0.10f) return null
 
+        // Expand by 1 pixel outwards to ensure the red box tightly covers anti-aliased edges
+        left = max(0, left - 1)
+        right = min(width - 1, right + 1)
+        top = max(0, top - 1)
+        bottom = min(height - 1, bottom + 1)
+
         return SlotBounds(left, right, top, bottom, component.area, component.id)
     }
 
@@ -1639,18 +1645,32 @@ class SlotDetectionEngine {
         y1: Int,
         searchRight: Boolean
     ): Int {
-        val range = if (searchRight) minCandidate..maxCandidate else minCandidate downTo maxCandidate
-        val span = max(1, y1 - y0 + 1)
-        // INCREASED threshold from 0.32f to 0.60f so it ignores sparse thin borders (like text) and only hits dense slot edges
-        val threshold = 0.60f
-        for (x in range) {
-            var count = 0
+        val step = if (searchRight) 1 else -1
+        var maxScore = -1
+
+        // Find the absolute maximum score in the search window
+        var x = if (searchRight) minCandidate else maxCandidate
+        while (if (searchRight) x <= maxCandidate else x >= minCandidate) {
+            var score = 0
             for (y in y0..y1) {
-                if (mask[y * width + x]) count++
+                if (mask[y * width + x]) score++
             }
-            if (count.toFloat() / span >= threshold) return x
+            if (score > maxScore) maxScore = score
+            x += step
         }
-        return maxCandidate
+        
+        // Accept the outermost column that has at least 85% of the max score
+        val threshold = (maxScore * 0.85f).toInt()
+        x = if (searchRight) minCandidate else maxCandidate
+        while (if (searchRight) x <= maxCandidate else x >= minCandidate) {
+            var score = 0
+            for (y in y0..y1) {
+                if (mask[y * width + x]) score++
+            }
+            if (score >= threshold) return x
+            x += step
+        }
+        return if (searchRight) maxCandidate else minCandidate
     }
 
     private fun refineHorizontalEdge(
@@ -1663,19 +1683,32 @@ class SlotDetectionEngine {
         x1: Int,
         searchDown: Boolean
     ): Int {
-        val range = if (searchDown) minCandidate..maxCandidate else minCandidate downTo maxCandidate
-        val span = max(1, x1 - x0 + 1)
-        // INCREASED threshold from 0.32f to 0.60f so it ignores sparse thin borders (like text) and only hits dense slot edges
-        val threshold = 0.60f
-        for (y in range) {
-            var count = 0
+        val step = if (searchDown) 1 else -1
+        var maxScore = -1
+
+        var y = if (searchDown) minCandidate else maxCandidate
+        while (if (searchDown) y <= maxCandidate else y >= minCandidate) {
+            var score = 0
             val row = y * width
             for (x in x0..x1) {
-                if (mask[row + x]) count++
+                if (mask[row + x]) score++
             }
-            if (count.toFloat() / span >= threshold) return y
+            if (score > maxScore) maxScore = score
+            y += step
         }
-        return maxCandidate
+        
+        val threshold = (maxScore * 0.85f).toInt()
+        y = if (searchDown) minCandidate else maxCandidate
+        while (if (searchDown) y <= maxCandidate else y >= minCandidate) {
+            var score = 0
+            val row = y * width
+            for (x in x0..x1) {
+                if (mask[row + x]) score++
+            }
+            if (score >= threshold) return y
+            y += step
+        }
+        return if (searchDown) maxCandidate else minCandidate
     }
 
     private fun seedCoverage(rect: SlotBounds, mask: BooleanArray, width: Int): Float {

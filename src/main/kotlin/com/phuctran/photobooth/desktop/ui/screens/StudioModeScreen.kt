@@ -8,12 +8,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import kotlinx.coroutines.launch
 
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.scrollBy
 import com.phuctran.photobooth.desktop.domain.SessionState
 import com.phuctran.photobooth.desktop.model.*
 import com.phuctran.photobooth.desktop.ui.components.*
@@ -30,26 +37,19 @@ fun StudioModeScreen(
     selectedEffect: EffectMode,
     onLayoutSelected: (String) -> Unit,
     onEffectSelected: (String) -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    onBack: () -> Unit
 ) {
     var step by remember { mutableStateOf(1) }
-    var selectedSize by remember { mutableStateOf(selectedLayout.printSizeLabel) }
-    
-    val availableSizes = layouts.map { it.printSizeLabel }.distinct()
-    val layoutsForSize = layouts.filter { it.printSizeLabel == selectedSize }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         // Top Progress Bar
         Row(Modifier.fillMaxWidth().height(60.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            StepIndicator(step = 1, currentStep = step, label = "Kích cỡ khung")
+            StepIndicator(step = 1, currentStep = step, label = "Bố cục")
             Spacer(Modifier.width(32.dp))
             Divider(Modifier.width(100.dp), color = if (step >= 2) MaterialTheme.colors.primary else NeutralBorder)
             Spacer(Modifier.width(32.dp))
-            StepIndicator(step = 2, currentStep = step, label = "Bố cục")
-            Spacer(Modifier.width(32.dp))
-            Divider(Modifier.width(100.dp), color = if (step >= 3) MaterialTheme.colors.primary else NeutralBorder)
-            Spacer(Modifier.width(32.dp))
-            StepIndicator(step = 3, currentStep = step, label = "Màu ảnh")
+            StepIndicator(step = 2, currentStep = step, label = "Màu ảnh")
         }
 
         PanelBox(Modifier.fillMaxSize()) {
@@ -57,31 +57,21 @@ fun StudioModeScreen(
                 targetState = step
             ) { targetStep ->
                 when (targetStep) {
-                    1 -> Step1PrintSize(
-                        availableSizes = availableSizes,
-                        selectedSize = selectedSize,
-                        onSizeSelect = { size ->
-                            selectedSize = size
-                            val firstLayout = layouts.first { it.printSizeLabel == size }
-                            onLayoutSelected(firstLayout.id)
-                            step = 2
-                        }
-                    )
-                    2 -> Step2Layout(
-                        layouts = layoutsForSize,
+                    1 -> Step1Layout(
+                        layouts = layouts,
                         selectedLayout = selectedLayout,
                         onLayoutSelect = {
                             onLayoutSelected(it.id)
-                            step = 3
+                            step = 2
                         },
-                        onBack = { step = 1 }
+                        onBack = onBack
                     )
-                    3 -> Step3Effect(
+                    2 -> Step2Effect(
                         effects = effects,
                         selectedEffect = selectedEffect,
                         selectedLayout = selectedLayout,
                         onEffectSelect = onEffectSelected,
-                        onBack = { step = 2 },
+                        onBack = { step = 1 },
                         onConfirm = onConfirm
                     )
                 }
@@ -105,93 +95,129 @@ fun StepIndicator(step: Int, currentStep: Int, label: String) {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun Step1PrintSize(
-    availableSizes: List<String>,
-    selectedSize: String,
-    onSizeSelect: (String) -> Unit
-) {
-    Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("CHỌN KÍCH CỠ KHUNG", style = MaterialTheme.typography.h3, fontWeight = FontWeight.Black, color = NeutralText)
-        Spacer(Modifier.height(8.dp))
-        Text("Bước đầu tiên để có một bức ảnh đẹp.", style = MaterialTheme.typography.h6, color = NeutralMuted)
-        
-        Spacer(Modifier.height(32.dp))
-        
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            availableSizes.forEach { size ->
-                val isSelected = size == selectedSize
-                Box(
-                    modifier = Modifier
-                        .size(240.dp, 320.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(if (isSelected) MaterialTheme.colors.primary.copy(alpha = 0.1f) else NeutralPanel)
-                        .border(
-                            width = if (isSelected) 4.dp else 1.dp,
-                            color = if (isSelected) MaterialTheme.colors.primary else NeutralBorder,
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                        .clickable { onSizeSelect(size) }
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Box(
-                            Modifier.size(160.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).border(1.dp, NeutralBorder, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Dummy visual for size
-                            val isLandscape = size.startsWith("15")
-                            Box(Modifier.size(if (isLandscape) 120.dp else 80.dp, if (isLandscape) 80.dp else 120.dp).border(4.dp, NeutralBorder))
-                        }
-                        Text(size, style = MaterialTheme.typography.h4, fontWeight = FontWeight.Bold, color = NeutralText)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun Step2Layout(
+fun Step1Layout(
     layouts: List<LayoutMode>,
     selectedLayout: LayoutMode,
     onLayoutSelect: (LayoutMode) -> Unit,
     onBack: () -> Unit
 ) {
-    Row(Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-        Column(Modifier.width(400.dp).fillMaxHeight()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Text("←", fontSize = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.width(16.dp))
-                SectionHeader("Bước 2", "Chọn bố cục", "Nhấn vào bố cục để chọn và đi tiếp.")
+    val coroutineScope = rememberCoroutineScope()
+    val actualInitialIndex = layouts.indexOfFirst { it.id == selectedLayout.id }.coerceAtLeast(0)
+    val safeSize = layouts.size.coerceAtLeast(1)
+    val middle = 50_000
+    val initialPage = middle - (middle % safeSize) + actualInitialIndex
+    
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { 100_000 }
+    )
+
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Text("←", fontSize = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(24.dp))
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                layouts.forEach { layout ->
-                    LayoutChoice(
+            Spacer(Modifier.width(16.dp))
+            SectionHeader("Bước 1", "Chọn bố cục", "Lướt để xem các bố cục và nhấp vào bố cục ở giữa để đi tiếp.")
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+            val pageWidth = 400.dp
+            val horizontalPadding = if (maxWidth > pageWidth) (maxWidth - pageWidth) / 2 else 0.dp
+            
+            androidx.compose.foundation.pager.HorizontalPager(
+                state = pagerState,
+                contentPadding = PaddingValues(horizontal = horizontalPadding),
+                pageSpacing = 0.dp,
+                beyondBoundsPageCount = 2,
+                flingBehavior = androidx.compose.foundation.pager.PagerDefaults.flingBehavior(
+                    state = pagerState,
+                    pagerSnapDistance = androidx.compose.foundation.pager.PagerSnapDistance.atMost(20)
+                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            coroutineScope.launch {
+                                pagerState.scrollBy(-delta)
+                            }
+                        },
+                        onDragStopped = { velocity: Float ->
+                            coroutineScope.launch {
+                                val pagesToSpin = (velocity / 500f).toInt().coerceIn(-10, 10)
+                                val targetPage = pagerState.currentPage - pagesToSpin
+                                pagerState.animateScrollToPage(targetPage)
+                            }
+                        }
+                    )
+            ) { page ->
+                val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                val absoluteOffset = kotlin.math.abs(pageOffset)
+                val scale = androidx.compose.ui.util.lerp(
+                    start = 0.8f,
+                    stop = 1f,
+                    fraction = 1f - absoluteOffset.coerceIn(0f, 1f)
+                )
+                val alpha = androidx.compose.ui.util.lerp(
+                    start = 0.3f,
+                    stop = 1f,
+                    fraction = 1f - absoluteOffset.coerceIn(0f, 1f)
+                )
+                
+                val actualPage = page % layouts.size.coerceAtLeast(1)
+                val layout = layouts[actualPage]
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            this.alpha = alpha
+                        }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            if (pagerState.currentPage == page) {
+                                onLayoutSelect(layout)
+                            } else {
+                                coroutineScope.launch { pagerState.animateScrollToPage(page) }
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    PrintPreview(
                         layout = layout,
-                        selected = layout.id == selectedLayout.id,
-                        onClick = { onLayoutSelect(layout) }
+                        moments = emptyList(),
+                        frame = FramePack("preview", "Preview", "", layout.accentColor),
+                        modifier = Modifier.fillMaxHeight(0.9f)
                     )
                 }
             }
         }
-        Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-            PrintPreview(
-                layout = selectedLayout,
-                moments = emptyList(),
-                frame = FramePack("preview", "Preview", "", selectedLayout.accentColor),
-                modifier = Modifier.fillMaxHeight(0.9f)
-            )
+        
+        // Bottom indicator / title
+        val currentLayout = layouts.getOrNull(pagerState.currentPage)
+        if (currentLayout != null) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(currentLayout.title, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold, color = NeutralText)
+                Text(currentLayout.subtitle, style = MaterialTheme.typography.subtitle1, color = NeutralMuted)
+            }
         }
     }
 }
 
 @Composable
-fun Step3Effect(
+fun Step2Effect(
     effects: List<EffectMode>,
     selectedEffect: EffectMode,
     selectedLayout: LayoutMode,
@@ -206,7 +232,7 @@ fun Step3Effect(
                     Text("←", fontSize = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.width(16.dp))
-                SectionHeader("Bước 3", "Màu ảnh", "Chọn bộ lọc màu yêu thích.")
+                SectionHeader("Bước 2", "Màu ảnh", "Chọn bộ lọc màu yêu thích.")
             }
             Spacer(Modifier.height(24.dp))
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {

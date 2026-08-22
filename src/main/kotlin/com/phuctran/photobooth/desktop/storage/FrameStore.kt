@@ -1,6 +1,5 @@
 package com.phuctran.photobooth.desktop.storage
 
-import com.phuctran.photobooth.desktop.model.DefaultFramePacks
 import com.phuctran.photobooth.desktop.model.FramePack
 import java.nio.file.Files
 import java.nio.file.Path
@@ -23,10 +22,10 @@ class FrameStore(projectDir: Path) {
                 .sorted()
                 .forEach { customFrames.add(it.toFramePack()) }
         }
-        return DefaultFramePacks + customFrames
+        return customFrames
     }
 
-    fun addCustomFrame(source: Path, layoutId: String, hierarchyPath: String = ""): FramePack {
+    fun addCustomFrame(source: Path, printSizeLabel: String, layoutId: String, isSpecial: Boolean = false): FramePack {
         require(Files.isRegularFile(source)) {
             "Không tìm thấy file frame: $source"
         }
@@ -34,11 +33,8 @@ class FrameStore(projectDir: Path) {
             "Frame cần là PNG trong suốt."
         }
 
-        val targetDir = if (hierarchyPath.isNotBlank()) {
-            frameDir.resolve(hierarchyPath).resolve(layoutId)
-        } else {
-            frameDir.resolve(layoutId)
-        }
+        val category = if (isSpecial) "Special" else "Standard"
+        val targetDir = frameDir.resolve(printSizeLabel).resolve(layoutId).resolve(category)
         Files.createDirectories(targetDir)
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val slug = source.fileName.toString()
@@ -63,7 +59,13 @@ class FrameStore(projectDir: Path) {
             .joinToString(" ") { word -> word.replaceFirstChar { char -> char.titlecase(Locale.ROOT) } }
             .ifBlank { "Custom Frame" }
 
-        val layoutId = if (parent != frameDir) parent.fileName.toString() else null
+        // The path structure is: data/frames/<printSizeLabel>/<layoutId>/<Standard|Special>/[EventName]/frame.png
+        val relativePath = frameDir.relativize(this)
+        val parts = relativePath.map { it.toString() }
+        
+        val targetPrintSize = if (parts.size >= 1) parts[0] else null
+        val targetLayoutId = if (parts.size >= 2) parts[1] else null
+        val isSpecial = parts.any { it.equals("Special", ignoreCase = true) }
 
         return FramePack(
             id = name,
@@ -71,9 +73,10 @@ class FrameStore(projectDir: Path) {
             description = "Frame custom từ thư mục data/frames.",
             accentColor = 0xFF5F6B7A,
             isCustom = true,
+            isSpecial = isSpecial,
             customImagePath = this,
-            targetPrintSize = null,
-            targetLayoutId = layoutId
+            targetPrintSize = targetPrintSize,
+            targetLayoutId = targetLayoutId
         )
     }
 

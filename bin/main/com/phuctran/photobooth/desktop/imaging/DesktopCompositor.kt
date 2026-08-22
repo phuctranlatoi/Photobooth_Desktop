@@ -42,19 +42,29 @@ class DesktopCompositor(
             it.color = Color.WHITE
             it.fillRect(0, 0, width, height)
 
-            val slots = computeSlots(layout, width)
+            val slots = computeSlots(layout, width, height)
             slots.zip(photoPaths.take(layout.selectCount)).forEach { (slot, photoPath) ->
                 it.color = Color(244, 244, 242)
                 it.fill(slot)
 
                 val image = ImageIO.read(photoPath.toFile())
                 if (image != null) {
-                    it.drawCenterCrop(image, slot)
+                    // Increase bleed margin to 40 pixels total (20px per side) to ensure no gaps
+                    val bleedPx = 40
+                    val bleedSlot = Rectangle(
+                        slot.x - bleedPx / 2,
+                        slot.y - bleedPx / 2,
+                        slot.width + bleedPx,
+                        slot.height + bleedPx
+                    )
+                    it.drawCenterCrop(image, bleedSlot)
                 }
 
-                it.color = Color.WHITE
-                it.stroke = BasicStroke((width * 0.006f).coerceAtLeast(2f))
-                it.draw(slot)
+                if (!frame.isCustom) {
+                    it.color = Color.WHITE
+                    it.stroke = BasicStroke((width * 0.006f).coerceAtLeast(2f))
+                    it.draw(slot)
+                }
             }
 
             if (frame.isCustom && frame.customImagePath != null) {
@@ -75,7 +85,18 @@ class DesktopCompositor(
         )
     }
 
-    private fun computeSlots(layout: LayoutMode, canvasWidth: Int): List<Rectangle> {
+    private fun computeSlots(layout: LayoutMode, canvasWidth: Int, canvasHeight: Int): List<Rectangle> {
+        if (layout.absoluteSlots.isNotEmpty()) {
+            return layout.absoluteSlots.map { slot ->
+                Rectangle(
+                    (canvasWidth * slot.x).roundToInt(),
+                    (canvasHeight * slot.y).roundToInt(),
+                    (canvasWidth * slot.width).roundToInt(),
+                    (canvasHeight * slot.height).roundToInt()
+                )
+            }
+        }
+
         val width = canvasWidth.toFloat()
         val top = (width * layout.paddingTopRatio).roundToInt()
         val left = (width * layout.paddingLeftRatio).roundToInt()

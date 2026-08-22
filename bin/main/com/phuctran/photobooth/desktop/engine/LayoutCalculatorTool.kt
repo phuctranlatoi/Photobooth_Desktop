@@ -164,8 +164,31 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
         if (id.isEmpty()) return
         
         coroutineScope.launch(Dispatchers.IO) {
+            val rawSize = detectedSizeInput.trim()
+            val formattedSize = if (rawSize.matches(Regex("\\d+\\s*[xX]\\s*\\d+"))) {
+                val parts = rawSize.split(Regex("\\s*[xX]\\s*"))
+                "${parts[0]} x ${parts[1]} cm"
+            } else {
+                if (rawSize.isEmpty()) "15 x 10 cm" else rawSize
+            }
+            
+            val pAspectRatio = result.width.toFloat() / result.height.toFloat()
+            val firstSlot = result.slots.firstOrNull()
+            val photoAspect = if (firstSlot != null) {
+                (firstSlot.width / firstSlot.height) * pAspectRatio
+            } else 1f
+            
             val layoutData = mapOf(
                 "id" to id,
+                "title" to id,
+                "subtitle" to "${result.slots.size} ảnh",
+                "description" to "Tự động phân tích từ ảnh gốc.",
+                "shotCount" to result.slots.size,
+                "selectCount" to result.slots.size,
+                "printSizeLabel" to formattedSize,
+                "printAspectRatio" to pAspectRatio,
+                "photoAspectRatio" to photoAspect,
+                "mediaLabel" to "$formattedSize • ${result.slots.size} ảnh",
                 "width" to result.width,
                 "height" to result.height,
                 "slots" to result.slots.map { slot ->
@@ -200,17 +223,9 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
                 val tempFile = java.io.File(file.parentFile, "$fId.png")
                 javax.imageio.ImageIO.write(result.punchedImage, "png", tempFile)
                 
-                val eventSuffix = if (isSpecialFrame) {
-                    val evt = specialEventName.trim().replace(Regex("[^a-zA-Z0-9_]+"), "_").ifEmpty { "Event" }
-                    "Special/$evt"
-                } else {
-                    "Standard"
-                }
-                val hierarchy = "${detectedSizeInput.trim()}/${lId}/$eventSuffix"
-                
                 val projectDir = com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir()
                 val frameStore = com.phuctran.photobooth.desktop.storage.FrameStore(projectDir)
-                val newFrame = frameStore.addCustomFrame(tempFile.toPath(), lId, hierarchy)
+                val newFrame = frameStore.addCustomFrame(tempFile.toPath(), detectedSizeInput.trim(), lId, isSpecialFrame)
                 
                 tempFile.delete() // Clean up temp file
                 

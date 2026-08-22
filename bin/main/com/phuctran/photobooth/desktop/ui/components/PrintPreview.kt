@@ -44,32 +44,69 @@ fun PrintPreview(
         val slotWidth = (maxWidth - left - right - gapX * (columns - 1).toFloat()) / columns.toFloat()
         val slotHeight = slotWidth / layout.photoAspectRatio
 
-        repeat(layout.selectCount) { index ->
-            val row = index / columns
-            val column = index % columns
-            val x = left + (slotWidth + gapX) * column.toFloat()
-            val y = top + (slotHeight + gapY) * row.toFloat()
-            val moment = moments.getOrNull(index)
-            val bitmap = remember(moment?.photoPath) { moment?.photoPath?.let(::loadImageBitmap) }
-            Box(
-                modifier = Modifier
-                    .offset(x, y)
-                    .width(slotWidth)
-                    .height(slotHeight)
-                    .clip(RoundedCornerShape(0.dp))
-                    .background(NeutralBg)
-                    .border(1.dp, NeutralMuted.copy(alpha = 0.5f), RoundedCornerShape(0.dp))
-            ) {
-                if (bitmap != null) {
-                    Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        if (layout.absoluteSlots.isNotEmpty()) {
+            layout.absoluteSlots.forEach { slot ->
+                val x = maxWidth * slot.x
+                val y = maxHeight * slot.y
+                val slotW = maxWidth * slot.width
+                val slotH = maxHeight * slot.height
+                val moment = moments.getOrNull(slot.index)
+                val bitmap = remember(moment?.photoPath) { moment?.photoPath?.let(::loadImageBitmap) }
+                
+                // Increase bleed to 8.dp to ensure no background shows through
+                val bleedX = 8.dp
+                val bleedY = 8.dp
+                Box(
+                    modifier = Modifier
+                        .offset(x - bleedX / 2, y - bleedY / 2)
+                        .width(slotW + bleedX)
+                        .height(slotH + bleedY)
+                        .clip(RoundedCornerShape(0.dp))
+                        .background(NeutralBg)
+                        .border(1.dp, NeutralMuted.copy(alpha = 0.5f), RoundedCornerShape(0.dp))
+                ) {
+                    if (bitmap != null) {
+                        Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    }
+                    Text(
+                        text = moment?.photoLabel ?: "Ảnh ${slot.index + 1}",
+                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.86f), RoundedCornerShape(5.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
+                        color = accent,
+                        style = MaterialTheme.typography.caption,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-                Text(
-                    text = moment?.photoLabel ?: "Ảnh ${index + 1}",
-                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.86f), RoundedCornerShape(5.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
-                    color = accent,
-                    style = MaterialTheme.typography.caption,
-                    fontWeight = FontWeight.Bold
-                )
+            }
+        } else {
+            repeat(layout.selectCount) { index ->
+                val row = index / columns
+                val column = index % columns
+                val x = left + (slotWidth + gapX) * column.toFloat()
+                val y = top + (slotHeight + gapY) * row.toFloat()
+                val moment = moments.getOrNull(index)
+                val bitmap = remember(moment?.photoPath) { moment?.photoPath?.let(::loadImageBitmap) }
+                val bleedX = 8.dp
+                val bleedY = 8.dp
+                Box(
+                    modifier = Modifier
+                        .offset(x - bleedX / 2, y - bleedY / 2)
+                        .width(slotWidth + bleedX)
+                        .height(slotHeight + bleedY)
+                        .clip(RoundedCornerShape(0.dp))
+                        .background(NeutralBg)
+                        .border(1.dp, NeutralMuted.copy(alpha = 0.5f), RoundedCornerShape(0.dp))
+                ) {
+                    if (bitmap != null) {
+                        Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    }
+                    Text(
+                        text = moment?.photoLabel ?: "Ảnh ${index + 1}",
+                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.86f), RoundedCornerShape(5.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
+                        color = accent,
+                        style = MaterialTheme.typography.caption,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 

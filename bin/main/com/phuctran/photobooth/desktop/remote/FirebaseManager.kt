@@ -8,6 +8,11 @@ import com.google.firebase.cloud.StorageClient
 import java.io.FileInputStream
 import java.io.InputStream
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.phuctran.photobooth.desktop.model.LayoutMode
+import com.phuctran.photobooth.desktop.model.LayoutSlot
+import com.phuctran.photobooth.desktop.model.LayoutFamily
 
 object FirebaseManager {
     
@@ -56,6 +61,93 @@ object FirebaseManager {
         } catch (e: Exception) {
             println("Error uploading layout: ${e.message}")
             e.printStackTrace()
+        }
+    }
+
+    /**
+     * Deletes a layout from Firestore.
+     */
+    fun deleteLayout(layoutId: String) {
+        if (!isInitialized) {
+            println("Firebase is not initialized. Cannot delete layout.")
+            return
+        }
+
+        try {
+            val db = FirestoreClient.getFirestore()
+            val docRef = db.collection("layouts").document(layoutId)
+            docRef.delete().get()
+            println("Layout $layoutId deleted successfully.")
+        } catch (e: Exception) {
+            println("Error deleting layout: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Fetches layout data from Firestore and maps it to LayoutMode.
+     */
+    suspend fun fetchLayouts(): List<LayoutMode> = withContext(Dispatchers.IO) {
+        if (!isInitialized) {
+            println("Firebase is not initialized. Cannot fetch layouts.")
+            return@withContext emptyList()
+        }
+        try {
+            val db = FirestoreClient.getFirestore()
+            val querySnapshot = db.collection("layouts").get().get() // get() on ApiFuture
+            val layouts = mutableListOf<LayoutMode>()
+            for (doc in querySnapshot.documents) {
+                val id = doc.getString("id") ?: doc.id
+                val width = doc.getDouble("width")?.toFloat() ?: doc.getLong("width")?.toFloat() ?: 1200f
+                val height = doc.getDouble("height")?.toFloat() ?: doc.getLong("height")?.toFloat() ?: 1800f
+                val slotsList = doc.get("slots") as? List<Map<String, Any>> ?: emptyList()
+                val slots = slotsList.mapNotNull { slotMap ->
+                    try {
+                        val index = (slotMap["index"] as? Number)?.toInt() ?: 0
+                        val x = (slotMap["x"] as? Number)?.toFloat() ?: 0f
+                        val y = (slotMap["y"] as? Number)?.toFloat() ?: 0f
+                        val w = (slotMap["width"] as? Number)?.toFloat() ?: 0.5f
+                        val h = (slotMap["height"] as? Number)?.toFloat() ?: 0.5f
+                        LayoutSlot(index, x, y, w, h)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }.sortedBy { it.index }
+
+                if (slots.isNotEmpty()) {
+                            val pAspectRatio = doc.getDouble("printAspectRatio")?.toFloat() ?: (width / height)
+                            val firstSlot = slots.firstOrNull()
+                            val computedPhotoAspect = if (firstSlot != null) {
+                                (firstSlot.width / firstSlot.height) * pAspectRatio
+                            } else 1f
+                            val photoAspect = doc.getDouble("photoAspectRatio")?.toFloat() ?: computedPhotoAspect
+                            
+                            layouts.add(
+                                LayoutMode(
+                                    id = id,
+                                    title = doc.getString("title") ?: "Layout $id",
+                                    subtitle = doc.getString("subtitle") ?: "${slots.size} ảnh",
+                                    description = doc.getString("description") ?: "Kích thước ${width.toInt()}x${height.toInt()}",
+                                    family = LayoutFamily.Grid,
+                                    shotCount = doc.getLong("shotCount")?.toInt() ?: slots.size,
+                                    selectCount = doc.getLong("selectCount")?.toInt() ?: slots.size,
+                                    basePrice = doc.getLong("basePrice") ?: 50000L,
+                                    mediaLabel = doc.getString("mediaLabel") ?: "Layout $id",
+                                    accentColor = doc.getLong("accentColor") ?: 0xFF4CAF50,
+                                    absoluteSlots = slots,
+                                    printAspectRatio = pAspectRatio,
+                                    gridColumns = doc.getLong("gridColumns")?.toInt() ?: 1,
+                                    printSizeLabel = doc.getString("printSizeLabel") ?: "15 x 10 cm",
+                                    photoAspectRatio = photoAspect
+                                )
+                            )
+                }
+            }
+            return@withContext layouts
+        } catch (e: Exception) {
+            println("Error fetching layouts: ${e.message}")
+            e.printStackTrace()
+            return@withContext emptyList()
         }
     }
 
