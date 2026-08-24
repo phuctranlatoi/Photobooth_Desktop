@@ -14,6 +14,8 @@ import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,7 +69,11 @@ fun BouncyButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (isPressed) 0.95f else 1f)
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+    )
 
     Button(
         onClick = onClick,
@@ -90,9 +96,9 @@ fun BouncyButton(
 fun PanelBox(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = modifier
-            .shadow(16.dp, RoundedCornerShape(16.dp), ambientColor = Color.Black.copy(alpha = 0.05f), spotColor = Color.Black.copy(alpha = 0.05f))
-            .border(1.dp, NeutralBorder, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
+            .shadow(24.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black.copy(alpha = 0.5f), spotColor = Color.Black.copy(alpha = 0.5f))
+            .border(1.dp, NeutralBorder.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
         color = NeutralPanel,
         contentColor = NeutralText,
         elevation = 0.dp
@@ -136,16 +142,85 @@ fun loadImageBitmap(path: Path): ImageBitmap? {
     } catch (e: Exception) { null }
 }
 
+fun loadFrameThumbnail(path: Path): ImageBitmap? {
+    try {
+        if (!Files.exists(path)) return null
+        val thumbPath = path.resolveSibling("thumb_" + path.fileName.toString())
+        
+        if (Files.exists(thumbPath)) {
+            return org.jetbrains.skia.Image.makeFromEncoded(Files.readAllBytes(thumbPath)).toComposeImageBitmap()
+        }
+
+        Files.newInputStream(path).use { stream ->
+            javax.imageio.ImageIO.createImageInputStream(stream).use { iis ->
+                val readers = javax.imageio.ImageIO.getImageReaders(iis)
+                if (readers.hasNext()) {
+                    val reader = readers.next()
+                    reader.setInput(iis, true, true)
+                    val param = reader.defaultReadParam
+                    param.setSourceSubsampling(4, 4, 0, 0)
+                    val img = reader.read(0, param)
+                    reader.dispose()
+                    
+                    if (img != null) {
+                        try {
+                            Files.newOutputStream(thumbPath).use { out ->
+                                javax.imageio.ImageIO.write(img, "png", out)
+                            }
+                        } catch(e: Exception) { e.printStackTrace() }
+                        return img.toComposeImageBitmap()
+                    }
+                }
+            }
+        }
+        return null
+    } catch (e: Exception) {
+        e.printStackTrace()
+        return null
+    }
+}
+
 @Composable
-fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, isDimmed: Boolean = false, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val bitmap = remember(moment.photoPath) { moment.photoPath?.let(::loadImageBitmap) }
-    Box(modifier.aspectRatio(aspectRatio).clip(RoundedCornerShape(0.dp)).background(NeutralBg).border(if (selectedOrder != null) 3.dp else 1.dp, if (selectedOrder != null) AccentNude else NeutralBorder, RoundedCornerShape(0.dp)).bouncyClickable(onClick = onClick)) {
+    
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (selectedOrder != null) 0.95f else 1f)
+    val dimAlpha by androidx.compose.animation.core.animateFloatAsState(if (isDimmed) 0.4f else 0f)
+
+    Box(
+        modifier
+            .aspectRatio(aspectRatio)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFF3F4F6))
+            .border(if (selectedOrder != null) 4.dp else 1.dp, if (selectedOrder != null) AccentNude else Color.Transparent, RoundedCornerShape(16.dp))
+            .bouncyClickable(onClick = onClick)
+    ) {
         if (bitmap != null) {
             Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
-        if (selectedOrder != null) {
-            Box(Modifier.align(Alignment.TopEnd).padding(8.dp).size(36.dp).clip(CircleShape).background(AccentNude), contentAlignment = Alignment.Center) {
-                Text("$selectedOrder", color = NeutralText, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Black)
+        
+        // Dim overlay
+        if (dimAlpha > 0f) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dimAlpha)))
+        }
+
+        // Selection Badge
+        androidx.compose.animation.AnimatedVisibility(
+            visible = selectedOrder != null,
+            enter = androidx.compose.animation.scaleIn(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 500f)),
+            exit = androidx.compose.animation.scaleOut(),
+            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
+        ) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(AccentNude)
+                    .border(2.dp, Color.White, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("${selectedOrder ?: ""}", color = Color.White, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Black)
             }
         }
     }
@@ -192,15 +267,9 @@ fun LayoutChoice(layout: LayoutMode, selected: Boolean, onClick: () -> Unit) {
 @Composable
 fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
     if (frame.customImagePath != null) {
-        val imageBitmap = remember(frame.customImagePath) {
-            try {
-                if (Files.exists(frame.customImagePath)) {
-                    val stream = Files.newInputStream(frame.customImagePath)
-                    val img = javax.imageio.ImageIO.read(stream)
-                    img?.toComposeImageBitmap()
-                } else null
-            } catch (e: Exception) {
-                null
+        val imageBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, frame.customImagePath) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                loadFrameThumbnail(frame.customImagePath!!)
             }
         }
         
@@ -218,9 +287,10 @@ fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
                 .padding(12.dp),
             contentAlignment = Alignment.Center
         ) {
-            if (imageBitmap != null) {
+            val bmp = imageBitmap
+            if (bmp != null) {
                 Image(
-                    bitmap = imageBitmap,
+                    bitmap = bmp,
                     contentDescription = frame.title,
                     modifier = Modifier.fillMaxWidth().heightIn(max = 250.dp),
                     contentScale = ContentScale.Fit

@@ -147,12 +147,20 @@ class DesktopBoothController(
             refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
             refreshCameraDevices()
             localServer?.start()
+            
+            // Start live view early to attract customers on StartScreen
+            cameraService.startLiveView(_selectedEffect.value.id)
+            
             _isAppReady.value = true
         }
     }
 
     fun transitionTo(newState: SessionState) {
         stateMachine.transitionTo(newState)
+        if (newState == SessionState.IDLE) {
+            // Reset to normal effect when returning to idle
+            chooseEffect(com.phuctran.photobooth.desktop.model.DefaultEffectModes.first().id)
+        }
     }
 
     fun chooseLayout(layoutId: String) {
@@ -168,12 +176,11 @@ class DesktopBoothController(
     val liveViewStream: StateFlow<androidx.compose.ui.graphics.ImageBitmap?> = cameraService.liveViewStream
 
     fun chooseEffect(effectId: String) {
-        DefaultEffectModes.firstOrNull { it.id == effectId }?.let {
+        com.phuctran.photobooth.desktop.model.DefaultEffectModes.firstOrNull { it.id == effectId }?.let {
             _selectedEffect.value = it
             _statusMessage.value = "Đã chọn màu ${it.title}."
-            if (stateMachine.currentState.value == SessionState.LIVE_VIEW) {
-                cameraService.startLiveView(it.id)
-            }
+            // Always update live view with the new effect so they can preview it in SELECTING screen
+            cameraService.startLiveView(it.id)
         }
     }
 

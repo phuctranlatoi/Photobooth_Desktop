@@ -7,6 +7,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -35,6 +36,7 @@ fun StudioModeScreen(
     effects: List<EffectMode>,
     selectedLayout: LayoutMode,
     selectedEffect: EffectMode,
+    liveViewBitmap: androidx.compose.ui.graphics.ImageBitmap?,
     onLayoutSelected: (String) -> Unit,
     onEffectSelected: (String) -> Unit,
     onConfirm: () -> Unit,
@@ -70,6 +72,7 @@ fun StudioModeScreen(
                         effects = effects,
                         selectedEffect = selectedEffect,
                         selectedLayout = selectedLayout,
+                        liveViewBitmap = liveViewBitmap,
                         onEffectSelect = onEffectSelected,
                         onBack = { step = 1 },
                         onConfirm = onConfirm
@@ -221,47 +224,122 @@ fun Step2Effect(
     effects: List<EffectMode>,
     selectedEffect: EffectMode,
     selectedLayout: LayoutMode,
+    liveViewBitmap: androidx.compose.ui.graphics.ImageBitmap?,
     onEffectSelect: (String) -> Unit,
     onBack: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    Row(Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-        Column(Modifier.width(400.dp).fillMaxHeight()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Text("←", fontSize = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = FontWeight.Bold)
+    Box(Modifier.fillMaxSize()) {
+        // Main Area: Live View / Preview (Full bleed)
+        if (liveViewBitmap != null) {
+            val colorFilter = remember(selectedEffect.id) {
+                when (selectedEffect.id) {
+                    "black_white" -> {
+                        val matrix = androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) }
+                        androidx.compose.ui.graphics.ColorFilter.colorMatrix(matrix)
+                    }
+                    "vintage" -> {
+                        val matrix = androidx.compose.ui.graphics.ColorMatrix(
+                            floatArrayOf(
+                                0.393f, 0.769f, 0.189f, 0f, 0f,
+                                0.349f, 0.686f, 0.168f, 0f, 0f,
+                                0.272f, 0.534f, 0.131f, 0f, 0f,
+                                0f,     0f,     0f,     1f, 0f
+                            )
+                        )
+                        androidx.compose.ui.graphics.ColorFilter.colorMatrix(matrix)
+                    }
+                    else -> null
                 }
-                Spacer(Modifier.width(16.dp))
-                SectionHeader("Bước 2", "Màu ảnh", "Chọn bộ lọc màu yêu thích.")
             }
-            Spacer(Modifier.height(24.dp))
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                effects.forEach { effect ->
-                    ChoiceRow(
-                        title = effect.title,
-                        subtitle = effect.description,
-                        selected = effect.id == selectedEffect.id,
-                        accent = Color(effect.accentColor),
-                        onClick = { onEffectSelect(effect.id) }
-                    )
+            
+            Image(
+                bitmap = liveViewBitmap,
+                contentDescription = "Live View Preview",
+                modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = -1f),
+                contentScale = ContentScale.Crop,
+                colorFilter = colorFilter
+            )
+        } else {
+            // Fallback if camera is off - DO NOT show PrintPreview here. Show a clean dark placeholder.
+            Box(Modifier.fillMaxSize().background(Color(0xFF1A1A1A)), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Camera Not Available", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.h6)
                 }
-            }
-            Spacer(Modifier.weight(1f))
-            BouncyButton(
-                onClick = onConfirm,
-                modifier = Modifier.fillMaxWidth().height(80.dp),
-                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary, contentColor = Color.White)
-            ) {
-                Text("XÁC NHẬN CHỤP", style = MaterialTheme.typography.h4, fontWeight = FontWeight.Black)
             }
         }
-        Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-            PrintPreview(
-                layout = selectedLayout,
-                moments = emptyList(),
-                frame = FramePack("preview", "Preview", "", selectedLayout.accentColor),
-                modifier = Modifier.fillMaxHeight(0.9f)
-            )
+        
+        // Gradient overlay for better text/button readability
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.5f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.6f)
+                        )
+                    )
+                )
+        )
+        
+        // Top Left: Back Button & Header
+        Row(Modifier.align(Alignment.TopStart).padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
+            ) {
+                Text("←", fontSize = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = FontWeight.Bold, color = Color.White)
+            }
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text("Bước 2", style = MaterialTheme.typography.overline, color = Color.White.copy(alpha = 0.7f))
+                Text("Màu ảnh", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = Color.White)
+            }
+        }
+        
+        // Top Right: Confirm Button
+        BouncyButton(
+            onClick = onConfirm,
+            colors = ButtonDefaults.buttonColors(backgroundColor = AccentNude, contentColor = Color.White),
+            modifier = Modifier.align(Alignment.TopEnd).padding(24.dp).height(56.dp).width(160.dp)
+        ) {
+            Text("TIẾP TỤC", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.subtitle1)
+        }
+        
+        // Bottom Area: Floating Effect Selector
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(24.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            effects.forEach { effect ->
+                val isSelected = effect.id == selectedEffect.id
+                val bgColor = if (isSelected) AccentNude else Color.White
+                val textColor = if (isSelected) Color.White else NeutralText
+                
+                Column(
+                    modifier = Modifier
+                        .width(160.dp)
+                        .height(140.dp)
+                        .shadow(if (isSelected) 16.dp else 4.dp, RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(bgColor)
+                        .clickable { onEffectSelect(effect.id) }
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(Modifier.size(56.dp).clip(CircleShape).background(Color(effect.accentColor)))
+                    Spacer(Modifier.height(12.dp))
+                    Text(effect.title, fontWeight = FontWeight.Bold, color = textColor, style = MaterialTheme.typography.subtitle1, maxLines = 1)
+                }
+            }
         }
     }
 }

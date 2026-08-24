@@ -7,6 +7,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -26,47 +27,66 @@ fun DeliveryScreen(
     onOpenAlbum: () -> Unit,
     onFinish: () -> Unit
 ) {
-    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        PanelBox(Modifier.weight(0.3f).fillMaxHeight()) {
-            SectionHeader("Hoàn tất", "Lấy ảnh của bạn", "Cảm ơn bạn đã sử dụng dịch vụ!")
-            Spacer(Modifier.height(24.dp))
+    Box(Modifier.fillMaxSize().background(Color.White), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            // Header
+            Text(
+                "HOÀN TẤT!",
+                style = MaterialTheme.typography.h3,
+                fontWeight = FontWeight.Black,
+                color = AccentNude
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Ảnh đang được in. Vui lòng nhận ảnh ở khe bên dưới nhé!\nĐừng quên tải file mềm về điện thoại của bạn.",
+                style = MaterialTheme.typography.h6,
+                color = NeutralText,
+                textAlign = TextAlign.Center
+            )
             
-            Text("Chi tiết", fontWeight = FontWeight.Bold, color = NeutralText)
-            Spacer(Modifier.height(8.dp))
-            Text("Đã chụp: $totalCaptured ảnh", color = NeutralMuted)
-            Text("In: $printCopies bản", color = NeutralMuted)
+            Spacer(Modifier.height(40.dp))
             
-            Spacer(Modifier.weight(1f))
-            BouncyButton(
-                onClick = onFinish,
-                modifier = Modifier.fillMaxWidth().height(60.dp),
-                colors = ButtonDefaults.buttonColors(backgroundColor = AccentNude, contentColor = Color.White)
+            // QR Card
+            Box(
+                modifier = Modifier
+                    .shadow(16.dp, RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFFF9FAFB))
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text("VỀ TRANG CHỦ", fontWeight = FontWeight.Black, style = MaterialTheme.typography.h6)
-            }
-        }
-        
-        PanelBox(Modifier.weight(0.7f).fillMaxHeight()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (summary.qrUrl != null) {
-                        RealQr(summary.qrUrl, Modifier.size(270.dp))
-                        Text(text = summary.qrUrl, color = NeutralMuted, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        OutlinedButton(onClick = onOpenAlbum) { Text("Mở album trực tuyến") }
+                        RealQr(summary.qrUrl, Modifier.size(240.dp))
+                        Spacer(Modifier.height(16.dp))
+                        Text("Quét mã để tải ảnh gốc", fontWeight = FontWeight.Bold, color = NeutralText)
+                        if (summary.outputPath != null) {
+                            TextButton(onClick = onOpenOutput) {
+                                Text("Mở thư mục lưu file in", color = AccentNude)
+                            }
+                        }
                     } else {
                         Box(
-                            modifier = Modifier.size(270.dp).clip(RoundedCornerShape(8.dp)).background(NeutralPanel).border(1.dp, NeutralBorder, RoundedCornerShape(8.dp)),
+                            modifier = Modifier.size(240.dp).clip(RoundedCornerShape(12.dp)).background(NeutralPanel),
                             contentAlignment = Alignment.Center
                         ) {
                             Text("Không có QR", color = NeutralMuted)
                         }
                     }
-                    if (summary.outputPath != null) {
-                        TextButton(onClick = onOpenOutput) {
-                            Text("Mở thư mục lưu file in", color = AccentNude)
-                        }
-                    }
                 }
+            }
+            
+            Spacer(Modifier.height(60.dp))
+            
+            BouncyButton(
+                onClick = onFinish,
+                colors = ButtonDefaults.buttonColors(backgroundColor = AccentNude, contentColor = Color.White),
+                modifier = Modifier.width(300.dp).height(64.dp)
+            ) {
+                Text("VỀ TRANG CHỦ", fontWeight = FontWeight.Black, style = MaterialTheme.typography.h5)
             }
         }
     }

@@ -33,9 +33,7 @@ fun AppShell(
     ) {
         TopBar(state)
         
-        if (state != SessionState.IDLE) {
-            ProgressStepper(state)
-        }
+        // ProgressStepper is removed to simplify UI
         
         Box(Modifier.weight(1f).fillMaxWidth()) {
             content()

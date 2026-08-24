@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.with
+
 fun main() = application {
     // Initialize Firebase Admin SDK
     FirebaseManager.initialize()
@@ -50,6 +52,7 @@ fun main() = application {
 
         val isAppReady by controller.isAppReady.collectAsState()
         val availableLayouts by controller.availableLayouts.collectAsState()
+        val liveViewBitmap by controller.liveViewStream.collectAsState()
 
         PhotoboothTheme {
             AppShell(state) {
@@ -61,8 +64,13 @@ fun main() = application {
                         }
                     }
                 } else {
-                    when (state) {
+                    androidx.compose.animation.Crossfade(
+                        targetState = state,
+                        animationSpec = androidx.compose.animation.core.tween(400)
+                    ) { targetState ->
+                        when (targetState) {
                         SessionState.IDLE -> StartScreen(
+                            liveViewBitmap = liveViewBitmap,
                             onStart = { controller.transitionTo(SessionState.SELECTING) },
                             onAdmin = { controller.transitionTo(SessionState.ADMIN) }
                         )
@@ -71,6 +79,7 @@ fun main() = application {
                             effects = com.phuctran.photobooth.desktop.model.DefaultEffectModes,
                             selectedLayout = layout,
                             selectedEffect = effect,
+                            liveViewBitmap = liveViewBitmap,
                             onLayoutSelected = { controller.chooseLayout(it) },
                             onEffectSelected = { controller.chooseEffect(it) },
                             onConfirm = { controller.confirmStudioSetup() },
@@ -97,7 +106,6 @@ fun main() = application {
                     }
                     SessionState.PREPARING -> PrepareScreen(layout, effect)
                     SessionState.LIVE_VIEW, SessionState.COUNTDOWN, SessionState.CAPTURING -> {
-                        val liveViewBitmap by controller.liveViewStream.collectAsState()
                         val isRecordingVideo by controller.isRecordingVideo.collectAsState()
                         CaptureScreen(
                             state = state,
@@ -194,8 +202,9 @@ fun main() = application {
                     }
                     else -> {}
                 }
-                }
-            }
+                    } // End AnimatedContent
+                } // End else
+            } // End AppShell
         }
     }
 }

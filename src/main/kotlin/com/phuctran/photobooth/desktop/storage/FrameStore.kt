@@ -81,7 +81,9 @@ class FrameStore(projectDir: Path) {
     }
 
     private fun Path.isSupportedImage(): Boolean {
-        val extension = fileName.toString().substringAfterLast('.', "").lowercase(Locale.ROOT)
+        val fileNameStr = fileName.toString()
+        if (fileNameStr.startsWith("thumb_")) return false
+        val extension = fileNameStr.substringAfterLast('.', "").lowercase(Locale.ROOT)
         return extension == "png"
     }
 }

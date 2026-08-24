@@ -29,30 +29,43 @@ fun SelectPhotosScreen(
     onMomentSelect: (CapturedMoment) -> Unit,
     onConfirm: () -> Unit
 ) {
-    PanelBox(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            SectionHeader("Bước 5", "Chọn ảnh để in", "Đã chọn ${selectedMoments.size}/${layout.selectCount} • album giữ toàn bộ ảnh.")
-            Button(
-                onClick = onConfirm,
-                enabled = selectedMoments.size == layout.selectCount,
-                colors = ButtonDefaults.buttonColors(backgroundColor = NeutralPanel, contentColor = NeutralText)
-            ) { Text("Chọn frame") }
-        }
-        Spacer(Modifier.height(12.dp))
-        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            capturedMoments.chunked(4).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { moment ->
-                        MomentTile(
-                            moment = moment,
-                            selectedOrder = selectedMoments.indexOf(moment).takeIf { it >= 0 }?.plus(1),
-                            aspectRatio = layout.photoAspectRatio,
-                            onClick = { onMomentSelect(moment) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+    Box(Modifier.fillMaxSize().background(Color.White)) {
+        Column(Modifier.fillMaxSize().padding(24.dp)) {
+            // Header
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                SectionHeader("Bước 5", "Chọn ảnh để in", "Đã chọn ${selectedMoments.size}/${layout.selectCount} • album giữ toàn bộ ảnh.")
+                BouncyButton(
+                    onClick = onConfirm,
+                    enabled = selectedMoments.size == layout.selectCount,
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = if (selectedMoments.size == layout.selectCount) AccentNude else NeutralBorder,
+                        contentColor = if (selectedMoments.size == layout.selectCount) Color.White else NeutralMuted
+                    ),
+                    modifier = Modifier.height(56.dp).width(200.dp)
+                ) { 
+                    Text("TIẾP TỤC", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.subtitle1)
                 }
+            }
+            Spacer(Modifier.height(32.dp))
+            
+            // Gallery Grid
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                capturedMoments.chunked(4).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        row.forEach { moment ->
+                            MomentTile(
+                                moment = moment,
+                                selectedOrder = selectedMoments.indexOf(moment).takeIf { it >= 0 }?.plus(1),
+                                aspectRatio = layout.photoAspectRatio,
+                                isDimmed = selectedMoments.isNotEmpty() && !selectedMoments.contains(moment),
+                                onClick = { onMomentSelect(moment) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+                Spacer(Modifier.height(60.dp))
             }
         }
     }

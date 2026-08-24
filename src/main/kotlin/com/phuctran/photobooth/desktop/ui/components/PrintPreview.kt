@@ -10,6 +10,8 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -111,9 +113,20 @@ fun PrintPreview(
         }
 
         if (frame.isCustom && frame.customImagePath != null) {
-            val overlay = remember(frame.customImagePath) { loadImageBitmap(frame.customImagePath) }
-            if (overlay != null) {
-                Image(overlay, null, contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
+            val overlay by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, frame.customImagePath) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    loadImageBitmap(frame.customImagePath!!)
+                }
+            }
+            val overlayBitmap = overlay
+            if (overlayBitmap != null) {
+                Image(
+                    bitmap = overlayBitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier.fillMaxSize(),
+                    filterQuality = androidx.compose.ui.graphics.FilterQuality.High
+                )
             }
         } else {
             Box(Modifier.fillMaxSize().border(5.dp, accent, RoundedCornerShape(6.dp)))
