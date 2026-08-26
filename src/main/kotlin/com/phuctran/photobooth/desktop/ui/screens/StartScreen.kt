@@ -95,14 +95,7 @@ fun StartScreen(
         }
         
         Box(Modifier.weight(1.2f).fillMaxHeight().padding(24.dp).clip(RoundedCornerShape(24.dp)).background(NeutralPanel), contentAlignment = Alignment.Center) {
-            if (liveViewBitmap != null) {
-                Image(
-                    bitmap = liveViewBitmap,
-                    contentDescription = "Live View Preview",
-                    modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = -1f),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
+
                 val color1 by infiniteTransition.animateColor(
                     initialValue = Color(0xFFF7F8FA),
                     targetValue = Color(0xFFE2E8F0),
@@ -180,7 +173,6 @@ fun StartScreen(
                         )
                     }
                 }
-            }
         }
     }
 }

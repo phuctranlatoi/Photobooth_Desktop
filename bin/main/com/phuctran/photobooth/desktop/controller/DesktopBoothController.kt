@@ -77,7 +77,10 @@ class DesktopBoothController(
     private val _selectedLayout = MutableStateFlow(DefaultLayoutModes.first())
     val selectedLayout = _selectedLayout.asStateFlow()
 
-    private val _selectedEffect = MutableStateFlow(DefaultEffectModes.first())
+    private val _availableEffects = MutableStateFlow(com.phuctran.photobooth.desktop.model.DefaultEffectModes)
+    val availableEffects = _availableEffects.asStateFlow()
+
+    private val _selectedEffect = MutableStateFlow(com.phuctran.photobooth.desktop.model.DefaultEffectModes.first())
     val selectedEffect = _selectedEffect.asStateFlow()
 
     private val _availableFrames = MutableStateFlow<List<com.phuctran.photobooth.desktop.model.FramePack>>(emptyList())
@@ -144,6 +147,7 @@ class DesktopBoothController(
             } catch (e: Exception) {
                 println("Failed to fetch layouts from Firebase: ${e.message}")
             }
+            refreshEffects()
             refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
             refreshCameraDevices()
             localServer?.start()
@@ -159,7 +163,7 @@ class DesktopBoothController(
         stateMachine.transitionTo(newState)
         if (newState == SessionState.IDLE) {
             // Reset to normal effect when returning to idle
-            chooseEffect(com.phuctran.photobooth.desktop.model.DefaultEffectModes.first().id)
+            chooseEffect(_availableEffects.value.first().id)
         }
     }
 
@@ -176,7 +180,7 @@ class DesktopBoothController(
     val liveViewStream: StateFlow<androidx.compose.ui.graphics.ImageBitmap?> = cameraService.liveViewStream
 
     fun chooseEffect(effectId: String) {
-        com.phuctran.photobooth.desktop.model.DefaultEffectModes.firstOrNull { it.id == effectId }?.let {
+        _availableEffects.value.firstOrNull { it.id == effectId }?.let {
             _selectedEffect.value = it
             _statusMessage.value = "Đã chọn màu ${it.title}."
             // Always update live view with the new effect so they can preview it in SELECTING screen
@@ -602,7 +606,57 @@ class DesktopBoothController(
         }
     }
 
-    private fun refreshFramesForLayout(layout: LayoutMode, preserveSelection: Boolean) {
+    fun saveEffects(effects: List<com.phuctran.photobooth.desktop.model.EffectMode>) {
+        val configDir = config.appDataDir?.resolve("data/config") ?: return
+        java.nio.file.Files.createDirectories(configDir)
+        val filtersFile = configDir.resolve("filters.json")
+        val gson = com.google.gson.GsonBuilder().setPrettyPrinting().create()
+        val listType = object : com.google.gson.reflect.TypeToken<List<com.phuctran.photobooth.desktop.model.EffectMode>>() {}.type
+        
+        try {
+            val jsonStr = gson.toJson(effects, listType)
+            java.nio.file.Files.writeString(filtersFile, jsonStr)
+            refreshEffects()
+            _statusMessage.value = "Đã lưu bộ lọc màu thành công."
+        } catch (e: Exception) {
+            println("Failed to write filters.json: ${e.message}")
+            _statusMessage.value = "Lỗi lưu bộ lọc: ${e.message}"
+        }
+    }
+
+    private fun refreshEffects() {
+        val configDir = config.appDataDir?.resolve("data/config") ?: return
+        java.nio.file.Files.createDirectories(configDir)
+        val filtersFile = configDir.resolve("filters.json")
+        val gson = com.google.gson.GsonBuilder().setPrettyPrinting().create()
+        val listType = object : com.google.gson.reflect.TypeToken<List<com.phuctran.photobooth.desktop.model.EffectMode>>() {}.type
+
+        if (java.nio.file.Files.exists(filtersFile)) {
+            try {
+                val jsonStr = java.nio.file.Files.readString(filtersFile)
+                val loadedFilters: List<com.phuctran.photobooth.desktop.model.EffectMode> = gson.fromJson(jsonStr, listType)
+                if (loadedFilters.isNotEmpty()) {
+                    _availableEffects.value = loadedFilters
+                }
+            } catch (e: Exception) {
+                println("Failed to parse filters.json: ${e.message}")
+            }
+        } else {
+            try {
+                val defaultJson = gson.toJson(com.phuctran.photobooth.desktop.model.DefaultEffectModes, listType)
+                java.nio.file.Files.writeString(filtersFile, defaultJson)
+                _availableEffects.value = com.phuctran.photobooth.desktop.model.DefaultEffectModes
+            } catch (e: Exception) {
+                println("Failed to write default filters.json: ${e.message}")
+            }
+        }
+        imageProcessor.availableEffects = _availableEffects.value
+        if (_availableEffects.value.none { it.id == _selectedEffect.value.id }) {
+            _selectedEffect.value = _availableEffects.value.first()
+        }
+    }
+
+    fun refreshFramesForLayout(layout: com.phuctran.photobooth.desktop.model.LayoutMode, preserveSelection: Boolean = true) {
         val customPacks = frameStore.loadFrames()
             .filter { it.isCustom && it.targetLayoutId == layout.id }
             .sortedWith(

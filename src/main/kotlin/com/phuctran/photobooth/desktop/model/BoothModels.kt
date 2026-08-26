@@ -75,8 +75,61 @@ data class EffectMode(
     val id: String,
     val title: String,
     val description: String,
-    val accentColor: Long
-)
+    val accentColor: Long,
+    val saturation: Float = 1.0f,
+    val contrast: Float = 1.0f,
+    val brightness: Float = 0.0f,
+    val warmth: Float = 0.0f,
+    val tint: Float = 0.0f
+) {
+    fun toComposeColorMatrix(): androidx.compose.ui.graphics.ColorMatrix {
+        val matrix = androidx.compose.ui.graphics.ColorMatrix()
+        
+        // Saturation
+        if (saturation != 1.0f) {
+            matrix.setToSaturation(saturation)
+        }
+
+        // Contrast and Brightness
+        if (contrast != 1.0f || brightness != 0.0f) {
+            val c = contrast
+            val t = (1f - c) * 255f / 2f + (brightness * 255f)
+            val cbMatrix = androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
+                c, 0f, 0f, 0f, t,
+                0f, c, 0f, 0f, t,
+                0f, 0f, c, 0f, t,
+                0f, 0f, 0f, 1f, 0f
+            ))
+            matrix.timesAssign(cbMatrix)
+        }
+
+        // Warmth (Orange/Blue balance)
+        if (warmth != 0.0f) {
+            val w = warmth * 255f * 0.5f // Scale warmth
+            val wMatrix = androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
+                1f, 0f, 0f, 0f, w,       // Increase/Decrease Red
+                0f, 1f, 0f, 0f, w * 0.2f,// Slightly adjust Green
+                0f, 0f, 1f, 0f, -w,      // Decrease/Increase Blue
+                0f, 0f, 0f, 1f, 0f
+            ))
+            matrix.timesAssign(wMatrix)
+        }
+
+        // Tint (Magenta/Green balance)
+        if (tint != 0.0f) {
+            val tintVal = tint * 255f * 0.5f
+            val tintMatrix = androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
+                1f, 0f, 0f, 0f, tintVal, // Increase/Decrease Red
+                0f, 1f, 0f, 0f, -tintVal,// Decrease/Increase Green
+                0f, 0f, 1f, 0f, tintVal, // Increase/Decrease Blue
+                0f, 0f, 0f, 1f, 0f
+            ))
+            matrix.timesAssign(tintMatrix)
+        }
+
+        return matrix
+    }
+}
 
 data class FramePack(
     val id: String,
@@ -170,13 +223,21 @@ val DefaultEffectModes = listOf(
         id = "black_white",
         title = "Black & White",
         description = "Tối giản, cổ điển, nổi thần thái khuôn mặt.",
-        accentColor = 0xFF2F3338
+        accentColor = 0xFF2F3338,
+        saturation = 0.0f,
+        contrast = 1.2f,
+        brightness = 0.05f
     ),
     EffectMode(
         id = "vintage",
         title = "Vintage",
         description = "Hạt phim nhẹ và ánh sáng hoài cổ.",
-        accentColor = 0xFF7A7268
+        accentColor = 0xFF7A7268,
+        saturation = 0.6f,
+        contrast = 0.9f,
+        warmth = 0.3f,
+        tint = 0.1f,
+        brightness = 0.1f
     )
 )
 

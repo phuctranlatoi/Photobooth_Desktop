@@ -52,124 +52,68 @@ class DesktopImageProcessor {
         return applyEffect(image, effectId)
     }
 
-    // Precompute Look-Up Tables (LUTs) for cinematic curves
-    private val normalLut = IntArray(256) { i ->
-        val x = i / 255f
-        val curve = (x * x * (3 - 2 * x)) // Smoothstep S-curve
-        // Blend 70% linear, 30% curve for a subtle pop
-        (i * 0.7f + curve * 255 * 0.3f).toInt().coerceIn(0, 255)
-    }
-
-    private val bwLut = IntArray(256) { i ->
-        val x = i / 255f
-        // Stronger S-curve for deep blacks and crisp whites
-        val curve = if (x < 0.5f) 2 * x * x else 1 - 2 * (1 - x) * (1 - x)
-        // Lift shadows slightly to 10 for a classic film look
-        (10 + curve * 245).toInt().coerceIn(0, 255)
-    }
-
-    private val vintageLut = IntArray(256) { i ->
-        val x = i / 255f
-        val curve = (x * x * (3 - 2 * x))
-        // Fade shadows strongly (lift to 35), compress highlights to 245
-        (35 + curve * 210).toInt().coerceIn(0, 255)
-    }
+    var availableEffects: List<com.phuctran.photobooth.desktop.model.EffectMode> = com.phuctran.photobooth.desktop.model.DefaultEffectModes
 
     private fun applyEffect(image: BufferedImage, effectId: String): BufferedImage {
+        val effect = availableEffects.find { it.id == effectId } ?: availableEffects.firstOrNull()
+        if (effect == null || (effect.saturation == 1.0f && effect.contrast == 1.0f && effect.brightness == 0.0f && effect.warmth == 0.0f && effect.tint == 0.0f)) {
+            return image
+        }
+
         val width = image.width
         val height = image.height
         val srcPixels = image.getRGB(0, 0, width, height, null, 0, width)
         val destPixels = IntArray(width * height)
 
-        val cx = width / 2f
-        val cy = height / 2f
-        val maxDistSq = cx * cx + cy * cy
+        val sat = effect.saturation
+        val con = effect.contrast
+        val bri = effect.brightness
+        val wrm = effect.warmth
+        val tnt = effect.tint
+        
+        val cOffset = (1f - con) * 127.5f + (bri * 255f)
+        val wOffsetR = wrm * 127.5f
+        val wOffsetG = wrm * 25.5f
+        val wOffsetB = -wrm * 127.5f
+        val tOffsetR = tnt * 127.5f
+        val tOffsetG = -tnt * 127.5f
+        val tOffsetB = tnt * 127.5f
 
-        when (effectId) {
-            "black_white" -> {
-                for (y in 0 until height) {
-                    val dySq = (y - cy) * (y - cy)
-                    val rowOffset = y * width
-                    for (x in 0 until width) {
-                        val distSq = (x - cx) * (x - cx) + dySq
-                        val vignette = 1.0f - (distSq / maxDistSq) * 0.4f // 40% corner darkening
-                        
-                        val p = srcPixels[rowOffset + x]
-                        val r = (p shr 16) and 0xff
-                        val g = (p shr 8) and 0xff
-                        val b = p and 0xff
-                        
-                        // Portrait B&W: favor red/green for bright skin tones
-                        val luma = (0.4f * r + 0.5f * g + 0.1f * b) * vignette
-                        val l = bwLut[luma.toInt().coerceIn(0, 255)]
-                        destPixels[rowOffset + x] = (0xFF shl 24) or (l shl 16) or (l shl 8) or l
-                    }
-                }
+        for (i in 0 until srcPixels.size) {
+            val p = srcPixels[i]
+            val sr = (p shr 16) and 0xff
+            val sg = (p shr 8) and 0xff
+            val sb = p and 0xff
+
+            // Contrast & Brightness
+            var r = con * sr + cOffset
+            var g = con * sg + cOffset
+            var b = con * sb + cOffset
+
+            // Saturation
+            if (sat != 1.0f) {
+                val luma = 0.299f * r + 0.587f * g + 0.114f * b
+                r = luma + sat * (r - luma)
+                g = luma + sat * (g - luma)
+                b = luma + sat * (b - luma)
             }
-            "vintage" -> {
-                for (y in 0 until height) {
-                    val dySq = (y - cy) * (y - cy)
-                    val rowOffset = y * width
-                    for (x in 0 until width) {
-                        val distSq = (x - cx) * (x - cx) + dySq
-                        val vignette = 1.0f - (distSq / maxDistSq) * 0.4f
-                        
-                        val p = srcPixels[rowOffset + x]
-                        val r = (p shr 16) and 0xff
-                        val g = (p shr 8) and 0xff
-                        val b = p and 0xff
-                        
-                        val luma = 0.299f * r + 0.587f * g + 0.114f * b
-                        // Warm sepia target
-                        val tr = luma * 1.2f
-                        val tg = luma * 1.05f
-                        val tb = luma * 0.8f
 
-                        // Blend 40% sepia, 60% original, then apply vignette
-                        val br = (r * 0.6f + tr * 0.4f) * vignette
-                        val bg = (g * 0.6f + tg * 0.4f) * vignette
-                        val bb = (b * 0.6f + tb * 0.4f) * vignette
+            // Warmth & Tint
+            r += wOffsetR + tOffsetR
+            g += wOffsetG + tOffsetG
+            b += wOffsetB + tOffsetB
 
-                        // Apply vintage fade curve
-                        val fR = vintageLut[br.toInt().coerceIn(0, 255)]
-                        val fG = vintageLut[bg.toInt().coerceIn(0, 255)]
-                        val fB = vintageLut[bb.toInt().coerceIn(0, 255)]
+            // Clamp and compose
+            val fr = r.toInt().coerceIn(0, 255)
+            val fg = g.toInt().coerceIn(0, 255)
+            val fb = b.toInt().coerceIn(0, 255)
 
-                        destPixels[rowOffset + x] = (0xFF shl 24) or (fR shl 16) or (fG shl 8) or fB
-                    }
-                }
-            }
-            "normal" -> {
-                for (y in 0 until height) {
-                    val rowOffset = y * width
-                    for (x in 0 until width) {
-                        val p = srcPixels[rowOffset + x]
-                        val r = (p shr 16) and 0xff
-                        val g = (p shr 8) and 0xff
-                        val b = p and 0xff
-                        
-                        val luma = 0.299f * r + 0.587f * g + 0.114f * b
-                        // 15% Saturation boost
-                        val sr = (luma + (r - luma) * 1.15f).toInt().coerceIn(0, 255)
-                        val sg = (luma + (g - luma) * 1.15f).toInt().coerceIn(0, 255)
-                        val sb = (luma + (b - luma) * 1.15f).toInt().coerceIn(0, 255)
-
-                        // Contrast curve
-                        val fR = normalLut[sr]
-                        val fG = normalLut[sg]
-                        val fB = normalLut[sb]
-
-                        destPixels[rowOffset + x] = (0xFF shl 24) or (fR shl 16) or (fG shl 8) or fB
-                    }
-                }
-            }
-            else -> {
-                System.arraycopy(srcPixels, 0, destPixels, 0, srcPixels.size)
-            }
+            destPixels[i] = (0xFF shl 24) or (fr shl 16) or (fg shl 8) or fb
         }
-        val result = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-        result.setRGB(0, 0, width, height, destPixels, 0, width)
-        return result
+
+        val outImage = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+        outImage.setRGB(0, 0, width, height, destPixels, 0, width)
+        return outImage
     }
 
     fun ensureJpeg(source: Path, outputDir: Path, prefix: String): Path? {

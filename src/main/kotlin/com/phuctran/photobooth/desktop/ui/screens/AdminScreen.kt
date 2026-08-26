@@ -34,11 +34,13 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 fun AdminScreen(
     layouts: List<LayoutMode>,
     frames: List<FramePack>,
+    effects: List<com.phuctran.photobooth.desktop.model.EffectMode>,
     config: DesktopBoothConfig,
     nativeCamera: NativeEosCaptureService?,
     onAddFrame: (String) -> Unit,
     onDeleteLayout: (String) -> Unit,
     onSaveSettings: (Boolean, Boolean, String) -> Unit,
+    onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
     onBack: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
@@ -87,6 +89,7 @@ fun AdminScreen(
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) { Text("Quản lý bố cục", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
             Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) { Text("Cài đặt", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
             Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) { Text("Tạo Layout/Frame", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }) { Text("Quản lý màu sắc", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
         }
 
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
@@ -299,6 +302,8 @@ fun AdminScreen(
                         com.phuctran.photobooth.desktop.engine.CalculatorApp(config)
                     }
                 }
+            } else if (selectedTab == 4) {
+                FilterAdminView(effects = effects, onSaveEffects = onSaveEffects)
             }
         }
     }

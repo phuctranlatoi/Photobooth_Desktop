@@ -126,8 +126,8 @@ class NativeEosCaptureService(
         println("Native EDSDK: Executing capture...")
         var resultPath: Path? = null
         try {
-            // Chụp trực tiếp vào máy tính
-            val photos = camera.shoot(EdsSaveTo.kEdsSaveTo_Host, 5) 
+            // Sử dụng SafeShootCommand để tránh lỗi ArrayIndexOutOfBoundsException của edsdk4j
+            val photos = camera.execute(edsdk.api.commands.SafeShootCommand(edsdk.utils.CanonConstants.EdsSaveTo.kEdsSaveTo_Host, 3)).get(5)
             if (photos != null && photos.isNotEmpty()) {
                 val photoFile = photos.last()
                 val tempFile = photoFile.toPath()

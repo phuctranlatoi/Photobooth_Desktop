@@ -1776,8 +1776,8 @@ class SlotDetectionEngine {
         
         val sorted = sortSlotsReadingOrder(input)
 
-        val rowCenters = clusterCenters(sorted.map { it.centerY.toFloat() }).sorted()
-        val colCenters = clusterCenters(sorted.map { it.centerX.toFloat() }).sorted()
+        val rowCenters = clusterCenters(sorted.map { it.centerY.toFloat() }, max(20f, medianH * 0.15f)).sorted()
+        val colCenters = clusterCenters(sorted.map { it.centerX.toFloat() }, max(20f, medianW * 0.15f)).sorted()
         
         val rows = rowCenters.size
         val cols = colCenters.size
@@ -1857,17 +1857,24 @@ class SlotDetectionEngine {
         } else yStarts
 
         // Enforce symmetry: if there's only 1 column, the slot width should be symmetric
-        // padLeft and padRight should be equal (or nearly equal)
-        val effectiveW = if (cols == 1) {
+        // padLeft and padRight should be equal
+        var effectiveW = medianW
+        if (cols == 1) {
             val padL = refinedXStarts[0]
             val padR = width - (refinedXStarts[0] + medianW)
+            
             if (padR <= 0 && padL > 0) {
                 // Slot bleeds to right edge - enforce symmetric width
-                width - 2 * padL
+                effectiveW = width - 2 * padL
+                (refinedXStarts as MutableList)[0] = padL
+            } else if (padL <= 0 && padR > 0) {
+                effectiveW = width - 2 * padR
+                (refinedXStarts as MutableList)[0] = padR
             } else {
-                medianW
+                // Perfectly center the 1-column layout
+                (refinedXStarts as MutableList)[0] = (padL + padR) / 2
             }
-        } else medianW
+        }
 
         // Same for single row
         val effectiveH = if (rows == 1) {

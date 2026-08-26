@@ -232,25 +232,9 @@ fun Step2Effect(
     Box(Modifier.fillMaxSize()) {
         // Main Area: Live View / Preview (Full bleed)
         if (liveViewBitmap != null) {
-            val colorFilter = remember(selectedEffect.id) {
-                when (selectedEffect.id) {
-                    "black_white" -> {
-                        val matrix = androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) }
-                        androidx.compose.ui.graphics.ColorFilter.colorMatrix(matrix)
-                    }
-                    "vintage" -> {
-                        val matrix = androidx.compose.ui.graphics.ColorMatrix(
-                            floatArrayOf(
-                                0.393f, 0.769f, 0.189f, 0f, 0f,
-                                0.349f, 0.686f, 0.168f, 0f, 0f,
-                                0.272f, 0.534f, 0.131f, 0f, 0f,
-                                0f,     0f,     0f,     1f, 0f
-                            )
-                        )
-                        androidx.compose.ui.graphics.ColorFilter.colorMatrix(matrix)
-                    }
-                    else -> null
-                }
+            val colorFilter = remember(selectedEffect) {
+                val matrix = selectedEffect.toComposeColorMatrix()
+                androidx.compose.ui.graphics.ColorFilter.colorMatrix(matrix)
             }
             
             Image(

@@ -175,9 +175,11 @@ fun main() = application {
                     )
                     SessionState.ADMIN -> {
                         val currentConfig by controller.activeConfig.collectAsState()
+                        val availableEffects by controller.availableEffects.collectAsState()
                         AdminScreen(
                             layouts = availableLayouts,
                             frames = availableFrames,
+                            effects = availableEffects,
                             config = currentConfig,
                             nativeCamera = controller.nativeCamera,
                             onAddFrame = { layoutId ->
@@ -196,6 +198,9 @@ fun main() = application {
                             },
                             onSaveSettings = { enablePrint, useHotFolder, hotFolderPath ->
                                 controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath)
+                            },
+                            onSaveEffects = { effects ->
+                                controller.saveEffects(effects)
                             },
                             onBack = { controller.resetSession() }
                         )
