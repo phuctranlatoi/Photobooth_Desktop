@@ -21,6 +21,7 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.gestures.scrollBy
 import com.phuctran.photobooth.desktop.domain.SessionState
 import com.phuctran.photobooth.desktop.model.*
@@ -86,15 +87,28 @@ fun StudioModeScreen(
 @Composable
 fun StepIndicator(step: Int, currentStep: Int, label: String) {
     val isActive = currentStep >= step
-    val color = if (isActive) MaterialTheme.colors.primary else NeutralMuted
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(if (isActive) color else NeutralPanel),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(step.toString(), color = if (isActive) Color.White else NeutralMuted, fontWeight = FontWeight.Bold)
-        }
-        Text(label, color = color, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal, style = MaterialTheme.typography.h6)
+    val color = if (isActive) AccentNudeDark else NeutralMuted
+    val alpha = if (isActive) 1f else 0.5f
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally, 
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.graphicsLayer(alpha = alpha)
+    ) {
+        Text(
+            "STEP 0$step", 
+            color = color, 
+            style = MaterialTheme.typography.overline,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 2.sp
+        )
+        Text(
+            label.uppercase(), 
+            color = color, 
+            fontWeight = if (isActive) FontWeight.Black else FontWeight.Medium, 
+            style = MaterialTheme.typography.subtitle1,
+            letterSpacing = 1.sp
+        )
     }
 }
 

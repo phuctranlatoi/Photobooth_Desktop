@@ -66,21 +66,32 @@ fun AdminScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(NeutralBg)
-            .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            OutlinedButton(onClick = { 
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                KioskSecondaryButton("Thoát admin", {
                 onSaveSettings(enablePrint, useHotFolder, hotFolderPath)
                 onBack() 
-            }) { Text("Quay lại") }
-            Text("Quản trị hệ thống", style = MaterialTheme.typography.h4, fontWeight = FontWeight.Bold, color = NeutralText)
+                }, modifier = Modifier.width(150.dp))
+                Column {
+                    Text("Quản trị Le Souvenir", style = MaterialTheme.typography.h4, fontWeight = FontWeight.Black, color = NeutralText)
+                    Text("Kiểm tra nội dung, thiết bị và công cụ vận hành trước sự kiện.", color = NeutralSecondary, style = MaterialTheme.typography.body2)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                StatusChip("Camera", if (useHotFolder) "Hot folder" else "Webcam", AccentBlue)
+                StatusChip("In", if (enablePrint) "Bật" else "Tắt", if (enablePrint) AccentMint else NeutralMuted)
+                StatusChip("Album", if (config.canUploadAlbum) "Cloud" else "Local", if (config.canUploadAlbum) AccentMint else AccentAmber)
+            }
         }
 
         TabRow(
             selectedTabIndex = selectedTab,
-            backgroundColor = Color.Transparent,
+            backgroundColor = NeutralPanel,
             contentColor = MaterialTheme.colors.primary,
+            modifier = Modifier.clip(RoundedCornerShape(14.dp)).border(1.dp, NeutralBorder, RoundedCornerShape(14.dp)),
             indicator = { tabPositions ->
                 TabRowDefaults.Indicator(
                     Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
@@ -88,31 +99,31 @@ fun AdminScreen(
                 )
             }
         ) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) { Text("Quản lý khung", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) { Text("Quản lý bố cục", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) { Text("Khung", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) { Text("Bố cục", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
             Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) { Text("Cài đặt", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) { Text("Tạo Layout/Frame", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }) { Text("Quản lý màu sắc", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) { Text("Công cụ", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }) { Text("Màu ảnh", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
         }
 
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             if (selectedTab == 0) {
                 // Frames
                 Column(Modifier.fillMaxSize()) {
-                    SectionHeader("Quản lý Khung ảnh (Frame)", "Xem, lọc và xóa các khung ảnh đã lưu trên hệ thống.", "")
+                    SectionHeader("Admin", "Quản lý khung ảnh", "Xem, lọc và xóa các khung ảnh đã lưu trên hệ thống.")
                     Spacer(Modifier.height(12.dp))
                     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         if (adminFrames.isEmpty()) {
-                            Text("Chưa có khung ảnh nào cho layout này.", color = Color.Gray, modifier = Modifier.padding(16.dp))
+                            Text("Chưa có khung ảnh custom nào.", color = NeutralSecondary, modifier = Modifier.padding(16.dp))
                         } else {
                             // Group by Print Size then Layout ID
                             val groupedBySize = adminFrames.groupBy { it.targetPrintSize ?: "Kích thước Khác" }
                             groupedBySize.forEach { (size, framesBySize) ->
-                                Text("Khổ in: $size", style = MaterialTheme.typography.h6, color = MaterialTheme.colors.primary, fontWeight = FontWeight.Bold)
+                                Text("Khổ in: $size", style = MaterialTheme.typography.h6, color = AccentNudeDark, fontWeight = FontWeight.Bold)
                                 
                                 val groupedByLayout = framesBySize.groupBy { it.targetLayoutId ?: "Bố cục Khác" }
                                 groupedByLayout.forEach { (layout, framesByLayout) ->
-                                    Text("Bố cục: $layout", style = MaterialTheme.typography.subtitle1, color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                                    Text("Bố cục: $layout", style = MaterialTheme.typography.subtitle1, color = NeutralSecondary, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
                                     
                                     framesByLayout.forEach { frame -> 
                                         Box(modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp)) {
@@ -133,11 +144,11 @@ fun AdminScreen(
             } else if (selectedTab == 1) {
                 // Layouts
                 Column(Modifier.fillMaxSize()) {
-                    SectionHeader("Quản lý Bố cục (Layout)", "Xem các bố cục ảnh đang khả dụng trên hệ thống.", "")
+                    SectionHeader("Admin", "Quản lý bố cục", "Xem các bố cục ảnh đang khả dụng trên hệ thống.")
                     Spacer(Modifier.height(12.dp))
                     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (layouts.isEmpty()) {
-                            Text("Chưa có bố cục nào được tải.", color = Color.Gray, modifier = Modifier.padding(16.dp))
+                            Text("Chưa có bố cục nào được tải.", color = NeutralSecondary, modifier = Modifier.padding(16.dp))
                         } else {
                             layouts.forEach { layout -> 
                                 LayoutAdminCard(layout = layout, onDelete = { onDeleteLayout(layout.id) })
@@ -149,7 +160,7 @@ fun AdminScreen(
 
                 // Settings
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                    SectionHeader("Cài đặt", "Thiết bị ngoại vi", "Lưu ý: Bạn cần khởi động lại ứng dụng sau khi lưu để áp dụng.")
+                    SectionHeader("Admin", "Cài đặt thiết bị", "Bạn cần khởi động lại ứng dụng sau khi lưu để áp dụng.")
                     
                     // Print Settings
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -281,13 +292,11 @@ fun AdminScreen(
                     }
                     
                     Spacer(Modifier.height(16.dp))
-                    Button(
+                    KioskPrimaryButton(
+                        text = "Lưu cài đặt",
                         onClick = { onSaveSettings(enablePrint, useHotFolder, hotFolderPath) },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary, contentColor = Color.White),
-                        modifier = Modifier.height(48.dp)
-                    ) {
-                        Text("Lưu cài đặt", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp))
-                    }
+                        modifier = Modifier.width(180.dp)
+                    )
                 }
             } else if (selectedTab == 3) {
                 // Calculator App (Firebase Tool)
@@ -429,7 +438,12 @@ fun HardcodedCameraParamDropdown(
 
 @Composable
 fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDelete: () -> Unit) {
-    androidx.compose.material.Card(modifier = Modifier.fillMaxWidth(), backgroundColor = Color(0xFF27273A), elevation = 4.dp) {
+    androidx.compose.material.Card(
+        modifier = Modifier.fillMaxWidth().border(1.dp, NeutralBorder, RoundedCornerShape(14.dp)),
+        backgroundColor = NeutralPanel,
+        elevation = 0.dp,
+        shape = RoundedCornerShape(14.dp)
+    ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (frame.customImagePath != null) {
                 var imageBitmap by remember(frame.customImagePath) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
@@ -452,26 +466,36 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
                 }
                 
                 if (imageBitmap != null) {
-                    androidx.compose.foundation.Image(bitmap = imageBitmap!!, contentDescription = null, modifier = Modifier.height(100.dp))
+                    androidx.compose.foundation.Image(
+                        bitmap = imageBitmap!!,
+                        contentDescription = frame.title,
+                        modifier = Modifier.height(100.dp).widthIn(min = 72.dp).clip(RoundedCornerShape(10.dp)).background(NeutralPanelAlt),
+                    )
                 } else {
-                    Box(modifier = Modifier.height(100.dp).width(70.dp).background(Color.DarkGray, RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    Box(modifier = Modifier.height(100.dp).width(72.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = AccentNude, modifier = Modifier.size(24.dp))
                     }
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(frame.title, color = Color.White, fontWeight = FontWeight.Bold)
+                Text(frame.title, color = NeutralText, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InfoPill(frame.targetPrintSize ?: "Khổ khác", bgColor = NeutralPanelAlt, textColor = NeutralSecondary)
+                    InfoPill(frame.targetLayoutId ?: "Layout khác", bgColor = AccentNudeLight, textColor = AccentNudeDark)
+                }
                 if (frame.customImagePath != null) {
-                    Text(frame.customImagePath.toString(), color = Color.Gray, fontSize = 10.sp)
+                    Spacer(Modifier.height(6.dp))
+                    Text(frame.customImagePath.toString(), color = NeutralMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (frame.customImagePath != null) {
                 androidx.compose.material.OutlinedButton(
                     onClick = onDelete,
-                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = Color.Red, backgroundColor = Color.Transparent)
+                    shape = RoundedCornerShape(10.dp),
+                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentRed, backgroundColor = Color.Transparent)
                 ) {
-                    Text("Xóa khung này", fontWeight = FontWeight.Bold)
+                    Text("Xóa", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -482,30 +506,37 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
 fun LayoutAdminCard(layout: LayoutMode, onDelete: () -> Unit) {
     var showConfirm by remember { mutableStateOf(false) }
 
-    androidx.compose.material.Card(modifier = Modifier.fillMaxWidth(), backgroundColor = Color(0xFF27273A), elevation = 4.dp) {
+    androidx.compose.material.Card(
+        modifier = Modifier.fillMaxWidth().border(1.dp, NeutralBorder, RoundedCornerShape(14.dp)),
+        backgroundColor = NeutralPanel,
+        elevation = 0.dp,
+        shape = RoundedCornerShape(14.dp)
+    ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            MiniLayoutPreview(layout = layout, modifier = Modifier.height(96.dp).width(112.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)))
+            Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(layout.title, color = Color.White, fontWeight = FontWeight.Bold)
+                Text(layout.title, color = NeutralText, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Mã Bố cục (ID): ${layout.id}", color = Color.Gray, fontSize = 12.sp)
-                Text("Kích thước in: ${layout.printSizeLabel} | Số ảnh chụp: ${layout.shotCount} ảnh", color = Color.Gray, fontSize = 12.sp)
-                Text(layout.description, color = Color.Gray, fontSize = 12.sp)
+                Text("Layout ID: ${layout.id}", color = NeutralSecondary, fontSize = 12.sp)
+                Text("Khổ in: ${layout.printSizeLabel} | Chụp ${layout.shotCount} ảnh | Chọn ${layout.selectCount} ảnh", color = NeutralSecondary, fontSize = 12.sp)
+                Text(layout.description, color = NeutralMuted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (showConfirm) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Chắc chắn xóa?", color = Color.Red, fontSize = 12.sp)
+                    Text("Xóa layout?", color = AccentRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     androidx.compose.material.Button(
                         onClick = { 
                             showConfirm = false
                             onDelete() 
                         },
-                        colors = androidx.compose.material.ButtonDefaults.buttonColors(backgroundColor = Color.Red, contentColor = Color.White)
+                        colors = androidx.compose.material.ButtonDefaults.buttonColors(backgroundColor = AccentRed, contentColor = Color.White)
                     ) {
                         Text("Xóa")
                     }
                     androidx.compose.material.OutlinedButton(
                         onClick = { showConfirm = false },
-                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralSecondary)
                     ) {
                         Text("Hủy")
                     }
@@ -513,7 +544,8 @@ fun LayoutAdminCard(layout: LayoutMode, onDelete: () -> Unit) {
             } else {
                 androidx.compose.material.OutlinedButton(
                     onClick = { showConfirm = true },
-                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = Color.Red, backgroundColor = Color.Transparent)
+                    shape = RoundedCornerShape(10.dp),
+                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentRed, backgroundColor = Color.Transparent)
                 ) {
                     Text("Xóa", fontWeight = FontWeight.Bold)
                 }

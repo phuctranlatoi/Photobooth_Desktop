@@ -353,7 +353,7 @@ class DesktopBoothController(
                     }
                 
                 // Encode video concurrently in the background so it doesn't block the next shot
-                val videoPathFuture = scope.async(Dispatchers.IO) { encodeVideo(videoFramesDir, index) }
+                val videoPathFuture = scope.async(Dispatchers.IO) { encodeVideo(videoFramesDir, photoPath, index) }
                 _videoEncodingJobs.add(videoPathFuture)
                 
                 _capturedMoments.value = _capturedMoments.value + CapturedMoment(
@@ -391,7 +391,7 @@ class DesktopBoothController(
         }
     }
 
-    private fun encodeVideo(framesDir: Path, shotIndex: Int): Path? {
+    private fun encodeVideo(framesDir: Path, photoPath: Path?, shotIndex: Int): Path? {
         val outputFile = framesDir.parent.resolve("video_$shotIndex.mp4")
         return runCatching {
             val localAppData = System.getenv("LOCALAPPDATA")
@@ -404,16 +404,37 @@ class DesktopBoothController(
                 else -> "ffmpeg"
             }
 
-            val process = ProcessBuilder(
-                ffmpegExecutable, "-y", 
-                "-framerate", "15", 
-                "-i", "${framesDir.toAbsolutePath()}\\frame_%03d.jpg", 
-                "-c:v", "libx264", 
-                "-preset", "ultrafast",
-                "-crf", "28",
-                "-pix_fmt", "yuv420p",
-                outputFile.toAbsolutePath().toString()
-            ).redirectErrorStream(true).start()
+            val hasFrames = runCatching { java.nio.file.Files.list(framesDir).anyMatch { it.fileName.toString().startsWith("frame_") } }.getOrDefault(false)
+
+            val process = if (hasFrames) {
+                ProcessBuilder(
+                    ffmpegExecutable, "-y", 
+                    "-framerate", "15", 
+                    "-i", "${framesDir.toAbsolutePath()}\\frame_%03d.jpg", 
+                    "-c:v", "libx264", 
+                    "-preset", "ultrafast",
+                    "-crf", "28",
+                    "-pix_fmt", "yuv420p",
+                    outputFile.toAbsolutePath().toString()
+                ).redirectErrorStream(true).start()
+            } else if (photoPath != null && java.nio.file.Files.exists(photoPath)) {
+                // Fallback: create a 3-second static video from the single photo
+                // Must scale down because libx264 will crash on 24MP (6000x4000) photos due to H264 limits
+                ProcessBuilder(
+                    ffmpegExecutable, "-y", 
+                    "-loop", "1",
+                    "-framerate", "15",
+                    "-i", photoPath.toAbsolutePath().toString(), 
+                    "-vf", "scale=-2:1080",
+                    "-c:v", "libx264", 
+                    "-preset", "ultrafast",
+                    "-t", "3",
+                    "-pix_fmt", "yuv420p",
+                    outputFile.toAbsolutePath().toString()
+                ).redirectErrorStream(true).start()
+            } else {
+                return@runCatching null
+            }
             
             val exited = process.waitFor(20, java.util.concurrent.TimeUnit.SECONDS)
             if (exited && process.exitValue() == 0 && Files.exists(outputFile)) {
@@ -499,12 +520,16 @@ class DesktopBoothController(
             // Wait for all individual video encodings to finish
             _videoEncodingJobs.forEach { it.await() }
             
+            val latestSelectedMoments = _selectedMoments.value.mapNotNull { selected ->
+                _capturedMoments.value.find { it.index == selected.index }
+            }
+            
             val masterVideo = runCatching {
                 withContext(Dispatchers.IO) {
                     videoCompositor.createCompositeVideo(
                         layout = _selectedLayout.value,
                         frame = _selectedFrame.value,
-                        selectedMoments = _selectedMoments.value,
+                        selectedMoments = latestSelectedMoments,
                         outputDir = projectDir.resolve("data").resolve("output"),
                         sessionId = sessionId
                     )
@@ -545,7 +570,7 @@ class DesktopBoothController(
                         layout = _selectedLayout.value,
                         frame = _selectedFrame.value,
                         capturedMoments = _capturedMoments.value,
-                        selectedMoments = _selectedMoments.value,
+                        selectedMoments = latestSelectedMoments,
                         masterPrint = masterFile,
                         masterVideo = masterVideo
                     )

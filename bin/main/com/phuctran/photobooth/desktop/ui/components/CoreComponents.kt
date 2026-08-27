@@ -40,6 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.Size
@@ -64,15 +66,15 @@ fun BouncyButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.buttonColors(backgroundColor = NeutralText, contentColor = Color.White),
+    colors: ButtonColors = ButtonDefaults.buttonColors(backgroundColor = InkSoft, contentColor = Color.White),
     content: @Composable RowScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium)
     )
 
     Button(
@@ -93,12 +95,78 @@ fun BouncyButton(
 }
 
 @Composable
+fun KioskPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    BouncyButton(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = if (enabled) AccentNude else NeutralBorder,
+            contentColor = if (enabled) Color.White else NeutralMuted
+        ),
+        modifier = modifier.heightIn(min = 56.dp)
+    ) {
+        Text(text, fontWeight = FontWeight.Black, style = MaterialTheme.typography.button, maxLines = 1)
+    }
+}
+
+@Composable
+fun KioskSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            backgroundColor = NeutralPanel,
+            contentColor = NeutralText,
+            disabledContentColor = NeutralMuted
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder),
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
+        modifier = modifier.heightIn(min = 56.dp)
+    ) {
+        Text(text, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.button, maxLines = 1)
+    }
+}
+
+@Composable
+fun KioskBackButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    light: Boolean = false
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .size(52.dp)
+            .clip(CircleShape)
+            .background(if (light) Color.White.copy(alpha = 0.22f) else NeutralPanel)
+            .border(1.dp, if (light) Color.White.copy(alpha = 0.35f) else NeutralBorder, CircleShape)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = "Quay lại",
+            tint = if (light) Color.White else NeutralText
+        )
+    }
+}
+
+@Composable
 fun PanelBox(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = modifier
-            .shadow(24.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black.copy(alpha = 0.5f), spotColor = Color.Black.copy(alpha = 0.5f))
-            .border(1.dp, NeutralBorder.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
+            .shadow(18.dp, RoundedCornerShape(16.dp), ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.08f))
+            .border(1.dp, NeutralBorder.copy(alpha = 0.8f), RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
         color = NeutralPanel,
         contentColor = NeutralText,
         elevation = 0.dp
@@ -111,14 +179,18 @@ fun PanelBox(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
 
 @Composable
 fun SectionHeader(badge: String, title: String, subtitle: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.background(AccentNudeLight, RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
-                Text(badge, color = AccentNude, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (badge.isNotBlank()) {
+                Box(Modifier.background(AccentNudeLight, RoundedCornerShape(999.dp)).padding(horizontal = 10.dp, vertical = 5.dp)) {
+                    Text(badge, color = AccentNudeDark, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Black)
+                }
             }
-            Text(title, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText)
+            Text(title, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(subtitle, color = NeutralMuted, style = MaterialTheme.typography.body2)
+        if (subtitle.isNotBlank()) {
+            Text(subtitle, color = NeutralSecondary, style = MaterialTheme.typography.body2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
@@ -126,11 +198,36 @@ fun SectionHeader(badge: String, title: String, subtitle: String) {
 fun InfoPill(text: String, modifier: Modifier = Modifier, bgColor: Color = NeutralBg, textColor: Color = NeutralText) {
     Text(
         text,
-        modifier = modifier.background(bgColor, RoundedCornerShape(999.dp)).border(1.dp, NeutralBorder, RoundedCornerShape(999.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = modifier
+            .background(bgColor, RoundedCornerShape(999.dp))
+            .border(1.dp, NeutralBorder.copy(alpha = 0.8f), RoundedCornerShape(999.dp))
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         color = textColor,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         style = MaterialTheme.typography.caption
     )
+}
+
+@Composable
+fun StatusChip(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(color.copy(alpha = 0.11f))
+            .border(1.dp, color.copy(alpha = 0.22f), RoundedCornerShape(999.dp))
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(color))
+        Text(label, color = NeutralSecondary, style = MaterialTheme.typography.caption, fontWeight = FontWeight.SemiBold)
+        Text(value, color = color, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Black, maxLines = 1)
+    }
 }
 
 
@@ -191,13 +288,18 @@ fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, 
         modifier
             .aspectRatio(aspectRatio)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFF3F4F6))
-            .border(if (selectedOrder != null) 4.dp else 1.dp, if (selectedOrder != null) AccentNude else Color.Transparent, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(NeutralPanelAlt)
+            .border(if (selectedOrder != null) 4.dp else 1.dp, if (selectedOrder != null) AccentNude else NeutralBorder, RoundedCornerShape(14.dp))
             .bouncyClickable(onClick = onClick)
     ) {
         if (bitmap != null) {
             Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+        if (bitmap == null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(moment.photoLabel, color = NeutralMuted, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
+            }
         }
         
         // Dim overlay
@@ -214,7 +316,7 @@ fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, 
         ) {
             Box(
                 Modifier
-                    .size(40.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
                     .background(AccentNude)
                     .border(2.dp, Color.White, CircleShape),
@@ -228,14 +330,14 @@ fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, 
 
 @Composable
 fun ChoiceRow(title: String, subtitle: String, selected: Boolean, accent: Color, onClick: () -> Unit, trailing: String? = null) {
-    val scale by animateFloatAsState(if (selected) 1.02f else 1f)
+    val scale by animateFloatAsState(if (selected) 1.01f else 1f)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) accent.copy(alpha = 0.15f) else NeutralBg)
-            .border(2.dp, if (selected) accent else NeutralBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) accent.copy(alpha = 0.12f) else NeutralPanel)
+            .border(if (selected) 2.dp else 1.dp, if (selected) accent else NeutralBorder, RoundedCornerShape(14.dp))
             .bouncyClickable(onClick = onClick)
             .padding(16.dp)
     ) {
@@ -243,10 +345,17 @@ fun ChoiceRow(title: String, subtitle: String, selected: Boolean, accent: Color,
             Column(Modifier.weight(1f)) {
                 Text(title, color = NeutralText, style = MaterialTheme.typography.h6, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
-                Text(subtitle, color = NeutralMuted, style = MaterialTheme.typography.body2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = NeutralSecondary, style = MaterialTheme.typography.body2, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (trailing != null) {
-                Text(trailing, color = if (selected) accent else NeutralMuted, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(if (selected) Color.White else NeutralPanelAlt)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(trailing, color = if (selected) accent else NeutralSecondary, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Black)
+                }
             }
         }
     }
@@ -276,12 +385,12 @@ fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(NeutralBg)
+                .clip(RoundedCornerShape(14.dp))
+                .background(NeutralPanel)
                 .border(
                     if (selected) 3.dp else 1.dp,
                     if (selected) Color(frame.accentColor) else NeutralBorder,
-                    RoundedCornerShape(12.dp)
+                    RoundedCornerShape(14.dp)
                 )
                 .bouncyClickable(onClick = onClick)
                 .padding(12.dp),
@@ -296,7 +405,22 @@ fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
                     contentScale = ContentScale.Fit
                 )
             } else {
-                Text("Lỗi tải ảnh: ${frame.title}", color = NeutralMuted)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.size(42.dp).clip(CircleShape).background(NeutralPanelAlt))
+                    Text("Đang tải khung", color = NeutralMuted, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
+                }
+            }
+            if (selected) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(Color(frame.accentColor)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("OK", color = Color.White, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Black)
+                }
             }
         }
     } else {
@@ -314,46 +438,63 @@ fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
 @Composable
 fun OutputRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(NeutralBg).border(1.dp, NeutralBorder, RoundedCornerShape(12.dp)).padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(NeutralPanelAlt.copy(alpha = 0.75f))
+            .border(1.dp, NeutralBorder, RoundedCornerShape(12.dp))
+            .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = NeutralMuted, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.body2)
+        Text(label, color = NeutralSecondary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.body2)
         Text(value, color = NeutralText, fontWeight = FontWeight.Black, textAlign = TextAlign.End, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @Composable
 fun QuantityCard(quantity: Int, selected: Boolean, onClick: () -> Unit) {
-    val scale by animateFloatAsState(if (selected) 1.05f else 1f)
+    val scale by animateFloatAsState(if (selected) 1.04f else 1f)
     Box(
         Modifier
-            .size(110.dp)
+            .size(120.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) AccentNudeLight else NeutralBg)
-            .border(2.dp, if (selected) AccentNude else NeutralBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) AccentNudeLight else NeutralPanel)
+            .border(if (selected) 3.dp else 1.dp, if (selected) AccentNude else NeutralBorder, RoundedCornerShape(16.dp))
             .bouncyClickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("$quantity", color = NeutralText, style = MaterialTheme.typography.h3, fontWeight = FontWeight.Black)
-            Text("bản in", color = if (selected) AccentNude else NeutralMuted, style = MaterialTheme.typography.subtitle2, fontWeight = FontWeight.Bold)
+            Text("bản in", color = if (selected) AccentNudeDark else NeutralSecondary, style = MaterialTheme.typography.subtitle2, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
 fun QrMock(modifier: Modifier = Modifier) {
-    Box(modifier.clip(RoundedCornerShape(12.dp)).background(Color.White).border(1.dp, NeutralBorder, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+    Box(modifier.clip(RoundedCornerShape(16.dp)).background(Color.White).border(1.dp, NeutralBorder, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
         Text("QR CODE", color = NeutralMuted, fontWeight = FontWeight.Black)
     }
 }
 
 @Composable
 fun CameraPoseGuide(modifier: Modifier = Modifier) {
-    Box(modifier.clip(RoundedCornerShape(10.dp)).background(NeutralBg).border(1.dp, NeutralBorder, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-        Text("POSE GUIDE", color = NeutralMuted, fontWeight = FontWeight.Black)
+    Box(modifier.clip(RoundedCornerShape(18.dp)).background(CameraBlack).border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize().padding(28.dp)) {
+            val stroke = Stroke(2.dp.toPx())
+            val guide = Color.White.copy(alpha = 0.18f)
+            drawRoundRect(guide, cornerRadius = CornerRadius(24.dp.toPx()), style = stroke)
+            drawLine(guide, Offset(size.width / 3f, 0f), Offset(size.width / 3f, size.height), strokeWidth = 1.dp.toPx())
+            drawLine(guide, Offset(size.width * 2f / 3f, 0f), Offset(size.width * 2f / 3f, size.height), strokeWidth = 1.dp.toPx())
+            drawLine(guide, Offset(0f, size.height / 3f), Offset(size.width, size.height / 3f), strokeWidth = 1.dp.toPx())
+            drawLine(guide, Offset(0f, size.height * 2f / 3f), Offset(size.width, size.height * 2f / 3f), strokeWidth = 1.dp.toPx())
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Căn giữa khung hình", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
+            Text("Nhìn vào camera và giữ dáng khi đếm ngược", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.body2)
+        }
     }
 }
 
@@ -452,7 +593,7 @@ fun RealQr(url: String, modifier: Modifier = Modifier) {
     }
 
     Box(
-        modifier = modifier.clip(RoundedCornerShape(12.dp)).background(Color.White).border(1.dp, NeutralBorder, RoundedCornerShape(12.dp)), 
+        modifier = modifier.clip(RoundedCornerShape(16.dp)).background(Color.White).border(1.dp, NeutralBorder, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (qrBitmap != null) {

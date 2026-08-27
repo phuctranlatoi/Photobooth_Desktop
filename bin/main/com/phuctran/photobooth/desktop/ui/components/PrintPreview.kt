@@ -32,9 +32,9 @@ fun PrintPreview(
             modifier = Modifier
                 .fillMaxHeight()
                 .aspectRatio(layout.printAspectRatio, matchHeightConstraintsFirst = false)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .background(NeutralPanel)
-                .border(width = 1.dp, color = NeutralBorder, shape = RoundedCornerShape(6.dp))
+                .border(width = 1.dp, color = NeutralBorder, shape = RoundedCornerShape(8.dp))
         ) {
         val columns = layout.gridColumns.coerceAtLeast(1)
         val rows = ceil(layout.selectCount / columns.toFloat()).toInt().coerceAtLeast(1)
@@ -64,15 +64,15 @@ fun PrintPreview(
                         .width(slotW + bleedX)
                         .height(slotH + bleedY)
                         .clip(RoundedCornerShape(0.dp))
-                        .background(NeutralBg)
-                        .border(1.dp, NeutralMuted.copy(alpha = 0.5f), RoundedCornerShape(0.dp))
+                        .background(NeutralPanelAlt)
+                        .border(1.dp, NeutralBorder.copy(alpha = 0.75f), RoundedCornerShape(0.dp))
                 ) {
                     if (bitmap != null) {
                         Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     }
                     Text(
                         text = moment?.photoLabel ?: "Ảnh ${slot.index + 1}",
-                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.86f), RoundedCornerShape(5.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
+                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.9f), RoundedCornerShape(6.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
                         color = accent,
                         style = MaterialTheme.typography.caption,
                         fontWeight = FontWeight.Bold
@@ -95,15 +95,15 @@ fun PrintPreview(
                         .width(slotWidth + bleedX)
                         .height(slotHeight + bleedY)
                         .clip(RoundedCornerShape(0.dp))
-                        .background(NeutralBg)
-                        .border(1.dp, NeutralMuted.copy(alpha = 0.5f), RoundedCornerShape(0.dp))
+                        .background(NeutralPanelAlt)
+                        .border(1.dp, NeutralBorder.copy(alpha = 0.75f), RoundedCornerShape(0.dp))
                 ) {
                     if (bitmap != null) {
                         Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     }
                     Text(
                         text = moment?.photoLabel ?: "Ảnh ${index + 1}",
-                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.86f), RoundedCornerShape(5.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
+                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.9f), RoundedCornerShape(6.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
                         color = accent,
                         style = MaterialTheme.typography.caption,
                         fontWeight = FontWeight.Bold
@@ -129,12 +129,12 @@ fun PrintPreview(
                 )
             }
         } else {
-            Box(Modifier.fillMaxSize().border(5.dp, accent, RoundedCornerShape(6.dp)))
+            Box(Modifier.fillMaxSize().border(5.dp, accent, RoundedCornerShape(8.dp)))
             val footerHeight = maxHeight - (top + slotHeight * rows.toFloat() + gapY * (rows - 1).toFloat())
             if (footerHeight > 38.dp) {
                 Text(
                     text = frame.title.uppercase(),
-                    modifier = Modifier.align(Alignment.BottomStart).padding(14.dp).background(NeutralPanel.copy(alpha = 0.82f), RoundedCornerShape(5.dp)).padding(horizontal = 9.dp, vertical = 5.dp),
+                    modifier = Modifier.align(Alignment.BottomStart).padding(14.dp).background(NeutralPanel.copy(alpha = 0.88f), RoundedCornerShape(6.dp)).padding(horizontal = 9.dp, vertical = 5.dp),
                     color = accent,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.caption

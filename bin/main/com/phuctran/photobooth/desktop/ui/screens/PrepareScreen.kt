@@ -24,13 +24,22 @@ import java.nio.file.Path
 @Composable
 fun PrepareScreen(layout: LayoutMode, effect: EffectMode) {
     PanelBox(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-            CameraPoseGuide(Modifier.weight(0.8f).fillMaxHeight(0.8f))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Chuẩn bị", color = AccentNude, fontWeight = FontWeight.Bold)
-                Text("Mỗi tấm có 3 giây", style = MaterialTheme.typography.h3, fontWeight = FontWeight.Black)
-                InfoPill("Layout ${layout.title} • chọn ${layout.selectCount}")
-                InfoPill("Màu ${effect.title}")
+        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+            CameraPoseGuide(Modifier.weight(0.9f).fillMaxHeight(0.86f))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                SectionHeader("Bước 5", "Chuẩn bị tạo dáng", "Khi nhấn chụp, mỗi ảnh sẽ có 3 giây đếm ngược.")
+                Spacer(Modifier.height(28.dp))
+                Text("Đứng vào khung, nhìn camera và giữ dáng khi số đếm hiện lên.", style = MaterialTheme.typography.h4, fontWeight = FontWeight.Black, color = NeutralText)
+                Spacer(Modifier.height(24.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    InfoPill("${layout.shotCount} lần chụp", bgColor = AccentNudeLight, textColor = AccentNudeDark)
+                    InfoPill("Chọn ${layout.selectCount} ảnh in")
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    InfoPill(layout.title)
+                    InfoPill(effect.title, bgColor = NeutralPanelAlt, textColor = NeutralText)
+                }
             }
         }
     }

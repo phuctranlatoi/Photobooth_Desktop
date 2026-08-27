@@ -35,36 +35,42 @@ fun FrameScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit
 ) {
-    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PrintPreview(layout, selectedMoments, selectedFrame, Modifier.weight(0.8f).fillMaxHeight())
+    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        PanelBox(Modifier.weight(0.85f).fillMaxHeight()) {
+            SectionHeader("", "Preview bản in", "${selectedFrame.title} · ${layout.printSizeLabel}")
+            Spacer(Modifier.height(18.dp))
+            PrintPreview(layout, selectedMoments, selectedFrame, Modifier.weight(1f).fillMaxWidth())
+        }
         PanelBox(Modifier.weight(1f).fillMaxHeight()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                SectionHeader("Bước 6", "Chọn khung ảnh", "Bấm vào khung để thay đổi.")
-                OutlinedButton(onClick = { onAddFrame(false) }) { Text("Thêm PNG") }
+                SectionHeader("Bước 7", "Chọn khung ảnh", "Chạm vào khung để xem ngay trên bản in.")
+                KioskSecondaryButton("Thêm PNG", { onAddFrame(false) }, modifier = Modifier.width(132.dp).height(50.dp))
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
             
             if (frames.isEmpty()) {
-                Text("Chưa có khung ảnh nào.", color = NeutralMuted, modifier = Modifier.padding(16.dp))
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Chưa có khung ảnh", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText)
+                        Text("Bạn vẫn có thể dùng khung mặc định của layout.", color = NeutralSecondary)
+                    }
+                }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Adaptive(190.dp),
                     modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(frames, key = { it.id }) { frame ->
                         FrameChoice(frame, frame.id == selectedFrame.id) { onFrameSelected(frame.id) }
                     }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Quay lại") }
-                Button(
-                    onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = NeutralPanel, contentColor = NeutralText),
-                    modifier = Modifier.weight(1f)
-                ) { Text("Xem bản in") }
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                KioskSecondaryButton("Quay lại", onBack, modifier = Modifier.weight(1f))
+                KioskPrimaryButton("Xem bản in", onConfirm, modifier = Modifier.weight(1f))
             }
         }
     }

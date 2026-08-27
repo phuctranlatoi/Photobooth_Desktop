@@ -27,66 +27,56 @@ fun DeliveryScreen(
     onOpenAlbum: () -> Unit,
     onFinish: () -> Unit
 ) {
-    Box(Modifier.fillMaxSize().background(Color.White), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(24.dp)
+    Box(Modifier.fillMaxSize().background(NeutralBg), contentAlignment = Alignment.Center) {
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 72.dp, vertical = 36.dp),
+            horizontalArrangement = Arrangement.spacedBy(28.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Header
-            Text(
-                "HOÀN TẤT!",
-                style = MaterialTheme.typography.h3,
-                fontWeight = FontWeight.Black,
-                color = AccentNude
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "Ảnh đang được in. Vui lòng nhận ảnh ở khe bên dưới nhé!\nĐừng quên tải file mềm về điện thoại của bạn.",
-                style = MaterialTheme.typography.h6,
-                color = NeutralText,
-                textAlign = TextAlign.Center
-            )
-            
-            Spacer(Modifier.height(40.dp))
-            
-            // QR Card
-            Box(
-                modifier = Modifier
-                    .shadow(16.dp, RoundedCornerShape(24.dp))
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFFF9FAFB))
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (summary.qrUrl != null) {
-                        RealQr(summary.qrUrl, Modifier.size(240.dp))
-                        Spacer(Modifier.height(16.dp))
-                        Text("Quét mã để tải ảnh gốc", fontWeight = FontWeight.Bold, color = NeutralText)
-                        if (summary.outputPath != null) {
-                            TextButton(onClick = onOpenOutput) {
-                                Text("Mở thư mục lưu file in", color = AccentNude)
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier.size(240.dp).clip(RoundedCornerShape(12.dp)).background(NeutralPanel),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Không có QR", color = NeutralMuted)
-                        }
-                    }
+            PanelBox(Modifier.weight(0.9f).fillMaxHeight(0.78f)) {
+                SectionHeader("Hoàn tất", "Ảnh của bạn đã sẵn sàng", "Nhận bản in tại khe máy và quét QR để tải album.")
+                Spacer(Modifier.height(26.dp))
+                OutputRow("Ảnh đã chụp", "$totalCaptured ảnh")
+                Spacer(Modifier.height(10.dp))
+                OutputRow("Bản in", "$printCopies bản")
+                Spacer(Modifier.height(10.dp))
+                OutputRow("Album", summary.albumId ?: "Đang dùng phiên cục bộ")
+                Spacer(Modifier.weight(1f))
+                if (summary.outputPath != null) {
+                    KioskSecondaryButton("Mở thư mục lưu file", onOpenOutput, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(12.dp))
                 }
+                KioskPrimaryButton("Về trang chủ", onFinish, modifier = Modifier.fillMaxWidth().height(64.dp))
             }
-            
-            Spacer(Modifier.height(60.dp))
-            
-            BouncyButton(
-                onClick = onFinish,
-                colors = ButtonDefaults.buttonColors(backgroundColor = AccentNude, contentColor = Color.White),
-                modifier = Modifier.width(300.dp).height(64.dp)
+
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight(0.86f)
+                    .shadow(18.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black.copy(alpha = 0.1f), spotColor = Color.Black.copy(alpha = 0.1f))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(NeutralPanel)
+                    .border(1.dp, NeutralBorder, RoundedCornerShape(24.dp))
+                    .padding(34.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text("VỀ TRANG CHỦ", fontWeight = FontWeight.Black, style = MaterialTheme.typography.h5)
+                if (summary.qrUrl != null) {
+                    RealQr(summary.qrUrl, Modifier.size(280.dp))
+                    Spacer(Modifier.height(22.dp))
+                    Text("Quét để tải ảnh", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Album gồm ảnh gốc, ảnh in và video nếu có.", color = NeutralSecondary, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(14.dp))
+                    TextButton(onClick = onOpenAlbum) {
+                        Text("Mở album", color = AccentNude, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    QrMock(Modifier.size(260.dp))
+                    Spacer(Modifier.height(20.dp))
+                    Text("Chưa tạo được QR", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText)
+                    Text("Vui lòng gọi nhân viên để lấy file ảnh.", color = NeutralSecondary, textAlign = TextAlign.Center)
+                }
             }
         }
     }

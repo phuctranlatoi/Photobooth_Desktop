@@ -14,8 +14,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phuctran.photobooth.desktop.model.EffectMode
+import com.phuctran.photobooth.desktop.ui.components.InfoPill
+import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
+import com.phuctran.photobooth.desktop.ui.components.KioskSecondaryButton
 import com.phuctran.photobooth.desktop.ui.components.SectionHeader
-import com.phuctran.photobooth.desktop.ui.theme.NeutralBorder
+import com.phuctran.photobooth.desktop.ui.theme.*
 
 @Composable
 fun FilterAdminView(
@@ -35,9 +38,10 @@ fun FilterAdminView(
                 .padding(end = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SectionHeader("Bộ Lọc (Filters)", "Danh sách các bộ lọc hiện có", "")
+            SectionHeader("Admin", "Bộ lọc màu", "Danh sách các bộ lọc hiện có.")
             
-            Button(
+            KioskPrimaryButton(
+                text = "Thêm bộ lọc mới",
                 onClick = {
                     val newId = "filter_${System.currentTimeMillis()}"
                     val newEffect = EffectMode(
@@ -55,9 +59,7 @@ fun FilterAdminView(
                     selectedEffectId = newId
                 },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("+ Thêm bộ lọc mới", fontWeight = FontWeight.Bold)
-            }
+            )
 
             Column(
                 modifier = Modifier
@@ -70,27 +72,33 @@ fun FilterAdminView(
                     val isSelected = effect.id == selectedEffectId
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = if (isSelected) MaterialTheme.colors.primary else Color(0xFF27273A),
-                        elevation = if (isSelected) 8.dp else 0.dp
+                        backgroundColor = if (isSelected) AccentNudeLight else NeutralPanel,
+                        elevation = if (isSelected) 6.dp else 0.dp,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                     ) {
-                        Column(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { selectedEffectId = effect.id }
-                                .padding(16.dp)
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                effect.title,
-                                color = if (isSelected) Color.White else Color.LightGray,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                effect.description,
-                                color = if (isSelected) Color.White.copy(alpha = 0.8f) else Color.Gray,
-                                fontSize = 12.sp,
-                                maxLines = 1
-                            )
+                            Box(Modifier.size(34.dp).background(Color(effect.accentColor), androidx.compose.foundation.shape.CircleShape))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    effect.title,
+                                    color = NeutralText,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    effect.description,
+                                    color = NeutralSecondary,
+                                    fontSize = 12.sp,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }
@@ -109,7 +117,7 @@ fun FilterAdminView(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (selectedEffect != null) {
-                SectionHeader("Chỉnh sửa", "Thay đổi thông số cho ${selectedEffect.title}", "")
+                SectionHeader("Chỉnh sửa", selectedEffect.title, "Thay đổi thông số màu và lưu để áp dụng cho kiosk.")
                 
                 var title by remember(selectedEffect) { mutableStateOf(selectedEffect.title) }
                 var description by remember(selectedEffect) { mutableStateOf(selectedEffect.description) }
@@ -148,6 +156,22 @@ fun FilterAdminView(
 
                 Spacer(Modifier.height(8.dp))
 
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(NeutralPanelAlt, androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(Modifier.size(52.dp).background(Color(selectedEffect.accentColor), androidx.compose.foundation.shape.CircleShape))
+                    Column(Modifier.weight(1f)) {
+                        Text("Preview màu", color = NeutralText, fontWeight = FontWeight.Bold)
+                        Text("Thay đổi slider sẽ cập nhật bộ lọc đang chọn.", color = NeutralSecondary, style = MaterialTheme.typography.body2)
+                    }
+                    InfoPill(selectedEffect.id, bgColor = NeutralPanel, textColor = NeutralSecondary)
+                }
+
                 SliderControl("Độ bão hòa (Saturation)", saturation, 0f..2f) { saturation = it; updateCurrentEffect() }
                 SliderControl("Độ tương phản (Contrast)", contrast, 0f..2f) { contrast = it; updateCurrentEffect() }
                 SliderControl("Độ sáng (Brightness)", brightness, -1f..1f) { brightness = it; updateCurrentEffect() }
@@ -157,23 +181,20 @@ fun FilterAdminView(
                 Spacer(Modifier.height(16.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    OutlinedButton(
+                    KioskSecondaryButton(
+                        text = "Xóa bộ lọc này",
                         onClick = {
                             mutableEffects = mutableEffects.filter { it.id != selectedEffectId }.toMutableList()
                             selectedEffectId = mutableEffects.firstOrNull()?.id
                         },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red, backgroundColor = Color.Transparent)
-                    ) {
-                        Text("Xóa bộ lọc này", fontWeight = FontWeight.Bold)
-                    }
+                        modifier = Modifier.width(190.dp)
+                    )
 
-                    Button(onClick = { onSaveEffects(mutableEffects) }) {
-                        Text("Lưu tất cả thay đổi", fontWeight = FontWeight.Bold)
-                    }
+                    KioskPrimaryButton("Lưu tất cả thay đổi", { onSaveEffects(mutableEffects) }, modifier = Modifier.width(220.dp))
                 }
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Vui lòng chọn một bộ lọc để chỉnh sửa.", color = Color.Gray)
+                    Text("Vui lòng chọn một bộ lọc để chỉnh sửa.", color = NeutralSecondary)
                 }
             }
         }
@@ -184,14 +205,19 @@ fun FilterAdminView(
 fun SliderControl(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, color = Color.White, fontWeight = FontWeight.Bold)
-            Text(String.format("%.2f", value), color = Color.Gray)
+            Text(label, color = NeutralText, fontWeight = FontWeight.Bold)
+            Text(String.format("%.2f", value), color = NeutralSecondary)
         }
         Slider(
             value = value,
             onValueChange = onValueChange,
             valueRange = range,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = SliderDefaults.colors(
+                thumbColor = AccentNude,
+                activeTrackColor = AccentNude,
+                inactiveTrackColor = NeutralBorder
+            )
         )
     }
 }

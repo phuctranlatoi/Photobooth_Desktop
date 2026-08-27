@@ -29,10 +29,10 @@ fun QuantityScreen(
     onBack: () -> Unit
 ) {
     var quantity by remember(layout.id) { mutableStateOf(1) }
-    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         PanelBox(Modifier.weight(1f).fillMaxHeight()) {
-            SectionHeader("Bước 2", "Chọn số tấm in", "Ảnh số vẫn giữ đầy đủ, bản in chỉ lấy ảnh đã chọn.")
-            Spacer(Modifier.height(20.dp))
+            SectionHeader("Bước 3", "Chọn số bản in", "Album số vẫn giữ toàn bộ ảnh, bản in chỉ dùng ảnh bạn chọn.")
+            Spacer(Modifier.height(24.dp))
             val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
             // For 5x15, min 2 copies (1 sheet of 10x15). Options: 2, 4, 6, 8.
             // For 10x15, min 2 copies. Options: 2, 3, 4, 5.
@@ -45,30 +45,32 @@ fun QuantityScreen(
                 }
             }
             
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 quantityOptions.forEach { count ->
                     QuantityCard(count, quantity == count) { quantity = count }
                 }
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
             OutputRow("Bố cục", layout.mediaLabel)
+            Spacer(Modifier.height(10.dp))
             OutputRow("Màu", effect.title)
+            Spacer(Modifier.height(10.dp))
             OutputRow("Tổng thanh toán", formatVnd(layout.basePrice * quantity))
             Spacer(Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Quay lại") }
-                Button(
-                    onClick = { onQuantitySelected(quantity) },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = NeutralPanel, contentColor = NeutralText),
-                    modifier = Modifier.weight(1f)
-                ) { Text("Thanh toán") }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                KioskSecondaryButton("Quay lại", onBack, modifier = Modifier.weight(1f))
+                KioskPrimaryButton("Thanh toán", { onQuantitySelected(quantity) }, modifier = Modifier.weight(1f))
             }
         }
-        PrintPreview(
-            layout = layout,
-            moments = emptyList(),
-            frame = FramePack("preview", "Preview", "", layout.accentColor),
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
+        PanelBox(Modifier.weight(1f).fillMaxHeight()) {
+            SectionHeader("", "Bản in dự kiến", "${layout.printSizeLabel} · ${layout.shotCount} lần chụp")
+            Spacer(Modifier.height(18.dp))
+            PrintPreview(
+                layout = layout,
+                moments = emptyList(),
+                frame = FramePack("preview", "Le Souvenir", "", layout.accentColor),
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            )
+        }
     }
 }

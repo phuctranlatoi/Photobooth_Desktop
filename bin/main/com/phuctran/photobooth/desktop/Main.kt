@@ -53,14 +53,20 @@ fun main() = application {
         val isAppReady by controller.isAppReady.collectAsState()
         val availableLayouts by controller.availableLayouts.collectAsState()
         val liveViewBitmap by controller.liveViewStream.collectAsState()
+        val currentConfig by controller.activeConfig.collectAsState()
 
         PhotoboothTheme {
-            AppShell(state) {
+            AppShell(
+                state = state,
+                albumEnabled = currentConfig.canUploadAlbum,
+                printerEnabled = currentConfig.enableSystemPrint,
+                paymentConfigured = controller.isPaymentConfigured
+            ) {
                 if (!isAppReady) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            CircularProgressIndicator(color = Color.White)
-                            Text("Đang tải dữ liệu Layout từ Firebase...", color = Color.White)
+                            CircularProgressIndicator(color = com.phuctran.photobooth.desktop.ui.theme.AccentNude)
+                            Text("Đang tải bố cục chụp...", color = com.phuctran.photobooth.desktop.ui.theme.NeutralSecondary)
                         }
                     }
                 } else {
@@ -164,7 +170,7 @@ fun main() = application {
                         onPrint = { controller.startPrinting() },
                         onBack = { controller.goBack() }
                     )
-                    SessionState.PRINTING -> PrintingScreen(layout, frame)
+                    SessionState.PRINTING -> PrintingScreen(layout, frame, statusMessage)
                     SessionState.DELIVERY -> DeliveryScreen(
                         summary = exportSummary,
                         totalCaptured = capturedMoments.size,
@@ -174,7 +180,6 @@ fun main() = application {
                         onFinish = { controller.finishSession() }
                     )
                     SessionState.ADMIN -> {
-                        val currentConfig by controller.activeConfig.collectAsState()
                         val availableEffects by controller.availableEffects.collectAsState()
                         AdminScreen(
                             layouts = availableLayouts,

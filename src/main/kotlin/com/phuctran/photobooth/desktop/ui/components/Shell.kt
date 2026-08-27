@@ -20,11 +20,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.domain.SessionState
 import com.phuctran.photobooth.desktop.ui.theme.*
+import androidx.compose.ui.unit.sp
 import java.nio.file.Path
 
 @Composable
 fun AppShell(
     state: SessionState,
+    albumEnabled: Boolean = false,
+    printerEnabled: Boolean = false,
+    paymentConfigured: Boolean = false,
     content: @Composable BoxScope.() -> Unit
 ) {
     val isFullscreen = state == SessionState.LIVE_VIEW || state == SessionState.COUNTDOWN || state == SessionState.CAPTURING
@@ -34,41 +38,65 @@ fun AppShell(
             content()
         }
     } else {
-        Column(
-            Modifier.fillMaxSize().background(NeutralBg).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            Modifier.fillMaxSize().background(NeutralBg).padding(24.dp)
         ) {
-            TopBar(state)
-            
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                content()
-            }
+            content()
         }
     }
 }
 
 @Composable
-fun TopBar(state: SessionState) {
+fun TopBar(
+    state: SessionState,
+    albumEnabled: Boolean,
+    printerEnabled: Boolean,
+    paymentConfigured: Boolean
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(12.dp)).background(NeutralPanel).border(1.dp, NeutralBorder, RoundedCornerShape(12.dp)).padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(76.dp)
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(AccentNude), contentAlignment = Alignment.Center) {
-                Text("P", color = Color.White, style = MaterialTheme.typography.h6, fontWeight = FontWeight.Black)
-            }
-            Column {
-                Text("PHOTOBOOTH KIOSK", color = NeutralText, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Black)
-                Text("Session: ${state.name}", color = NeutralMuted, style = MaterialTheme.typography.caption)
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            InfoPill("Cloud Album ON", bgColor = AccentNudeLight, textColor = AccentNude)
-            InfoPill("Printer READY", bgColor = Color(0xFFE8F5E9), textColor = Color(0xFF4CAF50))
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(
+                "Le Souvenir", 
+                color = AccentNudeDark, 
+                style = MaterialTheme.typography.h4, 
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+            Text(
+                stepLabel(state),
+                color = NeutralSecondary,
+                style = MaterialTheme.typography.subtitle2,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
+}
+
+private fun stepLabel(state: SessionState): String = when (state) {
+    SessionState.IDLE -> "Sẵn sàng đón khách"
+    SessionState.SELECTING -> "Chọn bố cục và màu ảnh"
+    SessionState.SELECTING_QUANTITY -> "Chọn số bản in"
+    SessionState.PAYMENT_PENDING -> "Thanh toán"
+    SessionState.PREPARING -> "Chuẩn bị tạo dáng"
+    SessionState.LIVE_VIEW -> "Live view"
+    SessionState.COUNTDOWN -> "Đếm ngược"
+    SessionState.CAPTURING -> "Đang chụp"
+    SessionState.SELECTING_PHOTOS -> "Chọn ảnh in"
+    SessionState.EDITING -> "Chọn khung"
+    SessionState.COMPOSING -> "Ghép ảnh"
+    SessionState.PRINT_PENDING -> "Kiểm tra lần cuối"
+    SessionState.PRINTING -> "Đang in và upload"
+    SessionState.DELIVERY -> "Hoàn tất"
+    SessionState.RECOVERY -> "Khôi phục phiên"
+    SessionState.OUT_OF_SERVICE -> "Tạm ngưng phục vụ"
+    SessionState.ADMIN -> "Quản trị"
 }
 
 @Composable

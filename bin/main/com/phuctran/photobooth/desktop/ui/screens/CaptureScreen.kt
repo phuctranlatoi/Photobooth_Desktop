@@ -36,11 +36,13 @@ fun CaptureScreen(
     onRefreshCameraDevices: () -> Unit,
     onStartCapture: () -> Unit
 ) {
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        // Main Live View with Crop Box
+    Box(Modifier.fillMaxSize().background(CameraBlack)) {
         if (cameraDevices.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Camera chưa sẵn sàng", color = Color.White.copy(alpha = 0.5f))
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Camera chưa sẵn sàng", color = Color.White, style = MaterialTheme.typography.h4, fontWeight = FontWeight.Black)
+                    Text("Vui lòng kiểm tra nguồn camera hoặc gọi nhân viên.", color = Color.White.copy(alpha = 0.64f), style = MaterialTheme.typography.body1)
+                }
             }
         } else if (liveViewBitmap != null && (state == SessionState.LIVE_VIEW || state == SessionState.COUNTDOWN || state == SessionState.PREPARING || state == SessionState.CAPTURING)) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -84,7 +86,7 @@ fun CaptureScreen(
                     val cropLeft = xOffset + (drawWidth - cropWidth) / 2f
                     val cropTop = yOffset + (drawHeight - cropHeight) / 2f
                     
-                    val dimColor = Color.Black.copy(alpha = 0.75f)
+                    val dimColor = Color.Black.copy(alpha = 0.68f)
                     
                     // Top
                     if (cropTop > yOffset) {
@@ -104,10 +106,10 @@ fun CaptureScreen(
                     }
                     
                     drawRect(
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = Color.White.copy(alpha = 0.9f),
                         topLeft = androidx.compose.ui.geometry.Offset(cropLeft, cropTop),
                         size = androidx.compose.ui.geometry.Size(cropWidth, cropHeight),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
                     )
                 }
             }
@@ -126,49 +128,60 @@ fun CaptureScreen(
             }
         }
 
-        // Top Floating Progress Pill
-        Box(
+        Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 40.dp)
-                .clip(RoundedCornerShape(50))
-                .background(Color.White.copy(alpha = 0.2f))
-                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .padding(top = 34.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(Color.Black.copy(alpha = 0.42f))
+                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(999.dp))
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                "Ảnh ${capturedMoments.size} / ${layout.shotCount}",
+                "Ảnh ${capturedMoments.size}/${layout.shotCount}",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.h5
+                style = MaterialTheme.typography.subtitle1
             )
+            if (isRecordingVideo) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(AccentRed))
+                    Text("Đang quay video", color = Color.White.copy(alpha = 0.86f), style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
+                }
+            }
         }
 
-        // Bottom Floating Capture Button
-        if (state == SessionState.LIVE_VIEW || state == SessionState.IDLE || state == SessionState.SELECTING_QUANTITY || state == SessionState.PREPARING) {
-            Box(
+        if (state == SessionState.LIVE_VIEW || state == SessionState.PREPARING) {
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 60.dp)
+                    .padding(bottom = 44.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(108.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.3f))
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .border(1.dp, Color.White.copy(alpha = 0.38f), CircleShape)
                         .clickable { onStartCapture() },
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(78.dp)
                             .clip(CircleShape)
                             .background(Color.White)
+                            .border(8.dp, AccentNude.copy(alpha = 0.9f), CircleShape)
                     )
                 }
+                Text("Chạm để chụp", color = Color.White.copy(alpha = 0.86f), style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
             }
         }
 
-        // Cinematic Countdown Overlay
         if (countdown > 0) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
                 androidx.compose.animation.Crossfade(

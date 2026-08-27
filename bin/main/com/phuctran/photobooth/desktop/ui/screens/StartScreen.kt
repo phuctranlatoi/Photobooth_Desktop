@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.animateColor
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ButtonDefaults
@@ -33,11 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.shadow
 import com.phuctran.photobooth.desktop.ui.components.BouncyButton
 import com.phuctran.photobooth.desktop.ui.components.InfoPill
-import com.phuctran.photobooth.desktop.ui.theme.AccentNude
-import com.phuctran.photobooth.desktop.ui.theme.NeutralBg
-import com.phuctran.photobooth.desktop.ui.theme.NeutralMuted
-import com.phuctran.photobooth.desktop.ui.theme.NeutralPanel
-import com.phuctran.photobooth.desktop.ui.theme.NeutralText
+import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
+import com.phuctran.photobooth.desktop.ui.theme.*
 
 @Composable
 fun StartScreen(
@@ -48,18 +46,29 @@ fun StartScreen(
     val infiniteTransition = rememberInfiniteTransition()
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse)
+        targetValue = 1.025f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse)
+    )
+    val floatOffsetY by infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(tween(2600, easing = FastOutSlowInEasing), RepeatMode.Reverse)
     )
     
     var tapCount by remember { mutableStateOf(0) }
 
-    Row(Modifier.fillMaxSize().background(NeutralBg), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+    Row(
+        Modifier
+            .fillMaxSize()
+            .background(NeutralBg)
+            .padding(24.dp),
+        horizontalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
         Column(
-            modifier = Modifier.weight(1f).fillMaxHeight().padding(48.dp),
+            modifier = Modifier.weight(0.9f).fillMaxHeight().padding(start = 28.dp, end = 16.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text("PHOTOBOOTH", color = AccentNude, fontWeight = FontWeight.Black, style = MaterialTheme.typography.h3, modifier = Modifier.clickable(
+            Text("Le Souvenir", color = AccentNudeDark, fontWeight = FontWeight.Black, style = MaterialTheme.typography.h4, modifier = Modifier.clickable(
                 indication = null, 
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             ) {
@@ -69,110 +78,90 @@ fun StartScreen(
                     onAdmin()
                 }
             })
-            Text("STUDIO EDITION", style = MaterialTheme.typography.h2, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(14.dp))
+            Text("Chụp ảnh lấy ngay", style = MaterialTheme.typography.h2, fontWeight = FontWeight.Black, color = NeutralText)
             Spacer(Modifier.height(16.dp))
             Text(
-                "Trải nghiệm chụp ảnh chuyên nghiệp ngay tại đây. Chạm để bắt đầu phiên chụp của bạn.",
-                color = NeutralMuted,
+                "Chọn layout, tạo dáng, in ảnh và quét QR để tải album về điện thoại.",
+                color = NeutralSecondary,
                 style = MaterialTheme.typography.h6
             )
             Spacer(Modifier.height(32.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                InfoPill("Sony a6400 / Pro Webcam")
-                InfoPill("In ảnh lấy ngay")
+                InfoPill("In lấy ngay", bgColor = NeutralPanel, textColor = NeutralText)
+                InfoPill("Tải ảnh bằng QR", bgColor = AccentNudeLight, textColor = AccentNudeDark)
             }
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(42.dp))
             
-            BouncyButton(
+            KioskPrimaryButton(
+                text = "Bắt đầu chụp",
                 onClick = onStart,
-                colors = ButtonDefaults.buttonColors(backgroundColor = AccentNude, contentColor = Color.White),
-                modifier = Modifier.width(320.dp).height(80.dp).graphicsLayer(scaleX = pulseScale, scaleY = pulseScale)
-            ) {
-                Text("CHẠM ĐỂ BẮT ĐẦU", fontWeight = FontWeight.Black, style = MaterialTheme.typography.h5)
-            }
+                modifier = Modifier.width(300.dp).height(72.dp).graphicsLayer(scaleX = pulseScale, scaleY = pulseScale)
+            )
             
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(28.dp))
+            Text("Sẵn sàng lưu lại khoảnh khắc đẹp của bạn.", color = NeutralMuted, style = MaterialTheme.typography.caption)
         }
         
-        Box(Modifier.weight(1.2f).fillMaxHeight().padding(24.dp).clip(RoundedCornerShape(24.dp)).background(NeutralPanel), contentAlignment = Alignment.Center) {
-
-                val color1 by infiniteTransition.animateColor(
-                    initialValue = Color(0xFFF7F8FA),
-                    targetValue = Color(0xFFE2E8F0),
-                    animationSpec = infiniteRepeatable(tween(4000), RepeatMode.Reverse)
+        Box(
+            Modifier
+                .weight(1.2f)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(24.dp))
+                .background(CameraBlack)
+                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (liveViewBitmap != null) {
+                Image(
+                    bitmap = liveViewBitmap,
+                    contentDescription = "Live camera preview",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = -1f)
                 )
-                val color2 by infiniteTransition.animateColor(
-                    initialValue = Color(0xFFE2E8F0),
-                    targetValue = Color(0xFFF7F8FA),
-                    animationSpec = infiniteRepeatable(tween(5000), RepeatMode.Reverse)
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Black.copy(alpha = 0.08f), Color.Transparent, Color.Black.copy(alpha = 0.58f))
+                            )
+                        )
                 )
-
-                val floatOffsetY by infiniteTransition.animateFloat(
-                    initialValue = -15f,
-                    targetValue = 15f,
-                    animationSpec = infiniteRepeatable(tween(2500, easing = FastOutSlowInEasing), RepeatMode.Reverse)
-                )
-                
-                Box(Modifier.fillMaxSize().background(Brush.linearGradient(colors = listOf(color1, color2)))) {
-                    
-                    // Floating Orb 1 (Pink)
-                    Box(Modifier
-                        .offset(x = 80.dp, y = (40 + floatOffsetY * 2).dp)
-                        .size(250.dp)
-                        .background(Brush.radialGradient(listOf(Color(0x44FFB3BA), Color.Transparent)))
-                    )
-                    
-                    // Floating Orb 2 (Blue)
-                    Box(Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(x = (-60).dp, y = (-40 - floatOffsetY * 3).dp)
-                        .size(350.dp)
-                        .background(Brush.radialGradient(listOf(Color(0x44BAE1FF), Color.Transparent)))
-                    )
-
-                    // Floating Orb 3 (Yellow)
-                    Box(Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = (-20).dp, y = (20 + floatOffsetY).dp)
-                        .size(150.dp)
-                        .background(Brush.radialGradient(listOf(Color(0x44FFFFBA), Color.Transparent)))
-                    )
-                    
-                    val textOffsetX by infiniteTransition.animateFloat(
-                        initialValue = -150f,
-                        targetValue = 150f,
-                        animationSpec = infiniteRepeatable(tween(8000, easing = FastOutSlowInEasing), RepeatMode.Reverse)
-                    )
-
-                    // Large watermark text to make it feel fuller and dynamic
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "STUDIO",
-                            color = Color.Black.copy(alpha = 0.03f),
-                            fontWeight = FontWeight.Black,
-                            fontSize = androidx.compose.ui.unit.TextUnit(120f, androidx.compose.ui.unit.TextUnitType.Sp),
-                            modifier = Modifier
-                                .offset(y = (-40).dp, x = textOffsetX.dp)
-                                .graphicsLayer(rotationZ = -5f)
-                        )
-                    }
-
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        // Back Strip (tilted left, floating up)
-                        PhotostripGraphic(
-                            modifier = Modifier
-                                .offset(x = (-40).dp, y = floatOffsetY.dp)
-                                .graphicsLayer(rotationZ = -12f)
-                        )
-                        
-                        // Front Strip (tilted right, floating down)
-                        PhotostripGraphic(
-                            modifier = Modifier
-                                .offset(x = 40.dp, y = (-floatOffsetY).dp)
-                                .graphicsLayer(rotationZ = 8f)
-                        )
-                    }
+                Column(
+                    Modifier.align(Alignment.BottomStart).padding(28.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    InfoPill("Live preview", bgColor = Color.White.copy(alpha = 0.18f), textColor = Color.White)
+                    Text("Sẵn sàng cho phiên chụp mới", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
+                    Text("Đứng vào khung, bấm bắt đầu và làm phần còn lại thật vui.", color = Color.White.copy(alpha = 0.76f), style = MaterialTheme.typography.body2)
                 }
+            } else {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Brush.linearGradient(listOf(Color(0xFF18151B), Color(0xFF3C2D2A))))
+                )
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    PhotostripGraphic(
+                        modifier = Modifier
+                            .offset(x = (-50).dp, y = floatOffsetY.dp)
+                            .graphicsLayer(rotationZ = -10f)
+                    )
+                    PhotostripGraphic(
+                        modifier = Modifier
+                            .offset(x = 52.dp, y = (-floatOffsetY).dp)
+                            .graphicsLayer(rotationZ = 7f)
+                    )
+                }
+                Column(
+                    Modifier.align(Alignment.BottomStart).padding(28.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Studio preview", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
+                    Text("Camera sẽ hiển thị tại đây khi sẵn sàng.", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.body2)
+                }
+            }
         }
     }
 }
@@ -214,7 +203,7 @@ fun PhotostripGraphic(modifier: Modifier = Modifier) {
         }
         Box(Modifier.weight(0.3f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(
-                "PHOTOBOOTH",
+                "LE SOUVENIR",
                 fontWeight = FontWeight.Black,
                 color = Color(0xFF1A1A24),
                 style = MaterialTheme.typography.overline,

@@ -35,22 +35,43 @@ fun ConfirmScreen(
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PrintPreview(layout, selectedMoments, frame, Modifier.weight(0.8f).fillMaxHeight())
         PanelBox(Modifier.weight(1f).fillMaxHeight()) {
-            SectionHeader("Bước 7", "Xác nhận output", "Ảnh in dùng ảnh đã chọn, album số giữ ảnh gốc.")
-            Spacer(Modifier.height(12.dp))
-            OutputRow("In", "${exportSummary.printPhotoCount} ảnh đã chọn • $printCopies bản")
-            OutputRow("Upload ảnh", "${exportSummary.uploadedPhotoCount} ảnh gốc")
-            OutputRow("Upload video", "${exportSummary.uploadedVideoCount} clip")
-            OutputRow("Style", effect.title)
-            OutputRow("Frame", frame.title)
+            SectionHeader("Bước 8", "Kiểm tra lần cuối", "Xác nhận các thông số trước khi in ấn.")
+            Spacer(Modifier.height(24.dp))
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SummaryItem("Bản in", "${exportSummary.printPhotoCount} ảnh đã chọn  •  $printCopies bản")
+                SummaryItem("Ảnh kỹ thuật số", "${exportSummary.uploadedPhotoCount} ảnh gốc")
+                
+                if (exportSummary.uploadedVideoCount > 0) {
+                    SummaryItem("Video", "${exportSummary.uploadedVideoCount} clip")
+                }
+                
+                Divider(color = NeutralBg, modifier = Modifier.padding(vertical = 4.dp))
+                
+                SummaryItem("Bộ lọc màu", effect.title)
+                SummaryItem("Thiết kế khung", frame.title)
+            }
+            
             Spacer(Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Quay lại") }
-                Button(
-                    onClick = onPrint,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = NeutralPanel, contentColor = NeutralText),
-                    modifier = Modifier.weight(1f)
-                ) { Text("In và tạo QR") }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                KioskSecondaryButton("Quay lại", onBack, modifier = Modifier.weight(1f))
+                KioskPrimaryButton("In và tạo QR", onPrint, modifier = Modifier.weight(1f))
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryItem(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = NeutralSecondary, style = MaterialTheme.typography.body1, fontWeight = FontWeight.Medium)
+        Text(value, color = AccentNudeDark, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Black)
     }
 }

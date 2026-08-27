@@ -22,17 +22,42 @@ import com.phuctran.photobooth.desktop.ui.theme.*
 import java.nio.file.Path
 
 @Composable
-fun PrintingScreen(layout: LayoutMode, frame: FramePack) {
+fun PrintingScreen(layout: LayoutMode, frame: FramePack, statusMessage: String) {
     PanelBox(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Text("Đang in ảnh", style = MaterialTheme.typography.h3, fontWeight = FontWeight.Black)
-                CircularProgressIndicator(color = AccentNude, strokeWidth = 6.dp, modifier = Modifier.size(84.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    InfoPill(layout.mediaLabel)
-                    InfoPill(frame.title)
-                    InfoPill("Đang tạo album")
-                }
+        Column(
+            Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator(
+                color = AccentNudeDark,
+                strokeWidth = 6.dp,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(Modifier.height(48.dp))
+            
+            Text(
+                "Le Souvenir", 
+                style = MaterialTheme.typography.h3, 
+                fontWeight = FontWeight.Black, 
+                color = AccentNudeDark
+            )
+            
+            Spacer(Modifier.height(16.dp))
+            
+            Text(
+                statusMessage.ifBlank { "Đang hoàn thiện tác phẩm của bạn..." }, 
+                style = MaterialTheme.typography.h5, 
+                fontWeight = FontWeight.Medium, 
+                color = NeutralText,
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(Modifier.height(24.dp))
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                InfoPill(layout.printSizeLabel)
+                InfoPill(frame.title)
             }
         }
     }

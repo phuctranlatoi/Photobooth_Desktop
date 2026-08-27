@@ -29,43 +29,61 @@ fun SelectPhotosScreen(
     onMomentSelect: (CapturedMoment) -> Unit,
     onConfirm: () -> Unit
 ) {
-    Box(Modifier.fillMaxSize().background(Color.White)) {
-        Column(Modifier.fillMaxSize().padding(24.dp)) {
-            // Header
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                SectionHeader("Bước 5", "Chọn ảnh để in", "Đã chọn ${selectedMoments.size}/${layout.selectCount} • album giữ toàn bộ ảnh.")
-                BouncyButton(
-                    onClick = onConfirm,
-                    enabled = selectedMoments.size == layout.selectCount,
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = if (selectedMoments.size == layout.selectCount) AccentNude else NeutralBorder,
-                        contentColor = if (selectedMoments.size == layout.selectCount) Color.White else NeutralMuted
-                    ),
-                    modifier = Modifier.height(56.dp).width(200.dp)
-                ) { 
-                    Text("TIẾP TỤC", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.subtitle1)
-                }
-            }
-            Spacer(Modifier.height(32.dp))
-            
-            // Gallery Grid
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                capturedMoments.chunked(4).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        row.forEach { moment ->
-                            MomentTile(
-                                moment = moment,
-                                selectedOrder = selectedMoments.indexOf(moment).takeIf { it >= 0 }?.plus(1),
-                                aspectRatio = layout.photoAspectRatio,
-                                isDimmed = selectedMoments.isNotEmpty() && !selectedMoments.contains(moment),
-                                onClick = { onMomentSelect(moment) },
-                                modifier = Modifier.weight(1f)
-                            )
+    Box(Modifier.fillMaxSize().background(NeutralBg)) {
+        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            PanelBox(Modifier.weight(1.35f).fillMaxHeight()) {
+                SectionHeader("Bước 6", "Chọn ảnh để in", "Đã chọn ${selectedMoments.size}/${layout.selectCount} • album giữ toàn bộ ảnh.")
+                Spacer(Modifier.height(22.dp))
+
+                if (capturedMoments.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Chưa có ảnh để chọn", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText)
+                            Text("Vui lòng chụp lại hoặc gọi nhân viên kiểm tra camera.", color = NeutralSecondary, textAlign = TextAlign.Center)
                         }
-                        repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                } else {
+                    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        capturedMoments.chunked(4).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                row.forEach { moment ->
+                                    MomentTile(
+                                        moment = moment,
+                                        selectedOrder = selectedMoments.indexOf(moment).takeIf { it >= 0 }?.plus(1),
+                                        aspectRatio = layout.photoAspectRatio,
+                                        isDimmed = selectedMoments.size >= layout.selectCount && !selectedMoments.contains(moment),
+                                        onClick = { onMomentSelect(moment) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
                     }
                 }
-                Spacer(Modifier.height(60.dp))
+            }
+
+            PanelBox(Modifier.weight(0.75f).fillMaxHeight()) {
+                SectionHeader("", "Bản in đang chọn", "${selectedMoments.size}/${layout.selectCount} ảnh")
+                Spacer(Modifier.height(18.dp))
+                PrintPreview(
+                    layout = layout,
+                    moments = selectedMoments,
+                    frame = FramePack("selection_preview", "Le Souvenir", "", layout.accentColor),
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
+                Spacer(Modifier.height(18.dp))
+                OutputRow("Cần chọn", "${layout.selectCount} ảnh")
+                Spacer(Modifier.height(10.dp))
+                OutputRow("Đã chọn", "${selectedMoments.size} ảnh")
+                Spacer(Modifier.height(18.dp))
+                KioskPrimaryButton(
+                    text = "Tiếp tục chọn khung",
+                    onClick = onConfirm,
+                    enabled = selectedMoments.size == layout.selectCount,
+                    modifier = Modifier.fillMaxWidth().height(62.dp)
+                )
             }
         }
     }

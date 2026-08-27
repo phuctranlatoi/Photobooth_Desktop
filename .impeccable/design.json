@@ -1,0 +1,34 @@
+{
+  "schema": "impeccable.design.v1",
+  "product": "Pretty Booth Desktop",
+  "generatedAt": "2026-08-27T00:00:00+07:00",
+  "platform": "desktop",
+  "mode": "operate",
+  "conceptSeed": {
+    "key": "37385209",
+    "assignedIndex": 6,
+    "direction": "premium event-studio console"
+  },
+  "style": {
+    "foundation": "bright neutral kiosk UI",
+    "primaryAccent": "warm rose-clay",
+    "supportAccents": ["mint success", "blue info", "amber warning", "red destructive"],
+    "mediaPriority": ["live camera", "captured photos", "print preview", "frame thumbnail", "QR"],
+    "density": {
+      "guest": "spacious, one decision per screen",
+      "admin": "compact, scanable, operational"
+    }
+  },
+  "boundaries": [
+    "UI-only redesign",
+    "preserve session state logic",
+    "preserve camera capture logic",
+    "preserve payment, printing, upload, frame, and layout behavior"
+  ],
+  "entryPoints": [
+    "src/main/kotlin/com/phuctran/photobooth/desktop/ui/theme/Theme.kt",
+    "src/main/kotlin/com/phuctran/photobooth/desktop/ui/components/CoreComponents.kt",
+    "src/main/kotlin/com/phuctran/photobooth/desktop/ui/components/Shell.kt",
+    "src/main/kotlin/com/phuctran/photobooth/desktop/ui/screens"
+  ]
+}
