@@ -70,7 +70,10 @@ fun AdminScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            OutlinedButton(onClick = onBack) { Text("Quay lại") }
+            OutlinedButton(onClick = { 
+                onSaveSettings(enablePrint, useHotFolder, hotFolderPath)
+                onBack() 
+            }) { Text("Quay lại") }
             Text("Quản trị hệ thống", style = MaterialTheme.typography.h4, fontWeight = FontWeight.Bold, color = NeutralText)
         }
 

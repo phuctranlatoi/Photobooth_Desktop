@@ -33,8 +33,20 @@ fun QuantityScreen(
         PanelBox(Modifier.weight(1f).fillMaxHeight()) {
             SectionHeader("Bước 2", "Chọn số tấm in", "Ảnh số vẫn giữ đầy đủ, bản in chỉ lấy ảnh đã chọn.")
             Spacer(Modifier.height(20.dp))
+            val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
+            // For 5x15, min 2 copies (1 sheet of 10x15). Options: 2, 4, 6, 8.
+            // For 10x15, min 2 copies. Options: 2, 3, 4, 5.
+            val quantityOptions = if (isStrip) listOf(2, 4, 6, 8) else listOf(2, 3, 4, 5)
+            
+            // Adjust current quantity if it's not in the options
+            LaunchedEffect(quantityOptions) {
+                if (quantity !in quantityOptions) {
+                    quantity = quantityOptions.first()
+                }
+            }
+            
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                listOf(1, 2, 3, 4).forEach { count ->
+                quantityOptions.forEach { count ->
                     QuantityCard(count, quantity == count) { quantity = count }
                 }
             }

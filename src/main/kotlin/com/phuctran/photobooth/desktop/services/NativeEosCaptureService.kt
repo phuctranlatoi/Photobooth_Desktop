@@ -22,7 +22,9 @@ class NativeEosCaptureService(
 
     private val _liveViewStream = MutableStateFlow<ImageBitmap?>(null)
     override val liveViewStream: StateFlow<ImageBitmap?> = _liveViewStream
-    override val lastProcessedFrame: BufferedImage? = null
+    @Volatile
+    override var lastProcessedFrame: BufferedImage? = null
+        private set
 
     private val camera: CanonCamera = CanonCamera()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -82,6 +84,10 @@ class NativeEosCaptureService(
                 if (camera.beginLiveView()) {
                     liveViewStarted = true
                     println("Native EDSDK: Live view started successfully.")
+                    // Cố gắng bật chế độ lấy nét khuôn mặt liên tục (Face Tracking AF)
+                    runCatching {
+                        camera.setProperty(edsdk.utils.CanonConstants.EdsPropertyID.kEdsPropID_Evf_AFMode, 2L)
+                    }
                 } else {
                     println("Native EDSDK: Camera busy, retrying live view... ($retryCount)")
                     retryCount++
@@ -99,6 +105,7 @@ class NativeEosCaptureService(
                     val image = camera.downloadLiveView()
                     if (image != null) {
                         val processed = imageProcessor.applyEffectForLiveView(image, effectId)
+                        lastProcessedFrame = processed
                         _liveViewStream.value = processed.toComposeImageBitmap()
                         image.flush()
                     }
@@ -127,7 +134,7 @@ class NativeEosCaptureService(
         var resultPath: Path? = null
         try {
             // Sử dụng SafeShootCommand để tránh lỗi ArrayIndexOutOfBoundsException của edsdk4j
-            val photos = camera.execute(edsdk.api.commands.SafeShootCommand(edsdk.utils.CanonConstants.EdsSaveTo.kEdsSaveTo_Host, 3)).get(5)
+            val photos = camera.execute(edsdk.api.commands.SafeShootCommand(edsdk.utils.CanonConstants.EdsSaveTo.kEdsSaveTo_Host, 3)).get()
             if (photos != null && photos.isNotEmpty()) {
                 val photoFile = photos.last()
                 val tempFile = photoFile.toPath()

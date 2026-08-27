@@ -22,7 +22,9 @@ data class DesktopBoothConfig(
     val envSource: Path? = null,
     val payosClientId: String = "",
     val payosApiKey: String = "",
-    val payosChecksumKey: String = ""
+    val payosChecksumKey: String = "",
+    val printerNameStrip: String = "",
+    val printerNameFull: String = ""
 ) {
     val authHeader: String get() = "Bearer $boothApiKey"
     val canUploadAlbum: Boolean
@@ -65,7 +67,9 @@ object DesktopConfigLoader {
             envSource = envSource,
             payosClientId = env["PAYOS_CLIENT_ID"].orEmpty(),
             payosApiKey = env["PAYOS_API_KEY"].orEmpty(),
-            payosChecksumKey = env["PAYOS_CHECKSUM_KEY"].orEmpty()
+            payosChecksumKey = env["PAYOS_CHECKSUM_KEY"].orEmpty(),
+            printerNameStrip = env["PRINTER_NAME_STRIP"].orEmpty(),
+            printerNameFull = env["PRINTER_NAME_FULL"].orEmpty()
         )
     }
 

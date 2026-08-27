@@ -27,16 +27,22 @@ fun AppShell(
     state: SessionState,
     content: @Composable BoxScope.() -> Unit
 ) {
-    Column(
-        Modifier.fillMaxSize().background(NeutralBg).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        TopBar(state)
-        
-        // ProgressStepper is removed to simplify UI
-        
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+    val isFullscreen = state == SessionState.LIVE_VIEW || state == SessionState.COUNTDOWN || state == SessionState.CAPTURING
+
+    if (isFullscreen) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
             content()
+        }
+    } else {
+        Column(
+            Modifier.fillMaxSize().background(NeutralBg).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            TopBar(state)
+            
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                content()
+            }
         }
     }
 }

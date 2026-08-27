@@ -170,6 +170,7 @@ data class ExportSummary(
 
 data class RenderResult(
     val finalImagePath: Path,
+    val printImagePath: Path,
     val selectedCount: Int,
     val frameTitle: String
 )

@@ -47,6 +47,7 @@ class DesktopBoothController(
     private val frameStore: FrameStore = FrameStore(projectDir),
     private val sessionStore: DesktopSessionStore = DesktopSessionStore(projectDir),
     private val compositor: DesktopCompositor = DesktopCompositor(),
+    private val videoCompositor: com.phuctran.photobooth.desktop.imaging.DesktopVideoCompositor = com.phuctran.photobooth.desktop.imaging.DesktopVideoCompositor(projectDir),
     private val imageProcessor: DesktopImageProcessor = DesktopImageProcessor(),
     private val albumUploader: DesktopAlbumUploader = DesktopAlbumUploader(projectDir, config),
     private val printerService: PrinterService = SystemPrinterService(),
@@ -132,7 +133,7 @@ class DesktopBoothController(
     val isPaymentConfigured: Boolean get() = paymentService.isConfigured
 
     companion object {
-        const val CAPTURE_PREP_SECONDS = 3
+        const val CAPTURE_PREP_SECONDS = 10
         const val RECORDING_SECONDS = 4
     }
 
@@ -195,7 +196,7 @@ class DesktopBoothController(
     }
 
     fun setQuantityAndStartPayment(quantity: Int) {
-        val safeQuantity = quantity.coerceIn(1, 4)
+        val safeQuantity = quantity.coerceIn(1, 10)
         _printCopies.value = safeQuantity
         _totalPrice.value = _selectedLayout.value.basePrice * safeQuantity
         transitionTo(SessionState.PAYMENT_PENDING)
@@ -257,6 +258,8 @@ class DesktopBoothController(
 
     private val _isRecordingVideo = MutableStateFlow(false)
     val isRecordingVideo = _isRecordingVideo.asStateFlow()
+    
+    private val _videoEncodingJobs = mutableListOf<kotlinx.coroutines.Deferred<Path?>>()
 
     fun startCaptureFlow() {
         if (captureJob?.isActive == true) return
@@ -266,6 +269,7 @@ class DesktopBoothController(
             _capturedMoments.value = emptyList()
             _selectedMoments.value = emptyList()
             _exportSummary.value = ExportSummary(0, 0, 0)
+            _videoEncodingJobs.clear()
 
             val layout = _selectedLayout.value
             for (index in 1..layout.shotCount) {
@@ -293,17 +297,33 @@ class DesktopBoothController(
                                 if (frame != null) {
                                     val frameFile = videoFramesDir.resolve("frame_%03d.jpg".format(frameIdx++))
                                     try {
-                                        javax.imageio.ImageIO.write(frame, "jpg", frameFile.toFile())
+                                        val scaledFrame = if (frame.height > 720) {
+                                            val scale = 720.0 / frame.height
+                                            val targetWidth = (frame.width * scale).toInt()
+                                            // Ensure width is even for ffmpeg compatibility
+                                            val evenWidth = if (targetWidth % 2 != 0) targetWidth - 1 else targetWidth
+                                            val resized = java.awt.image.BufferedImage(evenWidth, 720, java.awt.image.BufferedImage.TYPE_INT_RGB)
+                                            val g = resized.createGraphics()
+                                            g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+                                            g.drawImage(frame, 0, 0, evenWidth, 720, null)
+                                            g.dispose()
+                                            resized
+                                        } else {
+                                            frame
+                                        }
+                                        javax.imageio.ImageIO.write(scaledFrame, "jpg", frameFile.toFile())
                                     } catch (e: Exception) {}
                                 }
-                                delay(100) // 10 fps
+                                delay(66) // ~15 fps
                             }
                         }
                     }
                     delay(1000)
                 }
                 _countdown.value = 0 // Báo hiệu đang chụp/đang lưu ảnh
-
+                _isRecordingVideo.value = false
+                videoJob?.join() // Chờ lưu nốt frame cuối
+                
                 transitionTo(SessionState.CAPTURING)
                 val photoPath = withContext(kotlinx.coroutines.Dispatchers.IO) { captureStill(index, layout) }
                     ?: withContext(Dispatchers.IO) {
@@ -334,6 +354,7 @@ class DesktopBoothController(
                 
                 // Encode video concurrently in the background so it doesn't block the next shot
                 val videoPathFuture = scope.async(Dispatchers.IO) { encodeVideo(videoFramesDir, index) }
+                _videoEncodingJobs.add(videoPathFuture)
                 
                 _capturedMoments.value = _capturedMoments.value + CapturedMoment(
                     index = index,
@@ -347,6 +368,9 @@ class DesktopBoothController(
                     val finalVideoPath = videoPathFuture.await()
                     if (finalVideoPath != null) {
                         _capturedMoments.value = _capturedMoments.value.map {
+                            if (it.index == index) it.copy(videoPath = finalVideoPath) else it
+                        }
+                        _selectedMoments.value = _selectedMoments.value.map {
                             if (it.index == index) it.copy(videoPath = finalVideoPath) else it
                         }
                     }
@@ -370,19 +394,35 @@ class DesktopBoothController(
     private fun encodeVideo(framesDir: Path, shotIndex: Int): Path? {
         val outputFile = framesDir.parent.resolve("video_$shotIndex.mp4")
         return runCatching {
+            val localAppData = System.getenv("LOCALAPPDATA")
+            val wingetPath = if (localAppData != null) "$localAppData\\Microsoft\\WinGet\\Links\\ffmpeg.exe" else "ffmpeg.exe"
+            val localBinPath = projectDir.resolve("bin").resolve("ffmpeg.exe").toAbsolutePath().toString()
+            
+            val ffmpegExecutable = when {
+                java.nio.file.Files.exists(java.nio.file.Path.of(localBinPath)) -> localBinPath
+                java.nio.file.Files.exists(java.nio.file.Path.of(wingetPath)) -> wingetPath
+                else -> "ffmpeg"
+            }
+
             val process = ProcessBuilder(
-                "ffmpeg", "-y", 
-                "-framerate", "10", 
+                ffmpegExecutable, "-y", 
+                "-framerate", "15", 
                 "-i", "${framesDir.toAbsolutePath()}\\frame_%03d.jpg", 
                 "-c:v", "libx264", 
-                "-preset", "fast",
+                "-preset", "ultrafast",
                 "-crf", "28",
                 "-pix_fmt", "yuv420p",
                 outputFile.toAbsolutePath().toString()
             ).redirectErrorStream(true).start()
             
-            val exited = process.waitFor(15, java.util.concurrent.TimeUnit.SECONDS)
+            val exited = process.waitFor(20, java.util.concurrent.TimeUnit.SECONDS)
             if (exited && process.exitValue() == 0 && Files.exists(outputFile)) {
+                // Xoá các frame tĩnh
+                runCatching {
+                    java.nio.file.Files.list(framesDir).forEach { 
+                        if (it.fileName.toString().startsWith("frame_")) java.nio.file.Files.deleteIfExists(it) 
+                    }
+                }
                 outputFile
             } else {
                 process.destroyForcibly()
@@ -442,24 +482,55 @@ class DesktopBoothController(
             transitionTo(SessionState.PRINTING)
             val sessionId = currentSessionId ?: UUID.randomUUID().toString().also { currentSessionId = it }
             val selectedPhotoPaths = _selectedMoments.value.mapNotNull { it.photoPath }
-            val masterFile = runCatching {
+            val renderResult = runCatching {
                 compositor.renderFinal(
                     layout = _selectedLayout.value,
                     frame = _selectedFrame.value,
                     photoPaths = selectedPhotoPaths,
                     outputDir = projectDir.resolve("data").resolve("output")
-                ).finalImagePath
+                )
+            }.getOrNull()
+            
+            val masterFile = renderResult?.finalImagePath
+            val printFile = renderResult?.printImagePath
+
+            _statusMessage.value = "Đã render ảnh in. Đang tạo video thành phẩm..."
+            
+            // Wait for all individual video encodings to finish
+            _videoEncodingJobs.forEach { it.await() }
+            
+            val masterVideo = runCatching {
+                withContext(Dispatchers.IO) {
+                    videoCompositor.createCompositeVideo(
+                        layout = _selectedLayout.value,
+                        frame = _selectedFrame.value,
+                        selectedMoments = _selectedMoments.value,
+                        outputDir = projectDir.resolve("data").resolve("output"),
+                        sessionId = sessionId
+                    )
+                }
             }.getOrNull()
 
-            _statusMessage.value = "Đã render ảnh in. Đang upload album..."
+            _statusMessage.value = "Đã render xong. Đang upload album..."
 
-            val printStatus = if (masterFile != null && config.enableSystemPrint) {
-                _statusMessage.value = "Đã render ảnh in. Đang gửi sang Windows Print..."
+            val printStatus = if (printFile != null && activeConfig.value.enableSystemPrint) {
+                val layout = _selectedLayout.value
+                val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
+                val requestedCopies = _printCopies.value
+                val actualSheets = (if (isStrip) requestedCopies / 2 else requestedCopies).coerceAtLeast(1)
+                
+                val targetPrinterName = if (isStrip) {
+                    activeConfig.value.printerNameStrip.takeIf { it.isNotBlank() }
+                } else {
+                    activeConfig.value.printerNameFull.takeIf { it.isNotBlank() }
+                }
+                
+                _statusMessage.value = "Đã render ảnh in. Đang gửi sang Windows Print ($actualSheets tờ)..."
                 withContext(Dispatchers.IO) {
-                    printerService.printImage(masterFile)
+                    printerService.printImage(printFile, actualSheets, targetPrinterName)
                         .getOrElse { error -> "Không gửi được sang Windows Print: ${error.message}" }
                 }
-            } else if (masterFile != null) {
+            } else if (printFile != null) {
                 "Đã render file in local. Bật ENABLE_SYSTEM_PRINT=true để gửi sang Windows Print."
             } else {
                 "Chưa render được file in."
@@ -475,7 +546,8 @@ class DesktopBoothController(
                         frame = _selectedFrame.value,
                         capturedMoments = _capturedMoments.value,
                         selectedMoments = _selectedMoments.value,
-                        masterPrint = masterFile
+                        masterPrint = masterFile,
+                        masterVideo = masterVideo
                     )
                 }
             } else null
@@ -484,7 +556,7 @@ class DesktopBoothController(
                 ExportSummary(
                     printPhotoCount = _selectedMoments.value.size,
                     uploadedPhotoCount = albumResult.uploadedCount,
-                    uploadedVideoCount = 0,
+                    uploadedVideoCount = if (masterVideo != null) 1 else 0,
                     qrUrl = albumResult.albumUrl,
                     masterUrl = albumResult.finalPhotoUrl,
                     albumId = albumResult.albumId,

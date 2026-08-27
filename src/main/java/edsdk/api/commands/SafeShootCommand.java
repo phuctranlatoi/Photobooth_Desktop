@@ -98,9 +98,10 @@ public class SafeShootCommand extends CanonCommand<File[]> {
             while ( shotAttempts > 0 && err != EdsError.EDS_ERR_OK ) {
                 try {
                     oldEvfMode = CanonUtils.isLiveViewEnabled( camera.getEdsCamera(), true );
-                    if ( oldEvfMode ) {
-                        CanonUtils.endLiveView( camera.getEdsCamera() );
-                    }
+                    // Xóa block endLiveView để không làm mất Servo AF của máy ảnh
+                    // if ( oldEvfMode ) {
+                    //     CanonUtils.endLiveView( camera.getEdsCamera() );
+                    // }
                 } catch(Exception e) {}
                 
                 err = sendCommand( EdsCameraCommand.kEdsCameraCommand_TakePicture, 0 );

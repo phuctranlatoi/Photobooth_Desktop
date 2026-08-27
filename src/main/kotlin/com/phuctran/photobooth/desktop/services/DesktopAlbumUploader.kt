@@ -24,7 +24,8 @@ class DesktopAlbumUploader(
         frame: FramePack,
         capturedMoments: List<CapturedMoment>,
         selectedMoments: List<CapturedMoment>,
-        masterPrint: Path?
+        masterPrint: Path?,
+        masterVideo: Path? = null
     ): AlbumUploadResult {
         if (!config.canUploadAlbum) {
             return AlbumUploadResult(
@@ -45,7 +46,7 @@ class DesktopAlbumUploader(
             }
 
             val uploadedOriginalAssets = originalJpegs.mapIndexedNotNull { index, file ->
-                cloudinaryClient.uploadImageToCloudinary(
+                cloudinaryClient.uploadAssetToCloudinary(
                     config = config,
                     sessionId = sessionId,
                     file = file,
@@ -57,7 +58,7 @@ class DesktopAlbumUploader(
             val uploadedFinalAsset = masterPrint?.let { file ->
                 val jpeg = imageProcessor.ensureJpeg(file, exportDir, "final")
                 jpeg?.let {
-                    cloudinaryClient.uploadImageToCloudinary(
+                    cloudinaryClient.uploadAssetToCloudinary(
                         config = config,
                         sessionId = sessionId,
                         file = it,
@@ -66,8 +67,18 @@ class DesktopAlbumUploader(
                     )
                 }
             }
+            
+            val uploadedFinalVideo = masterVideo?.let { file ->
+                cloudinaryClient.uploadAssetToCloudinary(
+                    config = config,
+                    sessionId = sessionId,
+                    file = file,
+                    position = uploadedOriginalAssets.size + 1,
+                    kind = "VIDEO"
+                )
+            }
 
-            val uploadedAssets = uploadedOriginalAssets + listOfNotNull(uploadedFinalAsset)
+            val uploadedAssets = uploadedOriginalAssets + listOfNotNull(uploadedFinalAsset, uploadedFinalVideo)
             if (uploadedAssets.isEmpty()) {
                 return AlbumUploadResult(
                     albumId = null,

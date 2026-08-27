@@ -32,11 +32,13 @@ class DesktopCompositor(
 
         Files.createDirectories(outputDir)
 
-        val width = renderWidth
+        val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
+
+        val width = if (isStrip) 600 else renderWidth
         val height = (width / layout.printAspectRatio).roundToInt().coerceAtLeast(1)
         val canvas = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
         val graphics = canvas.createGraphics()
-
+        
         graphics.use {
             it.configure()
             it.color = Color.WHITE
@@ -76,10 +78,62 @@ class DesktopCompositor(
 
         val fileName = buildFileName(layout.id, frame.id)
         val finalPath = outputDir.resolve(fileName)
+        // Lưu ảnh nguyên bản (dùng cho web/Cloudinary)
         ImageIO.write(canvas, "jpg", finalPath.toFile())
+        
+        val printPath = if (isStrip) {
+            val doubleWidth = width * 2
+            val compositeCanvas = BufferedImage(doubleWidth, height, BufferedImage.TYPE_INT_RGB)
+            val g2 = compositeCanvas.createGraphics()
+            g2.configure()
+            g2.color = Color.WHITE
+            g2.fillRect(0, 0, doubleWidth, height)
+            
+            // Tính toán thu nhỏ (bù lẹm/bleed compensation). 
+            // Dùng số pixel tuyệt đối để 4 lề dày bằng nhau.
+            val bleedPx = 32
+            val scaledWidth = width - bleedPx * 2
+            val scaledHeight = height - bleedPx * 2
+            val offsetX = bleedPx
+            val offsetY = bleedPx
+            
+            // Draw the first strip (left half)
+            g2.drawImage(canvas, offsetX, offsetY, scaledWidth, scaledHeight, null)
+            // Draw the second strip (right half)
+            g2.drawImage(canvas, width + offsetX, offsetY, scaledWidth, scaledHeight, null)
+            g2.dispose()
+            
+            val printFileName = "print_$fileName"
+            val pPath = outputDir.resolve(printFileName)
+            ImageIO.write(compositeCanvas, "jpg", pPath.toFile())
+            pPath
+        } else {
+            val printFileName = "print_$fileName"
+            val pPath = outputDir.resolve(printFileName)
+            
+            // Tính toán thu nhỏ (bù lẹm/bleed compensation) bằng pixel tuyệt đối.
+            val bleedPx = 32
+            val scaledWidth = width - bleedPx * 2
+            val scaledHeight = height - bleedPx * 2
+            val offsetX = bleedPx
+            val offsetY = bleedPx
+            
+            val compositeCanvas = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+            val g2 = compositeCanvas.createGraphics()
+            g2.configure()
+            g2.color = Color.WHITE
+            g2.fillRect(0, 0, width, height)
+            
+            g2.drawImage(canvas, offsetX, offsetY, scaledWidth, scaledHeight, null)
+            g2.dispose()
+            
+            ImageIO.write(compositeCanvas, "jpg", pPath.toFile())
+            pPath
+        }
 
         return RenderResult(
             finalImagePath = finalPath,
+            printImagePath = printPath,
             selectedCount = layout.selectCount,
             frameTitle = frame.title
         )
