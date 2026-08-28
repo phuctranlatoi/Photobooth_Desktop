@@ -234,30 +234,35 @@ class SlotDetectionEngine {
         val selectedPass = bestPass
 
         for (b in sortedBounds) {
+            // Expand the boundary to ensure the blurry/anti-aliased rim is fully processed and removed.
+            // If the boundary is too tight, the algorithm skips the fringing pixels entirely.
+            val expandedSlot = SlotBounds(
+                minX = max(0, b.minX - 6),
+                maxX = min(width - 1, b.maxX + 6),
+                minY = max(0, b.minY - 6),
+                maxY = min(height - 1, b.maxY + 6),
+                pixelArea = b.pixelArea,
+                id = b.id
+            )
+
             val background = estimateSlotBackground(
-                slot = b,
+                slot = b, // use original 'b' for background estimation to avoid noise from decorations
                 componentId = componentId,
                 detectPixels = detectPixels,
                 width = width
             )
 
             val noise95 = estimateBackgroundNoise95(
-                slot = b,
+                slot = b, // use original 'b' for background estimation
                 componentId = componentId,
                 detectPixels = detectPixels,
                 width = width,
                 background = background
             )
 
-            // Generic colored slots need a different matte model. A single RGB median is
-            // inappropriate for a gentle orange/pink/blue gradient: pixels at the far side
-            // of the rectangle can be far from the median even though they are still slot
-            // background. Use the definite uniform component to learn a robust RGB envelope,
-            // then make the whole rectangle transparent except decoration components outside
-            // that envelope. This branch NEVER writes outside [b].
             if (selectedPass == SeedType.UNIFORM_COLOR) {
                 applyUniformColorRobustMatte(
-                    slot = b,
+                    slot = expandedSlot,
                     sourcePixels = sourcePixels,
                     detectPixels = detectPixels,
                     punchedPixels = punchedPixels,
@@ -668,7 +673,7 @@ class SlotDetectionEngine {
             // 3) recover very bright decoration highlights that are numerically almost identical
             //    to the slot background by bridging only SHORT gaps enclosed by foreground.
             applyPixelExactHysteresisMatte(
-                slot = b,
+                slot = expandedSlot,
                 sourcePixels = sourcePixels,
                 detectPixels = detectPixels,
                 punchedPixels = punchedPixels,

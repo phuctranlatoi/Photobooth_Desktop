@@ -34,8 +34,8 @@ class DesktopCompositor(
 
         val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
 
-        val width = if (isStrip) 600 else renderWidth
-        val height = (width / layout.printAspectRatio).roundToInt().coerceAtLeast(1)
+        val width = if (isStrip) 592 else 1184
+        val height = 1790 // Tỷ lệ cứng chuẩn theo kích thước người dùng đo được
         val canvas = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
         val graphics = canvas.createGraphics()
         
@@ -82,25 +82,30 @@ class DesktopCompositor(
         ImageIO.write(canvas, "jpg", finalPath.toFile())
         
         val printPath = if (isStrip) {
-            val doubleWidth = width * 2
-            val compositeCanvas = BufferedImage(doubleWidth, height, BufferedImage.TYPE_INT_RGB)
+            // Giảm lề trái 2mm (~24px) -> 32 - 24 = 8
+            // Giảm lề phải 0.5mm (~6px) -> 32 - 6 = 26
+            val paperWidth = 1220 // Tổng = 8 + 592 + 2 + 592 + 26
+            val paperHeight = 1829
+            
+            val compositeCanvas = BufferedImage(paperWidth, paperHeight, BufferedImage.TYPE_INT_RGB)
             val g2 = compositeCanvas.createGraphics()
             g2.configure()
             g2.color = Color.WHITE
-            g2.fillRect(0, 0, doubleWidth, height)
+            g2.fillRect(0, 0, paperWidth, paperHeight)
             
-            // Tính toán thu nhỏ (bù lẹm/bleed compensation). 
-            // Dùng số pixel tuyệt đối để 4 lề dày bằng nhau.
-            val bleedPx = 32
-            val scaledWidth = width - bleedPx * 2
-            val scaledHeight = height - bleedPx * 2
-            val offsetX = bleedPx
-            val offsetY = bleedPx
+            val paddingTop = 39
+            val paddingLeft = 8
+            val gap = 2
             
-            // Draw the first strip (left half)
-            g2.drawImage(canvas, offsetX, offsetY, scaledWidth, scaledHeight, null)
-            // Draw the second strip (right half)
-            g2.drawImage(canvas, width + offsetX, offsetY, scaledWidth, scaledHeight, null)
+            val scaledWidth = 592
+            val scaledHeight = 1790
+            
+            // Tấm 1
+            g2.drawImage(canvas, paddingLeft, paddingTop, scaledWidth, scaledHeight, null)
+            
+            // Tấm 2
+            g2.drawImage(canvas, paddingLeft + scaledWidth + gap, paddingTop, scaledWidth, scaledHeight, null)
+            
             g2.dispose()
             
             val printFileName = "print_$fileName"
@@ -111,20 +116,22 @@ class DesktopCompositor(
             val printFileName = "print_$fileName"
             val pPath = outputDir.resolve(printFileName)
             
-            // Tính toán thu nhỏ (bù lẹm/bleed compensation) bằng pixel tuyệt đối.
-            val bleedPx = 32
-            val scaledWidth = width - bleedPx * 2
-            val scaledHeight = height - bleedPx * 2
-            val offsetX = bleedPx
-            val offsetY = bleedPx
+            val paperWidth = 1220
+            val paperHeight = 1829 // Khổ giấy thực tế in
             
-            val compositeCanvas = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+            val compositeCanvas = BufferedImage(paperWidth, paperHeight, BufferedImage.TYPE_INT_RGB)
             val g2 = compositeCanvas.createGraphics()
             g2.configure()
             g2.color = Color.WHITE
-            g2.fillRect(0, 0, width, height)
+            g2.fillRect(0, 0, paperWidth, paperHeight)
             
-            g2.drawImage(canvas, offsetX, offsetY, scaledWidth, scaledHeight, null)
+            val paddingTop = 39
+            val paddingLeft = 8
+            
+            val scaledWidth = 1184 // Hoặc 1186 nếu mún full gap
+            val scaledHeight = 1790
+            
+            g2.drawImage(canvas, paddingLeft, paddingTop, scaledWidth, scaledHeight, null)
             g2.dispose()
             
             ImageIO.write(compositeCanvas, "jpg", pPath.toFile())

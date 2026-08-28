@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNP Printer Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            gap: 40px;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+        }
+        .controls {
+            width: 350px;
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-y: auto;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .info {
+            background: #3d3d3d;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 20px;
+        }
+        /* Phỏng mô phỏng tỷ lệ 1200x1788 */
+        #printArea {
+            width: 400px;
+            height: 596px; /* 400 * (1788/1200) */
+            background-color: white;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        
+        /* Mô phỏng vùng Overprint bị lẹm thực tế của máy in (khoảng 2mm = ~24px) */
+        .overprint-zone {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 8px solid rgba(255, 0, 0, 0.3); /* 8px trên UI ~ 24px thực tế */
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* Đường dao cắt ở giữa */
+        .cut-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: rgba(255, 0, 0, 0.8);
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        /* Dao cắt có độ lệch (mô phỏng sai số cơ học) */
+        .cut-blade-tolerance {
+            position: absolute;
+            left: calc(50% - 3px); /* +- 1mm sai số */
+            width: 6px;
+            top: 0;
+            bottom: 0;
+            background-color: rgba(255, 0, 0, 0.2);
+            z-index: 9;
+        }
+
+        .strip {
+            position: absolute;
+            opacity: 0.8;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .strip-1 {
+            background-color: #0078D7; /* Xanh dương */
+        }
+        .strip-2 {
+            background-color: #107C10; /* Xanh lá */
+        }
+        
+        .slot-hole {
+            background-color: rgba(0,0,0,0.3);
+            border: 1px dashed rgba(255,255,255,0.8);
+            border-radius: 4px;
+            flex: 1;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="canvas-container">
+        <!-- 400x596 matches 1200x1788 ratio -->
+        <div id="printArea">
+            <div class="overprint-zone" title="Vùng bị lẹm do in tràn viền (Overprint)"></div>
+            <div class="cut-blade-tolerance" title="Sai số dao cắt"></div>
+            <div class="cut-line" title="Tim dao cắt"></div>
+            
+            <div id="strip1" class="strip strip-1">
+                <div class="slot-hole"></div>
+                <div class="slot-hole"></div>
+                <div class="slot-hole"></div>
+            </div>
+            
+            <div id="strip2" class="strip strip-2">
+                <div class="slot-hole"></div>
+                <div class="slot-hole"></div>
+                <div class="slot-hole"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h2>Thông số bù lẹm (Pixel)</h2>
+        <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">Tỷ lệ chuẩn tờ giấy là 1200 x 1788 px.</p>
+        
+        <div class="control-group">
+            <label>Side Margin (Lề 2 bên) <span id="valSide">0</span></label>
+            <input type="range" id="sideMargin" min="0" max="60" value="0">
+        </div>
+        
+        <div class="control-group">
+            <label>Top Margin (Lề trên) <span id="valTop">0</span></label>
+            <input type="range" id="topMargin" min="0" max="100" value="0">
+        </div>
+
+        <div class="control-group">
+            <label>Bottom Margin (Lề dưới) <span id="valBottom">0</span></label>
+            <input type="range" id="bottomMargin" min="0" max="100" value="0">
+        </div>
+
+        <div class="control-group">
+            <label>Gap (Khoảng hở giữa) <span id="valGap">0</span></label>
+            <input type="range" id="gapPx" min="0" max="100" value="0">
+        </div>
+
+        <div class="info">
+            <strong>Thông tin thuật toán (Tấm 1):</strong><br>
+            X: <span id="infoX1">0</span> px<br>
+            Y: <span id="infoY">0</span> px<br>
+            W: <span id="infoW">600</span> px<br>
+            H: <span id="infoH">1788</span> px<br><br>
+            <strong>Thông tin thuật toán (Tấm 2):</strong><br>
+            X: <span id="infoX2">600</span> px
+        </div>
+
+        <div style="margin-top: 20px; font-size: 12px; color: #ffaa00;">
+            * Đường màu đỏ nhạt viền quanh giấy mô phỏng phần giấy bị lẹm đi ngoài đời thực.<br>
+            * Đường màu đỏ ở giữa mô phỏng dao cắt và sai số chém lệch dao.
+        </div>
+    </div>
+
+    <script>
+        const SCALE = 400 / 1200; // UI scale factor
+        
+        const sideSlider = document.getElementById('sideMargin');
+        const topSlider = document.getElementById('topMargin');
+        const bottomSlider = document.getElementById('bottomMargin');
+        const gapSlider = document.getElementById('gapPx');
+
+        const strip1 = document.getElementById('strip1');
+        const strip2 = document.getElementById('strip2');
+
+        function updateLayout() {
+            const side = parseInt(sideSlider.value);
+            const top = parseInt(topSlider.value);
+            const bottom = parseInt(bottomSlider.value);
+            const gap = parseInt(gapSlider.value);
+
+            document.getElementById('valSide').innerText = side;
+            document.getElementById('valTop').innerText = top;
+            document.getElementById('valBottom').innerText = bottom;
+            document.getElementById('valGap').innerText = gap;
+
+            const paperW = 1200;
+            const paperH = 1788;
+
+            const scaledW = (paperW - (side * 2) - gap) / 2;
+            const scaledH = paperH - top - bottom;
+
+            const x1 = side;
+            const y = top;
+            const x2 = paperW - side - scaledW;
+
+            // Apply to UI (scaled down)
+            strip1.style.left = (x1 * SCALE) + 'px';
+            strip1.style.top = (y * SCALE) + 'px';
+            strip1.style.width = (scaledW * SCALE) + 'px';
+            strip1.style.height = (scaledH * SCALE) + 'px';
+
+            strip2.style.left = (x2 * SCALE) + 'px';
+            strip2.style.top = (y * SCALE) + 'px';
+            strip2.style.width = (scaledW * SCALE) + 'px';
+            strip2.style.height = (scaledH * SCALE) + 'px';
+
+            // Update info
+            document.getElementById('infoX1').innerText = x1;
+            document.getElementById('infoY').innerText = y;
+            document.getElementById('infoW').innerText = scaledW;
+            document.getElementById('infoH').innerText = scaledH;
+            document.getElementById('infoX2').innerText = x2;
+        }
+
+        sideSlider.addEventListener('input', updateLayout);
+        topSlider.addEventListener('input', updateLayout);
+        bottomSlider.addEventListener('input', updateLayout);
+        gapSlider.addEventListener('input', updateLayout);
+
+        // Initial draw
+        updateLayout();
+    </script>
+</body>
+</html>
