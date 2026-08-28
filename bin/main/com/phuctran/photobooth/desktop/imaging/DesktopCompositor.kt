@@ -78,13 +78,13 @@ class DesktopCompositor(
 
         val fileName = buildFileName(layout.id, frame.id)
         val finalPath = outputDir.resolve(fileName)
-        // Lưu ảnh nguyên bản (dùng cho web/Cloudinary)
-        ImageIO.write(canvas, "jpg", finalPath.toFile())
+        // Lưu ảnh nguyên bản (dùng cho web/Cloudinary) bằng định dạng PNG không nén để tránh bị bể nét
+        ImageIO.write(canvas, "png", finalPath.toFile())
         
         val printPath = if (isStrip) {
-            // Giảm lề trái 2mm (~24px) -> 32 - 24 = 8
-            // Giảm lề phải 0.5mm (~6px) -> 32 - 6 = 26
-            val paperWidth = 1220 // Tổng = 8 + 592 + 2 + 592 + 26
+            // Lề trái nhích lại 0.5mm (+6px) -> 8 + 6 = 14
+            // Lề phải giữ nguyên 26
+            val paperWidth = 1226 // Tổng = 14 + 592 + 2 + 592 + 26
             val paperHeight = 1829
             
             val compositeCanvas = BufferedImage(paperWidth, paperHeight, BufferedImage.TYPE_INT_RGB)
@@ -94,7 +94,7 @@ class DesktopCompositor(
             g2.fillRect(0, 0, paperWidth, paperHeight)
             
             val paddingTop = 39
-            val paddingLeft = 8
+            val paddingLeft = 14
             val gap = 2
             
             val scaledWidth = 592
@@ -110,13 +110,13 @@ class DesktopCompositor(
             
             val printFileName = "print_$fileName"
             val pPath = outputDir.resolve(printFileName)
-            ImageIO.write(compositeCanvas, "jpg", pPath.toFile())
+            ImageIO.write(compositeCanvas, "png", pPath.toFile())
             pPath
         } else {
             val printFileName = "print_$fileName"
             val pPath = outputDir.resolve(printFileName)
             
-            val paperWidth = 1220
+            val paperWidth = 1226
             val paperHeight = 1829 // Khổ giấy thực tế in
             
             val compositeCanvas = BufferedImage(paperWidth, paperHeight, BufferedImage.TYPE_INT_RGB)
@@ -126,7 +126,7 @@ class DesktopCompositor(
             g2.fillRect(0, 0, paperWidth, paperHeight)
             
             val paddingTop = 39
-            val paddingLeft = 8
+            val paddingLeft = 14 // Cho đồng bộ với Strip
             
             val scaledWidth = 1184 // Hoặc 1186 nếu mún full gap
             val scaledHeight = 1790
@@ -134,7 +134,7 @@ class DesktopCompositor(
             g2.drawImage(canvas, paddingLeft, paddingTop, scaledWidth, scaledHeight, null)
             g2.dispose()
             
-            ImageIO.write(compositeCanvas, "jpg", pPath.toFile())
+            ImageIO.write(compositeCanvas, "png", pPath.toFile())
             pPath
         }
 
@@ -276,7 +276,7 @@ class DesktopCompositor(
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val safeLayout = layoutId.replace(Regex("[^A-Za-z0-9_-]"), "_")
         val safeFrame = frameId.replace(Regex("[^A-Za-z0-9_-]"), "_")
-        return "print_${timestamp}_${safeLayout}_${safeFrame}.jpg"
+        return "print_${timestamp}_${safeLayout}_${safeFrame}.png"
     }
 }
 
