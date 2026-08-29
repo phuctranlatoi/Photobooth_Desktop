@@ -687,7 +687,15 @@ class SlotDetectionEngine {
 
         val punched = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
         punched.setRGB(0, 0, width, height, punchedPixels, 0, width)
-        return DetectionResult(width, height, slots, warnings, punched)
+        
+        // Find QR Code Slot
+        val qrSlot = slots.firstOrNull { slot ->
+            val ratio = slot.width / slot.height
+            ratio in 0.9f..1.1f && slot.width < 0.35f
+        }
+        val photoSlots = if (qrSlot != null) slots.filter { it != qrSlot } else slots
+
+        return DetectionResult(width, height, photoSlots, warnings, punched, qrSlot)
     }
 
     private fun findFrameBounds(image: BufferedImage): IntRect? {

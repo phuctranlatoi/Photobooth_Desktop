@@ -37,5 +37,6 @@ data class DetectionResult(
     val height: Int,
     val slots: List<FrameSlot>,
     val warnings: List<String>,
-    val punchedImage: java.awt.image.BufferedImage? = null
+    val punchedImage: java.awt.image.BufferedImage? = null,
+    val qrSlot: FrameSlot? = null
 )

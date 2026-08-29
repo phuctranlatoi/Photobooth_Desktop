@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import com.phuctran.photobooth.desktop.services.NativeEosCaptureService
 import com.phuctran.photobooth.desktop.ui.components.*
 import com.phuctran.photobooth.desktop.ui.theme.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import com.phuctran.photobooth.desktop.model.DefaultLayoutModes
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.model.FramePack
@@ -38,6 +40,7 @@ fun AdminScreen(
     config: DesktopBoothConfig,
     nativeCamera: NativeEosCaptureService?,
     onAddFrame: (String) -> Unit,
+    onSaveLayoutConfig: (String, Long, Int, Int) -> Unit = { _, _, _, _ -> },
     onDeleteLayout: (String) -> Unit,
     onSaveSettings: (Boolean, Boolean, String) -> Unit,
     onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
@@ -150,8 +153,25 @@ fun AdminScreen(
                         if (layouts.isEmpty()) {
                             Text("Chưa có bố cục nào được tải.", color = NeutralSecondary, modifier = Modifier.padding(16.dp))
                         } else {
+                            var editingLayout by remember { mutableStateOf<LayoutMode?>(null) }
+                            
                             layouts.forEach { layout -> 
-                                LayoutAdminCard(layout = layout, onDelete = { onDeleteLayout(layout.id) })
+                                LayoutAdminCard(
+                                    layout = layout, 
+                                    onEdit = { editingLayout = layout },
+                                    onDelete = { onDeleteLayout(layout.id) }
+                                )
+                            }
+                            
+                            editingLayout?.let { layoutToEdit ->
+                                LayoutEditDialog(
+                                    layout = layoutToEdit,
+                                    onDismiss = { editingLayout = null },
+                                    onSave = { price, shotCount, countdown ->
+                                        onSaveLayoutConfig(layoutToEdit.id, price, shotCount, countdown)
+                                        editingLayout = null
+                                    }
+                                )
                             }
                         }
                     }
@@ -503,7 +523,57 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
 }
 
 @Composable
-fun LayoutAdminCard(layout: LayoutMode, onDelete: () -> Unit) {
+fun LayoutEditDialog(layout: LayoutMode, onDismiss: () -> Unit, onSave: (Long, Int, Int) -> Unit) {
+    var priceStr by remember { mutableStateOf(layout.basePrice.toString()) }
+    var shotCountStr by remember { mutableStateOf(layout.shotCount.toString()) }
+    var countdownStr by remember { mutableStateOf(layout.countdownSeconds.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        backgroundColor = NeutralPanel,
+        title = { Text("Cài đặt Bố cục", fontWeight = FontWeight.Bold, color = NeutralText) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = priceStr,
+                    onValueChange = { priceStr = it },
+                    label = { Text("Giá tiền (VNĐ)") },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
+                )
+                OutlinedTextField(
+                    value = shotCountStr,
+                    onValueChange = { shotCountStr = it },
+                    label = { Text("Số ảnh chụp") },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
+                )
+                OutlinedTextField(
+                    value = countdownStr,
+                    onValueChange = { countdownStr = it },
+                    label = { Text("Thời gian đếm ngược (giây)") },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val p = priceStr.toLongOrNull() ?: layout.basePrice
+                val s = shotCountStr.toIntOrNull() ?: layout.shotCount
+                val c = countdownStr.toIntOrNull() ?: layout.countdownSeconds
+                onSave(p, s, c)
+            }) {
+                Text("Lưu")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Hủy", color = NeutralSecondary)
+            }
+        }
+    )
+}
+
+@Composable
+fun LayoutAdminCard(layout: LayoutMode, onEdit: () -> Unit, onDelete: () -> Unit) {
     var showConfirm by remember { mutableStateOf(false) }
 
     androidx.compose.material.Card(
@@ -525,6 +595,12 @@ fun LayoutAdminCard(layout: LayoutMode, onDelete: () -> Unit) {
             if (showConfirm) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Xóa layout?", color = AccentRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    androidx.compose.material.OutlinedButton(
+                        onClick = { showConfirm = false },
+                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralSecondary)
+                    ) {
+                        Text("Hủy")
+                    }
                     androidx.compose.material.Button(
                         onClick = { 
                             showConfirm = false
@@ -534,20 +610,23 @@ fun LayoutAdminCard(layout: LayoutMode, onDelete: () -> Unit) {
                     ) {
                         Text("Xóa")
                     }
-                    androidx.compose.material.OutlinedButton(
-                        onClick = { showConfirm = false },
-                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralSecondary)
-                    ) {
-                        Text("Hủy")
-                    }
                 }
             } else {
-                androidx.compose.material.OutlinedButton(
-                    onClick = { showConfirm = true },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentRed, backgroundColor = Color.Transparent)
-                ) {
-                    Text("Xóa", fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material.OutlinedButton(
+                        onClick = onEdit,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentBlue)
+                    ) {
+                        Text("Sửa")
+                    }
+                    androidx.compose.material.OutlinedButton(
+                        onClick = { showConfirm = true },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentRed)
+                    ) {
+                        Text("Xóa")
+                    }
                 }
             }
         }

@@ -225,7 +225,25 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
                 
                 val projectDir = com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir()
                 val frameStore = com.phuctran.photobooth.desktop.storage.FrameStore(projectDir)
-                val newFrame = frameStore.addCustomFrame(tempFile.toPath(), detectedSizeInput.trim(), lId, isSpecialFrame)
+                
+                var qrX: Int? = null
+                var qrY: Int? = null
+                var qrSize: Int? = null
+                if (result.qrSlot != null) {
+                    qrX = (result.qrSlot.x * result.width).toInt()
+                    qrY = (result.qrSlot.y * result.height).toInt()
+                    qrSize = (result.qrSlot.width * result.width).toInt()
+                }
+
+                val newFrame = frameStore.addCustomFrame(
+                    source = tempFile.toPath(), 
+                    printSizeLabel = detectedSizeInput.trim(), 
+                    layoutId = lId, 
+                    isSpecial = isSpecialFrame,
+                    qrCodeX = qrX,
+                    qrCodeY = qrY,
+                    qrCodeSize = qrSize
+                )
                 
                 tempFile.delete() // Clean up temp file
                 

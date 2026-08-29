@@ -8,6 +8,7 @@ import com.google.firebase.cloud.StorageClient
 import java.io.FileInputStream
 import java.io.InputStream
 import java.util.UUID
+import com.google.cloud.firestore.SetOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.phuctran.photobooth.desktop.model.LayoutMode
@@ -85,6 +86,33 @@ object FirebaseManager {
     }
 
     /**
+     * Updates specific configuration fields (price, shot count, countdown) of a layout.
+     */
+    fun updateLayoutConfig(layoutId: String, basePrice: Long, shotCount: Int, countdownSeconds: Int) {
+        if (!isInitialized) {
+            println("Firebase is not initialized. Cannot update layout config.")
+            return
+        }
+
+        try {
+            val db = FirestoreClient.getFirestore()
+            val docRef = db.collection("layouts").document(layoutId)
+            
+            val updates = mapOf(
+                "basePrice" to basePrice,
+                "shotCount" to shotCount,
+                "countdownSeconds" to countdownSeconds
+            )
+            
+            val result = docRef.set(updates, SetOptions.merge()).get()
+            println("Layout config updated at: ${result.updateTime}")
+        } catch (e: Exception) {
+            println("Error updating layout config: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
      * Fetches layout data from Firestore and maps it to LayoutMode.
      */
     suspend fun fetchLayouts(): List<LayoutMode> = withContext(Dispatchers.IO) {
@@ -131,6 +159,7 @@ object FirebaseManager {
                                     family = LayoutFamily.Grid,
                                     shotCount = doc.getLong("shotCount")?.toInt() ?: slots.size,
                                     selectCount = doc.getLong("selectCount")?.toInt() ?: slots.size,
+                                    countdownSeconds = doc.getLong("countdownSeconds")?.toInt() ?: 3,
                                     basePrice = doc.getLong("basePrice") ?: 50000L,
                                     mediaLabel = doc.getString("mediaLabel") ?: "Layout $id",
                                     accentColor = doc.getLong("accentColor") ?: 0xFF4CAF50,

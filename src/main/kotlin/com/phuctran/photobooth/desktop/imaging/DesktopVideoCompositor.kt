@@ -19,8 +19,11 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         outputDir: Path,
         sessionId: String
     ): Path? {
-        val frameFile = projectDir.resolve("data").resolve("frames").resolve(frame.id).resolve("frame.png")
-        if (!Files.exists(frameFile)) return null
+        val frameFile = frame.customImagePath ?: projectDir.resolve("data").resolve("frames").resolve(frame.id).resolve("frame.png")
+        if (!Files.exists(frameFile)) {
+            println("Master Video Error: Frame file not found at $frameFile")
+            return null
+        }
 
         // Get dimensions from frame
         val frameImg = ImageIO.read(frameFile.toFile()) ?: return null
@@ -108,9 +111,9 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         cmd.add("-c:v")
         cmd.add("libx264")
         cmd.add("-preset")
-        cmd.add("fast")
+        cmd.add("veryfast")
         cmd.add("-crf")
-        cmd.add("26")
+        cmd.add("23")
         cmd.add("-pix_fmt")
         cmd.add("yuv420p")
         
@@ -127,7 +130,10 @@ class DesktopVideoCompositor(private val projectDir: Path) {
             // Read output for debugging
             Thread {
                 process.inputStream.bufferedReader().use { reader ->
-                    while (reader.readLine() != null) {}
+                    while (true) {
+                        val line = reader.readLine() ?: break
+                        println("FFMPEG COMPOSITOR: $line")
+                    }
                 }
             }.start()
 

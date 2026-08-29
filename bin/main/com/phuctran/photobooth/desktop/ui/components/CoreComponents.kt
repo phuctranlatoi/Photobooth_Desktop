@@ -235,8 +235,41 @@ fun formatVnd(amount: Long): String = String.format("%,d đ", amount)
 
 fun loadImageBitmap(path: Path): ImageBitmap? {
     return try {
-        org.jetbrains.skia.Image.makeFromEncoded(Files.readAllBytes(path)).toComposeImageBitmap()
-    } catch (e: Exception) { null }
+        val thumbPath = path.resolveSibling("thumb_ui_" + path.fileName.toString())
+        if (Files.exists(thumbPath)) {
+            return org.jetbrains.skia.Image.makeFromEncoded(Files.readAllBytes(thumbPath)).toComposeImageBitmap()
+        }
+        
+        Files.newInputStream(path).use { stream ->
+            javax.imageio.ImageIO.createImageInputStream(stream).use { iis ->
+                val readers = javax.imageio.ImageIO.getImageReaders(iis)
+                if (readers.hasNext()) {
+                    val reader = readers.next()
+                    reader.setInput(iis, true, true)
+                    val param = reader.defaultReadParam
+                    param.setSourceSubsampling(4, 4, 0, 0)
+                    val img = reader.read(0, param)
+                    reader.dispose()
+                    
+                    if (img != null) {
+                        try {
+                            val ext = if (path.fileName.toString().endsWith(".png", true)) "png" else "jpg"
+                            Files.newOutputStream(thumbPath).use { out ->
+                                javax.imageio.ImageIO.write(img, ext, out)
+                            }
+                        } catch (e: Exception) { 
+                            e.printStackTrace() 
+                        }
+                        return img.toComposeImageBitmap()
+                    }
+                }
+            }
+        }
+        null
+    } catch (e: Exception) { 
+        e.printStackTrace()
+        null 
+    }
 }
 
 fun loadFrameThumbnail(path: Path): ImageBitmap? {

@@ -52,7 +52,11 @@ class DesktopCloudinaryClient(
             .build()
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
-        if (response.statusCode() !in 200..299) return null
+        if (response.statusCode() !in 200..299) {
+            println("Cloudinary Upload Error: HTTP ${response.statusCode()}")
+            println(response.body())
+            return null
+        }
 
         val json = response.body()
         val secureUrl = SimpleJson.string(json, "secure_url") ?: return null

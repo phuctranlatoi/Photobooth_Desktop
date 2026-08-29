@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -115,7 +116,12 @@ fun PrintPreview(
         if (frame.isCustom && frame.customImagePath != null) {
             val overlay by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, frame.customImagePath) {
                 value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    loadImageBitmap(frame.customImagePath!!)
+                    try {
+                        org.jetbrains.skia.Image.makeFromEncoded(java.nio.file.Files.readAllBytes(frame.customImagePath!!)).toComposeImageBitmap()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
+                    }
                 }
             }
             val overlayBitmap = overlay

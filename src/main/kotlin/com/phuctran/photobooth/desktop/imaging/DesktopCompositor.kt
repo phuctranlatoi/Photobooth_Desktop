@@ -17,6 +17,12 @@ import java.time.format.DateTimeFormatter
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
+import java.util.EnumMap
+
 class DesktopCompositor(
     private val renderWidth: Int = 1800
 ) {
@@ -24,7 +30,8 @@ class DesktopCompositor(
         layout: LayoutMode,
         frame: FramePack,
         photoPaths: List<Path>,
-        outputDir: Path
+        outputDir: Path,
+        qrCodeUrl: String? = null
     ): RenderResult {
         require(photoPaths.size >= layout.selectCount) {
             "Layout ${layout.title} cần đủ ${layout.selectCount} ảnh."
@@ -78,6 +85,12 @@ class DesktopCompositor(
 
         val fileName = buildFileName(layout.id, frame.id)
         val finalPath = outputDir.resolve(fileName)
+        
+        // Vẽ mã QR nếu có URL
+        if (qrCodeUrl != null) {
+            drawQRCode(canvas, qrCodeUrl, width, height, frame)
+        }
+
         // Lưu ảnh nguyên bản (dùng cho web/Cloudinary) bằng định dạng PNG không nén để tránh bị bể nét
         ImageIO.write(canvas, "png", finalPath.toFile())
         
@@ -277,6 +290,34 @@ class DesktopCompositor(
         val safeLayout = layoutId.replace(Regex("[^A-Za-z0-9_-]"), "_")
         val safeFrame = frameId.replace(Regex("[^A-Za-z0-9_-]"), "_")
         return "print_${timestamp}_${safeLayout}_${safeFrame}.png"
+    }
+
+    private fun drawQRCode(canvas: BufferedImage, url: String, canvasWidth: Int, canvasHeight: Int, frame: FramePack) {
+        try {
+            val qrSize = frame.qrCodeSize ?: (canvasWidth * 0.15f).roundToInt().coerceAtLeast(100) // 15% width mặc định
+            val hints = EnumMap<EncodeHintType, Any>(EncodeHintType::class.java)
+            hints[EncodeHintType.ERROR_CORRECTION] = ErrorCorrectionLevel.M
+            hints[EncodeHintType.MARGIN] = 1
+
+            val bitMatrix = QRCodeWriter().encode(url, BarcodeFormat.QR_CODE, qrSize, qrSize, hints)
+            
+            // Lấy tọa độ từ cấu hình frame, nếu không có thì mặc định góc dưới bên phải
+            val qrX = frame.qrCodeX ?: (canvasWidth - qrSize - 30)
+            val qrY = frame.qrCodeY ?: (canvasHeight - qrSize - 30)
+            
+            val g2 = canvas.createGraphics()
+            g2.configure()
+            
+            for (x in 0 until qrSize) {
+                for (y in 0 until qrSize) {
+                    val color = if (bitMatrix.get(x, y)) Color.BLACK else Color.WHITE
+                    canvas.setRGB(qrX + x, qrY + y, color.rgb)
+                }
+            }
+            g2.dispose()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
 

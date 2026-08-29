@@ -58,6 +58,7 @@ class DesktopBoothController(
         else -> com.phuctran.photobooth.desktop.services.WebcamStillCaptureService(imageProcessor)
     },
     private val paymentService: PaymentService = PaymentService(config),
+    private val webAlbumClient: com.phuctran.photobooth.desktop.remote.DesktopWebAlbumClient = com.phuctran.photobooth.desktop.remote.DesktopWebAlbumClient(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
     val nativeCamera: com.phuctran.photobooth.desktop.services.NativeEosCaptureService?
@@ -259,7 +260,7 @@ class DesktopBoothController(
     private val _isRecordingVideo = MutableStateFlow(false)
     val isRecordingVideo = _isRecordingVideo.asStateFlow()
     
-    private val _videoEncodingJobs = mutableListOf<kotlinx.coroutines.Deferred<Path?>>()
+    private val _videoEncodingJobs = mutableListOf<Job>()
 
     fun startCaptureFlow() {
         if (captureJob?.isActive == true) return
@@ -284,7 +285,8 @@ class DesktopBoothController(
                 var videoJob: kotlinx.coroutines.Job? = null
 
                 transitionTo(SessionState.COUNTDOWN)
-                for (seconds in CAPTURE_PREP_SECONDS downTo 1) {
+                val prepSeconds = layout.countdownSeconds
+                for (seconds in prepSeconds downTo 1) {
                     _countdown.value = seconds
                     _statusMessage.value = "Chuẩn bị ảnh $index sau $seconds giây."
                     
@@ -353,19 +355,8 @@ class DesktopBoothController(
                     }
                 
                 // Encode video concurrently in the background so it doesn't block the next shot
-                val videoPathFuture = scope.async(Dispatchers.IO) { encodeVideo(videoFramesDir, photoPath, index) }
-                _videoEncodingJobs.add(videoPathFuture)
-                
-                _capturedMoments.value = _capturedMoments.value + CapturedMoment(
-                    index = index,
-                    photoLabel = "Ảnh $index",
-                    videoLabel = "Video $index",
-                    photoPath = photoPath,
-                    videoPath = null // Will be updated when async encode finishes
-                )
-                
-                scope.launch {
-                    val finalVideoPath = videoPathFuture.await()
+                val encodeJob = scope.launch {
+                    val finalVideoPath = withContext(Dispatchers.IO) { encodeVideo(videoFramesDir, photoPath, index) }
                     if (finalVideoPath != null) {
                         _capturedMoments.value = _capturedMoments.value.map {
                             if (it.index == index) it.copy(videoPath = finalVideoPath) else it
@@ -375,6 +366,15 @@ class DesktopBoothController(
                         }
                     }
                 }
+                _videoEncodingJobs.add(encodeJob)
+                
+                _capturedMoments.value = _capturedMoments.value + CapturedMoment(
+                    index = index,
+                    photoLabel = "Ảnh $index",
+                    videoLabel = "Video $index",
+                    photoPath = photoPath,
+                    videoPath = null // Will be updated when async encode finishes
+                )
 
                 transitionTo(SessionState.LIVE_VIEW)
                 delay(700)
@@ -412,8 +412,8 @@ class DesktopBoothController(
                     "-framerate", "15", 
                     "-i", "${framesDir.toAbsolutePath()}\\frame_%03d.jpg", 
                     "-c:v", "libx264", 
-                    "-preset", "ultrafast",
-                    "-crf", "28",
+                    "-preset", "superfast",
+                    "-crf", "23",
                     "-pix_fmt", "yuv420p",
                     outputFile.toAbsolutePath().toString()
                 ).redirectErrorStream(true).start()
@@ -427,7 +427,8 @@ class DesktopBoothController(
                     "-i", photoPath.toAbsolutePath().toString(), 
                     "-vf", "scale=-2:1080",
                     "-c:v", "libx264", 
-                    "-preset", "ultrafast",
+                    "-preset", "superfast",
+                    "-crf", "23",
                     "-t", "3",
                     "-pix_fmt", "yuv420p",
                     outputFile.toAbsolutePath().toString()
@@ -435,6 +436,16 @@ class DesktopBoothController(
             } else {
                 return@runCatching null
             }
+
+            // Đọc error stream của FFmpeg để in ra console giúp debug dễ hơn
+            Thread {
+                process.inputStream.bufferedReader().use { reader ->
+                    while (true) {
+                        val line = reader.readLine() ?: break
+                        println("FFMPEG LOG: $line")
+                    }
+                }
+            }.start()
             
             val exited = process.waitFor(20, java.util.concurrent.TimeUnit.SECONDS)
             if (exited && process.exitValue() == 0 && Files.exists(outputFile)) {
@@ -503,12 +514,33 @@ class DesktopBoothController(
             transitionTo(SessionState.PRINTING)
             val sessionId = currentSessionId ?: UUID.randomUUID().toString().also { currentSessionId = it }
             val selectedPhotoPaths = _selectedMoments.value.mapNotNull { it.photoPath }
+            
+            // 1. Tạo Album trước để lấy URL làm mã QR
+            _statusMessage.value = "Đang khởi tạo Album..."
+            val preAlbum = if (config.canUploadAlbum) {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        webAlbumClient.createAlbum(
+                            config = config,
+                            request = com.phuctran.photobooth.desktop.remote.CreateAlbumRequest(
+                                externalSessionId = sessionId,
+                                expectedAssets = _selectedMoments.value.size + 2, // Photos + 1 Print + 1 Video
+                                expiresInDays = config.albumExpiresInDays
+                            )
+                        )
+                    }
+                }.getOrNull()
+            } else null
+
+            // 2. Render ảnh in
+            _statusMessage.value = "Đang render ảnh in..."
             val renderResult = runCatching {
                 compositor.renderFinal(
                     layout = _selectedLayout.value,
                     frame = _selectedFrame.value,
                     photoPaths = selectedPhotoPaths,
-                    outputDir = projectDir.resolve("data").resolve("output")
+                    outputDir = projectDir.resolve("data").resolve("output"),
+                    qrCodeUrl = preAlbum?.albumUrl
                 )
             }.getOrNull()
             
@@ -518,7 +550,7 @@ class DesktopBoothController(
             _statusMessage.value = "Đã render ảnh in. Đang tạo video thành phẩm..."
             
             // Wait for all individual video encodings to finish
-            _videoEncodingJobs.forEach { it.await() }
+            _videoEncodingJobs.forEach { it.join() }
             
             val latestSelectedMoments = _selectedMoments.value.mapNotNull { selected ->
                 _capturedMoments.value.find { it.index == selected.index }
@@ -534,7 +566,16 @@ class DesktopBoothController(
                         sessionId = sessionId
                     )
                 }
+            }.onFailure { e ->
+                println("Failed to create master video: ${e.message}")
+                e.printStackTrace()
             }.getOrNull()
+
+            if (masterVideo != null) {
+                println("Master video successfully created at: $masterVideo")
+            } else {
+                println("Master video generation failed (returned null).")
+            }
 
             _statusMessage.value = "Đã render xong. Đang upload album..."
 
@@ -567,6 +608,7 @@ class DesktopBoothController(
                 withContext(Dispatchers.IO) {
                     albumUploader.uploadSessionAlbum(
                         sessionId = sessionId,
+                        preCreatedAlbumId = preAlbum?.albumId,
                         layout = _selectedLayout.value,
                         frame = _selectedFrame.value,
                         capturedMoments = _capturedMoments.value,
@@ -577,7 +619,7 @@ class DesktopBoothController(
                 }
             } else null
 
-            val summary = if (albumResult != null && albumResult.albumUrl != null) {
+            val summary = if (albumResult != null && (albumResult.albumUrl != null || preAlbum?.albumUrl != null)) {
                 ExportSummary(
                     printPhotoCount = _selectedMoments.value.size,
                     uploadedPhotoCount = albumResult.uploadedCount,
@@ -700,6 +742,30 @@ class DesktopBoothController(
             )
         }.onFailure { e ->
             _statusMessage.value = "Lỗi lưu cài đặt: ${e.message}"
+        }
+    }
+
+    fun saveLayoutConfig(layoutId: String, price: Long, shotCount: Int, countdown: Int) {
+        // Run in background to update Firebase
+        scope.launch(Dispatchers.IO) {
+            com.phuctran.photobooth.desktop.remote.FirebaseManager.updateLayoutConfig(layoutId, price, shotCount, countdown)
+            
+            // Update local state immediately so UI reflects changes
+            val currentLayouts = _availableLayouts.value.toMutableList()
+            val index = currentLayouts.indexOfFirst { it.id == layoutId }
+            if (index != -1) {
+                currentLayouts[index] = currentLayouts[index].copy(
+                    basePrice = price,
+                    shotCount = shotCount,
+                    countdownSeconds = countdown
+                )
+                _availableLayouts.value = currentLayouts
+                
+                // If the updated layout is currently selected, update that too
+                if (_selectedLayout.value.id == layoutId) {
+                    _selectedLayout.value = currentLayouts[index]
+                }
+            }
         }
     }
 

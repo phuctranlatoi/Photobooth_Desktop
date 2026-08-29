@@ -198,6 +198,9 @@ fun main() = application {
                                     }
                                 }
                             },
+                            onSaveLayoutConfig = { layoutId, price, shotCount, countdown ->
+                                controller.saveLayoutConfig(layoutId, price, shotCount, countdown)
+                            },
                             onDeleteLayout = { layoutId ->
                                 controller.deleteLayout(layoutId)
                             },

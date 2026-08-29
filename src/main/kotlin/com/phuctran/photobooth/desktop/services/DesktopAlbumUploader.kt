@@ -20,6 +20,7 @@ class DesktopAlbumUploader(
 ) {
     fun uploadSessionAlbum(
         sessionId: String,
+        preCreatedAlbumId: String? = null,
         layout: LayoutMode,
         frame: FramePack,
         capturedMoments: List<CapturedMoment>,
@@ -91,36 +92,45 @@ class DesktopAlbumUploader(
                 )
             }
 
-            val album = webAlbumClient.createAlbum(
-                config = config,
-                request = CreateAlbumRequest(
-                    externalSessionId = sessionId,
-                    expectedAssets = uploadedAssets.size,
-                    expiresInDays = config.albumExpiresInDays
+            val albumId = if (preCreatedAlbumId != null) {
+                preCreatedAlbumId
+            } else {
+                val album = webAlbumClient.createAlbum(
+                    config = config,
+                    request = CreateAlbumRequest(
+                        externalSessionId = sessionId,
+                        expectedAssets = uploadedAssets.size,
+                        expiresInDays = config.albumExpiresInDays
+                    )
+                ) ?: return AlbumUploadResult(
+                    albumId = null,
+                    albumUrl = null,
+                    originalPhotoUrls = uploadedOriginalAssets.map { it.secureUrl },
+                    finalPhotoUrl = uploadedFinalAsset?.secureUrl,
+                    uploadedCount = uploadedAssets.size,
+                    finalizedCount = 0,
+                    errorMessage = "Upload Cloudinary xong nhưng chưa tạo được album web."
                 )
-            ) ?: return AlbumUploadResult(
-                albumId = null,
-                albumUrl = null,
-                originalPhotoUrls = uploadedOriginalAssets.map { it.secureUrl },
-                finalPhotoUrl = uploadedFinalAsset?.secureUrl,
-                uploadedCount = uploadedAssets.size,
-                finalizedCount = 0,
-                errorMessage = "Upload Cloudinary xong nhưng chưa tạo được album web."
-            )
+                album.albumId
+            }
 
             val finalizedCount = uploadedAssets.count { asset ->
-                webAlbumClient.finalizeAsset(config, album.albumId, asset.finalizeRequest)
+                webAlbumClient.finalizeAsset(config, albumId, asset.finalizeRequest)
             }
 
             val albumReady = if (finalizedCount > 0) {
-                webAlbumClient.completeAlbum(config, album.albumId)
+                webAlbumClient.completeAlbum(config, albumId)
             } else {
                 false
             }
 
+            // Mặc dù preCreatedAlbum có URL, nhưng webAlbumClient.completeAlbum không trả về URL, 
+            // nên ta dùng config.webAlbumBaseUrl để tái tạo URL
+            val finalAlbumUrl = "${config.webAlbumBaseUrl.trimEnd('/')}/album/${sessionId}"
+
             AlbumUploadResult(
-                albumId = album.albumId,
-                albumUrl = if (albumReady) album.albumUrl else null,
+                albumId = albumId,
+                albumUrl = if (albumReady) finalAlbumUrl else null,
                 originalPhotoUrls = uploadedOriginalAssets.map { it.secureUrl },
                 finalPhotoUrl = uploadedFinalAsset?.secureUrl,
                 uploadedCount = uploadedAssets.size,

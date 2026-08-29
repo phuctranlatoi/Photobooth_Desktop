@@ -8,6 +8,9 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.stream.Collectors
+import kotlin.io.path.nameWithoutExtension
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 
 class FrameStore(projectDir: Path) {
     val frameDir = projectDir.resolve("data").resolve("frames")
@@ -25,7 +28,15 @@ class FrameStore(projectDir: Path) {
         return customFrames
     }
 
-    fun addCustomFrame(source: Path, printSizeLabel: String, layoutId: String, isSpecial: Boolean = false): FramePack {
+    fun addCustomFrame(
+        source: Path, 
+        printSizeLabel: String, 
+        layoutId: String, 
+        isSpecial: Boolean = false,
+        qrCodeX: Int? = null,
+        qrCodeY: Int? = null,
+        qrCodeSize: Int? = null
+    ): FramePack {
         require(Files.isRegularFile(source)) {
             "Không tìm thấy file frame: $source"
         }
@@ -46,6 +57,17 @@ class FrameStore(projectDir: Path) {
         val extension = source.fileName.toString().substringAfterLast('.', "png").lowercase(Locale.ROOT)
         val destination = targetDir.resolve("${slug}_$timestamp.$extension")
         Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING)
+
+        if (qrCodeX != null && qrCodeY != null && qrCodeSize != null) {
+            val jsonPath = targetDir.resolve("${destination.nameWithoutExtension}.json")
+            val jsonObj = JsonObject().apply {
+                addProperty("qrCodeX", qrCodeX)
+                addProperty("qrCodeY", qrCodeY)
+                addProperty("qrCodeSize", qrCodeSize)
+            }
+            Files.writeString(jsonPath, Gson().toJson(jsonObj))
+        }
+
         return destination.toFramePack()
     }
 
@@ -67,6 +89,22 @@ class FrameStore(projectDir: Path) {
         val targetLayoutId = if (parts.size >= 2) parts[1] else null
         val isSpecial = parts.any { it.equals("Special", ignoreCase = true) }
 
+        // Đọc cấu hình QR từ file JSON (nếu có)
+        val jsonPath = this.parent.resolve("$name.json")
+        var qrX: Int? = null
+        var qrY: Int? = null
+        var qrSize: Int? = null
+
+        if (Files.exists(jsonPath)) {
+            runCatching {
+                val jsonStr = Files.readString(jsonPath)
+                val jsonObject = Gson().fromJson(jsonStr, JsonObject::class.java)
+                if (jsonObject.has("qrCodeX")) qrX = jsonObject.get("qrCodeX").asInt
+                if (jsonObject.has("qrCodeY")) qrY = jsonObject.get("qrCodeY").asInt
+                if (jsonObject.has("qrCodeSize")) qrSize = jsonObject.get("qrCodeSize").asInt
+            }
+        }
+
         return FramePack(
             id = name,
             title = title,
@@ -76,7 +114,10 @@ class FrameStore(projectDir: Path) {
             isSpecial = isSpecial,
             customImagePath = this,
             targetPrintSize = targetPrintSize,
-            targetLayoutId = targetLayoutId
+            targetLayoutId = targetLayoutId,
+            qrCodeX = qrX,
+            qrCodeY = qrY,
+            qrCodeSize = qrSize
         )
     }
 

@@ -25,6 +25,7 @@ data class LayoutMode(
     val family: LayoutFamily,
     val shotCount: Int,
     val selectCount: Int,
+    val countdownSeconds: Int = 3,
     val basePrice: Long,
     val mediaLabel: String,
     val accentColor: Long,
@@ -140,7 +141,10 @@ data class FramePack(
     val isSpecial: Boolean = false,
     val customImagePath: Path? = null,
     val targetPrintSize: String? = null,
-    val targetLayoutId: String? = null
+    val targetLayoutId: String? = null,
+    val qrCodeX: Int? = null,
+    val qrCodeY: Int? = null,
+    val qrCodeSize: Int? = null
 )
 
 data class CapturedMoment(
