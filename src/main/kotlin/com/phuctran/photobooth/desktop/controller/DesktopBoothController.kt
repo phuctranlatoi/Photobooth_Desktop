@@ -141,23 +141,28 @@ class DesktopBoothController(
     init {
         scope.launch {
             try {
-                val layoutsFromFirebase = com.phuctran.photobooth.desktop.remote.FirebaseManager.fetchLayouts()
-                if (layoutsFromFirebase.isNotEmpty()) {
-                    _availableLayouts.value = layoutsFromFirebase
-                    _selectedLayout.value = layoutsFromFirebase.first()
+                try {
+                    val layoutsFromFirebase = com.phuctran.photobooth.desktop.remote.FirebaseManager.fetchLayouts()
+                    if (layoutsFromFirebase.isNotEmpty()) {
+                        _availableLayouts.value = layoutsFromFirebase
+                        _selectedLayout.value = layoutsFromFirebase.first()
+                    }
+                } catch (e: Exception) {
+                    println("Failed to fetch layouts from Firebase: ${e.message}")
                 }
-            } catch (e: Exception) {
-                println("Failed to fetch layouts from Firebase: ${e.message}")
+                refreshEffects()
+                refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
+                refreshCameraDevices()
+                localServer?.start()
+                
+                // Start live view early to attract customers on StartScreen
+                cameraService.startLiveView(_selectedEffect.value.id)
+            } catch (t: Throwable) {
+                println("CRITICAL ERROR during initialization: ${t.message}")
+                t.printStackTrace()
+            } finally {
+                _isAppReady.value = true
             }
-            refreshEffects()
-            refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
-            refreshCameraDevices()
-            localServer?.start()
-            
-            // Start live view early to attract customers on StartScreen
-            cameraService.startLiveView(_selectedEffect.value.id)
-            
-            _isAppReady.value = true
         }
     }
 

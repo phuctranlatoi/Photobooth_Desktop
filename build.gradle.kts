@@ -33,15 +33,16 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe,
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi
             )
+            appResourcesRootDir.set(project.layout.projectDirectory.dir("app-resources"))
             packageName = "PrettyBoothDesktop"
-            packageVersion = "1.0.1"
-            
-            // Include missing modules that jdeps failed to detect
-            modules("java.net.http", "jdk.crypto.ec", "java.naming", "java.sql")
+            packageVersion = "1.0.0"
 
             buildTypes.release.proguard {
                 isEnabled.set(false)
             }
+            
+            // Include missing modules that jdeps failed to detect
+            modules("java.net.http", "jdk.crypto.ec", "java.naming", "java.sql", "jdk.unsupported", "java.management", "jdk.httpserver")
 
             windows {
                 menu = true

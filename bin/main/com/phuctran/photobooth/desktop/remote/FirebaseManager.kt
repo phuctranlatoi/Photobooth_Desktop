@@ -122,7 +122,9 @@ object FirebaseManager {
         }
         try {
             val db = FirestoreClient.getFirestore()
-            val querySnapshot = db.collection("layouts").get().get() // get() on ApiFuture
+            val querySnapshot = kotlinx.coroutines.withTimeout(5000) { 
+                db.collection("layouts").get().get()
+            }
             val layouts = mutableListOf<LayoutMode>()
             for (doc in querySnapshot.documents) {
                 val id = doc.getString("id") ?: doc.id

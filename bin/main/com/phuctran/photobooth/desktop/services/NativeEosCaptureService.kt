@@ -31,16 +31,48 @@ class NativeEosCaptureService(
     private var liveViewJob: Job? = null
     private var sessionOpen = false
 
+    private var currentEffectId: String = ""
+
     init {
         try {
             sessionOpen = camera.openSession()
             if (sessionOpen) {
                 println("Native EDSDK: Camera session opened successfully.")
             } else {
-                println("Native EDSDK: Failed to open camera session (Camera not connected or turned off?).")
+                println("Native EDSDK: Failed to open camera session. Will auto-retry in background.")
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+        startAutoReconnectLoop()
+    }
+
+    private fun startAutoReconnectLoop() {
+        scope.launch {
+            while (isActive) {
+                if (!sessionOpen) {
+                    try {
+                        sessionOpen = camera.openSession()
+                        if (sessionOpen) {
+                            println("Native EDSDK: Camera Reconnected!")
+                            // Restart live view automatically if it was requested
+                            if (currentEffectId.isNotEmpty() && liveViewJob == null) {
+                                startLiveView(currentEffectId)
+                            }
+                        }
+                    } catch (e: Exception) {}
+                } else {
+                    // Check if connection is still alive by fetching a basic property
+                    try {
+                        camera.apertureValue
+                    } catch (e: Exception) {
+                        println("Native EDSDK: Camera Disconnected!")
+                        sessionOpen = false
+                        stopLiveView()
+                    }
+                }
+                delay(2000) // Check every 2 seconds
+            }
         }
     }
 
@@ -75,7 +107,12 @@ class NativeEosCaptureService(
     }
 
     override fun startLiveView(effectId: String) {
-        if (!sessionOpen || liveViewJob?.isActive == true) return
+        currentEffectId = effectId
+        if (!sessionOpen) {
+            println("Native EDSDK: Cannot start live view, session not open. Will retry automatically.")
+            return
+        }
+        if (liveViewJob?.isActive == true) return
 
         liveViewJob = scope.launch {
             var liveViewStarted = false
@@ -89,6 +126,7 @@ class NativeEosCaptureService(
                         camera.setProperty(edsdk.utils.CanonConstants.EdsPropertyID.kEdsPropID_Evf_AFMode, 2L)
                     }
                 } else {
+                    emitErrorFrame("Camera busy (retrying $retryCount)...")
                     println("Native EDSDK: Camera busy, retrying live view... ($retryCount)")
                     retryCount++
                     delay(500)
@@ -96,6 +134,7 @@ class NativeEosCaptureService(
             }
 
             if (!liveViewStarted) {
+                emitErrorFrame("Failed to start LiveView!")
                 println("Native EDSDK: Failed to start live view after multiple attempts.")
                 return@launch
             }
@@ -108,13 +147,29 @@ class NativeEosCaptureService(
                         lastProcessedFrame = processed
                         _liveViewStream.value = processed.toComposeImageBitmap()
                         image.flush()
+                    } else {
+                        emitErrorFrame("LiveView null (Camera mode wrong/lens cap?)")
                     }
                 } catch (e: Exception) {
-                    // Suppress intermittent download errors
+                    emitErrorFrame("LV Error: ${e.message}")
                 }
                 delay(30) // ~30 fps request rate
             }
         }
+    }
+
+    private fun emitErrorFrame(msg: String) {
+        try {
+            val img = BufferedImage(640, 480, BufferedImage.TYPE_INT_RGB)
+            val g = img.createGraphics()
+            g.color = java.awt.Color.BLACK
+            g.fillRect(0, 0, 640, 480)
+            g.color = java.awt.Color.RED
+            g.font = java.awt.Font("Arial", java.awt.Font.BOLD, 24)
+            g.drawString(msg, 50, 240)
+            g.dispose()
+            _liveViewStream.value = img.toComposeImageBitmap()
+        } catch (e: Exception) {}
     }
 
     override fun stopLiveView() {
