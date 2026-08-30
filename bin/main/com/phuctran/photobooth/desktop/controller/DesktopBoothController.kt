@@ -547,17 +547,78 @@ class DesktopBoothController(
             val masterFile = renderResult?.finalImagePath
             val printFile = renderResult?.printImagePath
 
-            _statusMessage.value = "Đã render ảnh in. Đang tạo video thành phẩm..."
-            
-            // Wait for all individual video encodings to finish
-            _videoEncodingJobs.forEach { it.join() }
-            
-            val latestSelectedMoments = _selectedMoments.value.mapNotNull { selected ->
-                _capturedMoments.value.find { it.index == selected.index }
-            }
-            
-            val masterVideo = runCatching {
+            // 3. Upload Ảnh NGAY LẬP TỨC (đợi xong mới ra QR)
+            _statusMessage.value = "Đang tải ảnh lên web..."
+            val albumResult = if (config.canUploadAlbum) {
                 withContext(Dispatchers.IO) {
+                    albumUploader.uploadSessionPhotos(
+                        sessionId = sessionId,
+                        preCreatedAlbumId = preAlbum?.albumId,
+                        capturedMoments = _capturedMoments.value,
+                        masterPrint = masterFile
+                    )
+                }
+            } else null
+
+            // 4. Hiển thị QR và chuyển sang màn hình Delivery
+            val finalQrUrl = preAlbum?.albumUrl ?: if (config.enableLocalServer && masterFile != null) {
+                val ip = com.phuctran.photobooth.desktop.utils.NetworkUtility.getLocalIpAddress()
+                val filename = masterFile.fileName.toString()
+                "http://$ip:${config.localServerPort}/download/$filename"
+            } else null
+
+            val initialSummary = ExportSummary(
+                printPhotoCount = _selectedMoments.value.size,
+                uploadedPhotoCount = albumResult?.uploadedCount ?: 0,
+                uploadedVideoCount = 0,
+                qrUrl = finalQrUrl, // LUÔN GIỮ URL GỐC, KHÔNG BỊ GHI ĐÈ
+                masterUrl = albumResult?.finalPhotoUrl ?: finalQrUrl,
+                albumId = preAlbum?.albumId,
+                outputPath = masterFile,
+                printStatus = "Đang in ảnh và xử lý video..."
+            )
+            _exportSummary.value = initialSummary
+            
+            if (finalQrUrl != null) {
+                _statusMessage.value = "Hoàn tất! Mời quét mã QR. Máy đang in và tạo video..."
+            } else {
+                _statusMessage.value = "Đang in ảnh và xử lý nền..."
+            }
+            transitionTo(SessionState.DELIVERY)
+
+            // 5. Các tác vụ nặng chạy ngầm (In ấn, Tạo Video)
+            scope.launch(Dispatchers.IO) {
+                // In ảnh
+                val printStatus = if (printFile != null && activeConfig.value.enableSystemPrint) {
+                    val layout = _selectedLayout.value
+                    val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
+                    val requestedCopies = _printCopies.value
+                    val actualSheets = (if (isStrip) requestedCopies / 2 else requestedCopies).coerceAtLeast(1)
+                    
+                    val targetPrinterName = if (isStrip) {
+                        activeConfig.value.printerNameStrip.takeIf { it.isNotBlank() }
+                    } else {
+                        activeConfig.value.printerNameFull.takeIf { it.isNotBlank() }
+                    }
+                    
+                    printerService.printImage(printFile, actualSheets, targetPrinterName)
+                        .getOrElse { error -> "Không gửi được sang Windows Print: ${error.message}" }
+                } else if (printFile != null) {
+                    "Đã render file in local. Bật ENABLE_SYSTEM_PRINT=true để in."
+                } else {
+                    "Chưa render được file in."
+                }
+
+                _exportSummary.value = _exportSummary.value.copy(printStatus = printStatus.toString())
+
+                // Bước 2: Tạo Video
+                _videoEncodingJobs.forEach { it.join() }
+                
+                val latestSelectedMoments = _selectedMoments.value.mapNotNull { selected ->
+                    _capturedMoments.value.find { it.index == selected.index }
+                }
+                
+                val masterVideo = runCatching {
                     videoCompositor.createCompositeVideo(
                         layout = _selectedLayout.value,
                         frame = _selectedFrame.value,
@@ -565,124 +626,47 @@ class DesktopBoothController(
                         outputDir = projectDir.resolve("data").resolve("output"),
                         sessionId = sessionId
                     )
-                }
-            }.onFailure { e ->
-                println("Failed to create master video: ${e.message}")
-                e.printStackTrace()
-            }.getOrNull()
+                }.onFailure { e ->
+                    println("Failed to create master video: ${e.message}")
+                    e.printStackTrace()
+                }.getOrNull()
 
-            if (masterVideo != null) {
-                println("Master video successfully created at: $masterVideo")
-            } else {
-                println("Master video generation failed (returned null).")
-            }
-
-            _statusMessage.value = "Đã render xong. Đang upload album..."
-
-            val printStatus = if (printFile != null && activeConfig.value.enableSystemPrint) {
-                val layout = _selectedLayout.value
-                val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
-                val requestedCopies = _printCopies.value
-                val actualSheets = (if (isStrip) requestedCopies / 2 else requestedCopies).coerceAtLeast(1)
-                
-                val targetPrinterName = if (isStrip) {
-                    activeConfig.value.printerNameStrip.takeIf { it.isNotBlank() }
-                } else {
-                    activeConfig.value.printerNameFull.takeIf { it.isNotBlank() }
-                }
-                
-                _statusMessage.value = "Đã render ảnh in. Đang gửi sang Windows Print ($actualSheets tờ)..."
-                withContext(Dispatchers.IO) {
-                    printerService.printImage(printFile, actualSheets, targetPrinterName)
-                        .getOrElse { error -> "Không gửi được sang Windows Print: ${error.message}" }
-                }
-            } else if (printFile != null) {
-                "Đã render file in local. Bật ENABLE_SYSTEM_PRINT=true để gửi sang Windows Print."
-            } else {
-                "Chưa render được file in."
-            }
-
-            _statusMessage.value = "$printStatus Đang upload album..."
-
-            val albumResult = if (config.canUploadAlbum) {
-                withContext(Dispatchers.IO) {
-                    albumUploader.uploadSessionAlbum(
+                // Bước 3: Upload Video sau cùng
+                if (config.canUploadAlbum && masterVideo != null && albumResult?.albumId != null) {
+                    val videoUploaded = albumUploader.uploadSessionVideo(
                         sessionId = sessionId,
-                        preCreatedAlbumId = preAlbum?.albumId,
-                        layout = _selectedLayout.value,
-                        frame = _selectedFrame.value,
-                        capturedMoments = _capturedMoments.value,
-                        selectedMoments = latestSelectedMoments,
-                        masterPrint = masterFile,
-                        masterVideo = masterVideo
+                        albumId = albumResult.albumId,
+                        masterVideo = masterVideo,
+                        startPosition = albumResult.uploadedCount // Tiếp nối vị trí ảnh
                     )
+                    if (videoUploaded) {
+                        _exportSummary.value = _exportSummary.value.copy(
+                            uploadedVideoCount = 1
+                        )
+                    }
                 }
-            } else null
-
-            val summary = if (albumResult != null && (albumResult.albumUrl != null || preAlbum?.albumUrl != null)) {
-                ExportSummary(
-                    printPhotoCount = _selectedMoments.value.size,
-                    uploadedPhotoCount = albumResult.uploadedCount,
-                    uploadedVideoCount = if (masterVideo != null) 1 else 0,
-                    qrUrl = albumResult.albumUrl,
-                    masterUrl = albumResult.finalPhotoUrl,
-                    albumId = albumResult.albumId,
-                    outputPath = masterFile,
-                    printStatus = printStatus
+                
+                // Bước 4: Đánh dấu hoàn tất Album để Web hiển thị
+                if (config.canUploadAlbum && albumResult?.albumId != null) {
+                    albumUploader.completeSessionAlbum(albumResult.albumId)
+                }
+                
+                // Lưu DB
+                val session = BoothSession(
+                    id = sessionId,
+                    boothId = config.boothId,
+                    productId = _selectedLayout.value.id,
+                    state = "COMPLETED",
+                    qrCodeUrl = _exportSummary.value.qrUrl,
+                    photoUrls = albumResult?.originalPhotoUrls ?: emptyList(),
+                    videoUrls = emptyList(),
+                    masterUrl = _exportSummary.value.masterUrl,
+                    startedAt = System.currentTimeMillis(),
+                    paidAt = System.currentTimeMillis(),
+                    completedAt = System.currentTimeMillis()
                 )
-            } else if (config.enableLocalServer && masterFile != null) {
-                val ip = NetworkUtility.getLocalIpAddress()
-                val filename = masterFile.fileName.toString()
-                ExportSummary(
-                    printPhotoCount = _selectedMoments.value.size,
-                    uploadedPhotoCount = 0,
-                    uploadedVideoCount = 0,
-                    qrUrl = "http://$ip:${config.localServerPort}/download/$filename",
-                    masterUrl = "http://$ip:${config.localServerPort}/download/$filename",
-                    albumId = null,
-                    outputPath = masterFile,
-                    printStatus = printStatus
-                )
-            } else {
-                ExportSummary(
-                    printPhotoCount = _selectedMoments.value.size,
-                    uploadedPhotoCount = 0,
-                    uploadedVideoCount = 0,
-                    qrUrl = null,
-                    masterUrl = null,
-                    albumId = null,
-                    outputPath = masterFile,
-                    printStatus = printStatus
-                )
+                sessionStore.saveSession(session)
             }
-
-            _exportSummary.value = summary
-            
-            if (summary.qrUrl != null) {
-                _statusMessage.value = "Hoàn tất! Mời quét mã QR để lấy ảnh."
-            } else {
-                _statusMessage.value = "Hoàn tất! Chờ máy in nhả ảnh nhé."
-            }
-            
-            transitionTo(SessionState.DELIVERY)
-
-            val session = BoothSession(
-                id = sessionId,
-                boothId = config.boothId,
-                productId = _selectedLayout.value.id,
-                state = "COMPLETED",
-                qrCodeUrl = summary.qrUrl,
-                photoUrls = albumResult?.originalPhotoUrls ?: emptyList(),
-                videoUrls = emptyList(),
-                masterUrl = summary.masterUrl,
-                startedAt = System.currentTimeMillis(),
-                paidAt = System.currentTimeMillis(),
-                completedAt = System.currentTimeMillis()
-            )
-            withContext(Dispatchers.IO) { sessionStore.saveSession(session) }
-
-            delay(1000)
-            transitionTo(SessionState.DELIVERY)
         }
     }
 

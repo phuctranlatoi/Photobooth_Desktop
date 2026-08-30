@@ -82,7 +82,7 @@ object DesktopConfigLoader {
                     null
                 } else {
                     val key = trimmed.substringBefore("=").trim()
-                    val value = trimmed.substringAfter("=").trim().trim('"').trim('\'')
+                    val value = trimmed.substringAfter("=").trim().removeSurrounding("\"").removeSurrounding("'")
                     key to value
                 }
             }

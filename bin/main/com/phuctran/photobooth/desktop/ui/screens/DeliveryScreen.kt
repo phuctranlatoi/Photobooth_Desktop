@@ -39,8 +39,7 @@ fun DeliveryScreen(
                 OutputRow("Ảnh đã chụp", "$totalCaptured ảnh")
                 Spacer(Modifier.height(10.dp))
                 OutputRow("Bản in", "$printCopies bản")
-                Spacer(Modifier.height(10.dp))
-                OutputRow("Album", summary.albumId ?: "Đang dùng phiên cục bộ")
+                
                 Spacer(Modifier.weight(1f))
                 if (summary.outputPath != null) {
                     KioskSecondaryButton("Mở thư mục lưu file", onOpenOutput, modifier = Modifier.fillMaxWidth())

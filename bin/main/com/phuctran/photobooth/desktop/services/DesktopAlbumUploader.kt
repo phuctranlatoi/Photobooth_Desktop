@@ -18,15 +18,11 @@ class DesktopAlbumUploader(
     private val webAlbumClient: DesktopWebAlbumClient = DesktopWebAlbumClient(),
     private val imageProcessor: DesktopImageProcessor = DesktopImageProcessor()
 ) {
-    fun uploadSessionAlbum(
+    fun uploadSessionPhotos(
         sessionId: String,
-        preCreatedAlbumId: String? = null,
-        layout: LayoutMode,
-        frame: FramePack,
+        preCreatedAlbumId: String?,
         capturedMoments: List<CapturedMoment>,
-        selectedMoments: List<CapturedMoment>,
-        masterPrint: Path?,
-        masterVideo: Path? = null
+        masterPrint: Path?
     ): AlbumUploadResult {
         if (!config.canUploadAlbum) {
             return AlbumUploadResult(
@@ -36,7 +32,7 @@ class DesktopAlbumUploader(
                 finalPhotoUrl = null,
                 uploadedCount = 0,
                 finalizedCount = 0,
-                errorMessage = "Thiếu .env: BOOTH_API_KEY, CLOUDINARY_CLOUD_NAME hoặc CLOUDINARY_UPLOAD_PRESET."
+                errorMessage = "Thiếu cấu hình .env."
             )
         }
 
@@ -69,84 +65,60 @@ class DesktopAlbumUploader(
                 }
             }
             
-            val uploadedFinalVideo = masterVideo?.let { file ->
-                cloudinaryClient.uploadAssetToCloudinary(
-                    config = config,
-                    sessionId = sessionId,
-                    file = file,
-                    position = uploadedOriginalAssets.size + 1,
-                    kind = "VIDEO"
-                )
-            }
-
-            val uploadedAssets = uploadedOriginalAssets + listOfNotNull(uploadedFinalAsset, uploadedFinalVideo)
+            val uploadedAssets = uploadedOriginalAssets + listOfNotNull(uploadedFinalAsset)
             if (uploadedAssets.isEmpty()) {
-                return AlbumUploadResult(
-                    albumId = null,
-                    albumUrl = null,
-                    originalPhotoUrls = emptyList(),
-                    finalPhotoUrl = null,
-                    uploadedCount = 0,
-                    finalizedCount = 0,
-                    errorMessage = "Không upload được JPEG nào lên Cloudinary."
-                )
+                return AlbumUploadResult(null, null, emptyList(), null, 0, 0, "Không có ảnh để upload")
             }
 
-            val albumId = if (preCreatedAlbumId != null) {
-                preCreatedAlbumId
-            } else {
-                val album = webAlbumClient.createAlbum(
-                    config = config,
-                    request = CreateAlbumRequest(
-                        externalSessionId = sessionId,
-                        expectedAssets = uploadedAssets.size,
-                        expiresInDays = config.albumExpiresInDays
-                    )
-                ) ?: return AlbumUploadResult(
-                    albumId = null,
-                    albumUrl = null,
-                    originalPhotoUrls = uploadedOriginalAssets.map { it.secureUrl },
-                    finalPhotoUrl = uploadedFinalAsset?.secureUrl,
-                    uploadedCount = uploadedAssets.size,
-                    finalizedCount = 0,
-                    errorMessage = "Upload Cloudinary xong nhưng chưa tạo được album web."
-                )
-                album.albumId
-            }
+            val albumId = preCreatedAlbumId ?: webAlbumClient.createAlbum(
+                config = config,
+                request = CreateAlbumRequest(sessionId, uploadedAssets.size, config.albumExpiresInDays)
+            )?.albumId ?: return AlbumUploadResult(null, null, uploadedOriginalAssets.map { it.secureUrl }, uploadedFinalAsset?.secureUrl, uploadedAssets.size, 0, "Không tạo được album web")
 
             val finalizedCount = uploadedAssets.count { asset ->
                 webAlbumClient.finalizeAsset(config, albumId, asset.finalizeRequest)
             }
 
-            val albumReady = if (finalizedCount > 0) {
-                webAlbumClient.completeAlbum(config, albumId)
-            } else {
-                false
-            }
-
-            // Mặc dù preCreatedAlbum có URL, nhưng webAlbumClient.completeAlbum không trả về URL, 
-            // nên ta dùng config.webAlbumBaseUrl để tái tạo URL
             val finalAlbumUrl = "${config.webAlbumBaseUrl.trimEnd('/')}/album/${sessionId}"
 
             AlbumUploadResult(
                 albumId = albumId,
-                albumUrl = if (albumReady) finalAlbumUrl else null,
+                albumUrl = finalAlbumUrl,
                 originalPhotoUrls = uploadedOriginalAssets.map { it.secureUrl },
                 finalPhotoUrl = uploadedFinalAsset?.secureUrl,
                 uploadedCount = uploadedAssets.size,
                 finalizedCount = finalizedCount,
-                errorMessage = if (albumReady) null else "Đã upload nhưng album web chưa READY."
+                errorMessage = null
             )
         }.getOrElse { error ->
-            AlbumUploadResult(
-                albumId = null,
-                albumUrl = null,
-                originalPhotoUrls = emptyList(),
-                finalPhotoUrl = null,
-                uploadedCount = 0,
-                finalizedCount = 0,
-                errorMessage = error.message ?: "Upload album thất bại."
-            )
+            AlbumUploadResult(null, null, emptyList(), null, 0, 0, error.message)
         }
+    }
+
+    fun uploadSessionVideo(
+        sessionId: String,
+        albumId: String,
+        masterVideo: Path,
+        startPosition: Int
+    ): Boolean {
+        if (!config.canUploadAlbum) return false
+        return runCatching {
+            val uploadedVideo = cloudinaryClient.uploadAssetToCloudinary(
+                config = config,
+                sessionId = sessionId,
+                file = masterVideo,
+                position = startPosition,
+                kind = "VIDEO"
+            ) ?: return false
+            
+            webAlbumClient.finalizeAsset(config, albumId, uploadedVideo.finalizeRequest)
+        }.getOrDefault(false)
+    }
+
+    fun completeSessionAlbum(albumId: String): Boolean {
+        if (!config.canUploadAlbum) return false
+        return runCatching {
+            webAlbumClient.completeAlbum(config, albumId)
+        }.getOrDefault(false)
     }
 }

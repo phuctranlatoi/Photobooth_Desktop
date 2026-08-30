@@ -25,10 +25,9 @@ class DesktopVideoCompositor(private val projectDir: Path) {
             return null
         }
 
-        // Get dimensions from frame
-        val frameImg = ImageIO.read(frameFile.toFile()) ?: return null
-        val canvasWidth = frameImg.width
-        val canvasHeight = frameImg.height
+        val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
+        val canvasWidth = if (isStrip) 592 else 1184
+        val canvasHeight = 1790
 
         val slots = computeSlots(layout, canvasWidth, canvasHeight)
         
@@ -93,14 +92,9 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         // 4. Overlay frame PNG on top of everything
         val frameIndex = validMoments.size
         
-        val isDoubleWidth = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
-        
-        if (isDoubleWidth) {
-            val singleWidth = canvasWidth / 2
-            filter.append("[$lastOut][$frameIndex:v]overlay=0:0,crop=$singleWidth:$canvasHeight:0:0[out]")
-        } else {
-            filter.append("[$lastOut][$frameIndex:v]overlay=0:0[out]")
-        }
+        // Scale the frame to match canvas (in case user uploaded a 1184x1790 double-strip PNG)
+        filter.append("[$frameIndex:v]scale=$canvasWidth:$canvasHeight[scaled_frame];")
+        filter.append("[$lastOut][scaled_frame]overlay=0:0[out]")
 
         cmd.add("-filter_complex")
         cmd.add(filter.toString())
@@ -153,28 +147,25 @@ class DesktopVideoCompositor(private val projectDir: Path) {
     }
 
     private fun computeSlots(layout: LayoutMode, canvasWidth: Int, canvasHeight: Int): List<Rectangle> {
-        val isDoubleWidth = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
-        val singleWidth = if (isDoubleWidth) canvasWidth / 2 else canvasWidth
-        
         if (layout.absoluteSlots.isNotEmpty()) {
             return layout.absoluteSlots.map { slot ->
                 Rectangle(
-                    (singleWidth * slot.x).roundToInt(),
-                    (canvasHeight * slot.y).roundToInt(),
-                    (singleWidth * slot.width).roundToInt(),
-                    (canvasHeight * slot.height).roundToInt()
+                    (slot.x * canvasWidth).roundToInt(),
+                    (slot.y * canvasHeight).roundToInt(),
+                    (slot.width * canvasWidth).roundToInt(),
+                    (slot.height * canvasHeight).roundToInt()
                 )
             }
         }
 
-        val width = singleWidth.toFloat()
+        val width = canvasWidth.toFloat()
         val top = (width * layout.paddingTopRatio).roundToInt()
         val left = (width * layout.paddingLeftRatio).roundToInt()
         val right = (width * layout.paddingRightRatio).roundToInt()
         val gapX = (width * layout.gapHorizontalRatio).roundToInt()
         val gapY = (width * layout.gapVerticalRatio).roundToInt()
         val columns = layout.gridColumns.coerceAtLeast(1)
-        val slotWidth = ((singleWidth - left - right - gapX * (columns - 1)).toFloat() / columns)
+        val slotWidth = ((canvasWidth - left - right - gapX * (columns - 1)).toFloat() / columns)
             .roundToInt()
             .coerceAtLeast(1)
         val slotHeight = (slotWidth / layout.photoAspectRatio)
