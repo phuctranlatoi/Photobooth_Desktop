@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.phuctran.photobooth"
-version = "1.0.0"
+version = "1.0.1"
 
 kotlin {
     jvmToolchain(17)
@@ -34,7 +34,14 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi
             )
             packageName = "PrettyBoothDesktop"
-            packageVersion = "1.0.0"
+            packageVersion = "1.0.1"
+            
+            // Include missing modules that jdeps failed to detect
+            modules("java.net.http", "jdk.crypto.ec", "java.naming", "java.sql")
+
+            buildTypes.release.proguard {
+                isEnabled.set(false)
+            }
 
             windows {
                 menu = true

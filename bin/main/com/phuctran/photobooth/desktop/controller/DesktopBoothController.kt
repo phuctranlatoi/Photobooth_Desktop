@@ -541,13 +541,15 @@ class DesktopBoothController(
             // 2. Render ảnh in
             _statusMessage.value = "Đang render ảnh in..."
             val renderResult = runCatching {
-                compositor.renderFinal(
-                    layout = _selectedLayout.value,
-                    frame = _selectedFrame.value,
-                    photoPaths = selectedPhotoPaths,
-                    outputDir = projectDir.resolve("data").resolve("output"),
-                    qrCodeUrl = preAlbum?.albumUrl
-                )
+                withContext(Dispatchers.IO) {
+                    compositor.renderFinal(
+                        layout = _selectedLayout.value,
+                        frame = _selectedFrame.value,
+                        photoPaths = selectedPhotoPaths,
+                        outputDir = projectDir.resolve("data").resolve("output"),
+                        qrCodeUrl = preAlbum?.albumUrl
+                    )
+                }
             }.getOrNull()
             
             val masterFile = renderResult?.finalImagePath
