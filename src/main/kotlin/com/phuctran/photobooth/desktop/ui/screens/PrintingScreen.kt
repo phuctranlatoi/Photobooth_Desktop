@@ -53,12 +53,6 @@ fun PrintingScreen(layout: LayoutMode, frame: FramePack, statusMessage: String) 
                 textAlign = TextAlign.Center
             )
             
-            Spacer(Modifier.height(24.dp))
-            
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoPill(layout.printSizeLabel)
-                InfoPill(frame.title)
-            }
         }
     }
 }

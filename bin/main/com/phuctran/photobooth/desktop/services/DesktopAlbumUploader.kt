@@ -108,7 +108,7 @@ class DesktopAlbumUploader(
                 sessionId = sessionId,
                 file = masterVideo,
                 position = startPosition,
-                kind = "VIDEO"
+                kind = "GIF"
             ) ?: return false
             
             webAlbumClient.finalizeAsset(config, albumId, uploadedVideo.finalizeRequest)

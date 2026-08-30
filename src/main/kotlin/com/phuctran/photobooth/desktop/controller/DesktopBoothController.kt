@@ -290,36 +290,42 @@ class DesktopBoothController(
                     _countdown.value = seconds
                     _statusMessage.value = "Chuẩn bị ảnh $index sau $seconds giây."
                     
-                    if (seconds <= RECORDING_SECONDS && videoJob == null) {
+                    if (videoJob == null) {
                         _isRecordingVideo.value = true
                         videoJob = scope.launch(Dispatchers.IO) {
                             var frameIdx = 1
                             while (_isRecordingVideo.value && isActive) {
+                                val startMs = System.currentTimeMillis()
                                 val frame = cameraService.lastProcessedFrame
                                 if (frame != null) {
                                     val frameFile = videoFramesDir.resolve("frame_%03d.jpg".format(frameIdx++))
-                                    try {
-                                        val scaledFrame = if (frame.height > 720) {
-                                            val scale = 720.0 / frame.height
-                                            val targetWidth = (frame.width * scale).toInt()
-                                            // Ensure width is even for ffmpeg compatibility
-                                            val evenWidth = if (targetWidth % 2 != 0) targetWidth - 1 else targetWidth
-                                            val resized = java.awt.image.BufferedImage(evenWidth, 720, java.awt.image.BufferedImage.TYPE_INT_RGB)
-                                            val g = resized.createGraphics()
-                                            g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR)
-                                            g.drawImage(frame, 0, 0, evenWidth, 720, null)
-                                            g.dispose()
-                                            resized
-                                        } else {
-                                            frame
-                                        }
-                                        javax.imageio.ImageIO.write(scaledFrame, "jpg", frameFile.toFile())
-                                    } catch (e: Exception) {}
+                                    launch(Dispatchers.IO) {
+                                        try {
+                                            val scaledFrame = if (frame.height > 1080) {
+                                                val scale = 1080.0 / frame.height
+                                                val targetWidth = (frame.width * scale).toInt()
+                                                // Ensure width is even for ffmpeg compatibility
+                                                val evenWidth = if (targetWidth % 2 != 0) targetWidth - 1 else targetWidth
+                                                val resized = java.awt.image.BufferedImage(evenWidth, 1080, java.awt.image.BufferedImage.TYPE_INT_RGB)
+                                                val g = resized.createGraphics()
+                                                g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+                                                g.drawImage(frame, 0, 0, evenWidth, 1080, null)
+                                                g.dispose()
+                                                resized
+                                            } else {
+                                                frame
+                                            }
+                                            javax.imageio.ImageIO.write(scaledFrame, "jpg", frameFile.toFile())
+                                        } catch (e: Exception) {}
+                                    }
                                 }
-                                delay(66) // ~15 fps
+                                val elapsed = System.currentTimeMillis() - startMs
+                                val timeToSleep = 41L - elapsed // 24 fps target
+                                if (timeToSleep > 0) delay(timeToSleep)
                             }
                         }
                     }
+                    
                     delay(1000)
                 }
                 _countdown.value = 0 // Báo hiệu đang chụp/đang lưu ảnh
@@ -409,11 +415,11 @@ class DesktopBoothController(
             val process = if (hasFrames) {
                 ProcessBuilder(
                     ffmpegExecutable, "-y", 
-                    "-framerate", "15", 
+                    "-framerate", "24", 
                     "-i", "${framesDir.toAbsolutePath()}\\frame_%03d.jpg", 
                     "-c:v", "libx264", 
-                    "-preset", "superfast",
-                    "-crf", "23",
+                    "-preset", "fast",
+                    "-crf", "17",
                     "-pix_fmt", "yuv420p",
                     outputFile.toAbsolutePath().toString()
                 ).redirectErrorStream(true).start()

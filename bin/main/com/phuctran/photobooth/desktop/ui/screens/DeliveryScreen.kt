@@ -41,10 +41,6 @@ fun DeliveryScreen(
                 OutputRow("Bản in", "$printCopies bản")
                 
                 Spacer(Modifier.weight(1f))
-                if (summary.outputPath != null) {
-                    KioskSecondaryButton("Mở thư mục lưu file", onOpenOutput, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(12.dp))
-                }
                 KioskPrimaryButton("Về trang chủ", onFinish, modifier = Modifier.fillMaxWidth().height(64.dp))
             }
 
@@ -66,10 +62,6 @@ fun DeliveryScreen(
                     Text("Quét để tải ảnh", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText)
                     Spacer(Modifier.height(8.dp))
                     Text("Album gồm ảnh gốc, ảnh in và video nếu có.", color = NeutralSecondary, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(14.dp))
-                    TextButton(onClick = onOpenAlbum) {
-                        Text("Mở album", color = AccentNude, fontWeight = FontWeight.Bold)
-                    }
                 } else {
                     QrMock(Modifier.size(260.dp))
                     Spacer(Modifier.height(20.dp))

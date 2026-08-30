@@ -77,8 +77,8 @@ class DesktopVideoCompositor(private val projectDir: Path) {
             filter.append("[$i:v]scale=$w:$h:force_original_aspect_ratio=increase,crop=$w:$h[v$i];")
         }
 
-        // 2. Create background
-        filter.append("color=c=white:s=${canvasWidth}x${canvasHeight}:d=4[bg];")
+        // 2. Create background (duration 15s to ensure it covers long clips)
+        filter.append("color=c=white:s=${canvasWidth}x${canvasHeight}:d=15[bg];")
 
         // 3. Overlay videos onto background
         var lastOut = "bg"
@@ -105,9 +105,9 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         cmd.add("-c:v")
         cmd.add("libx264")
         cmd.add("-preset")
-        cmd.add("veryfast")
+        cmd.add("fast")
         cmd.add("-crf")
-        cmd.add("23")
+        cmd.add("17")
         cmd.add("-pix_fmt")
         cmd.add("yuv420p")
         

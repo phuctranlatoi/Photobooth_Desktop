@@ -5,7 +5,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import com.phuctran.photobooth.desktop.config.DesktopAppPaths
 import com.phuctran.photobooth.desktop.config.DesktopConfigLoader
 import com.phuctran.photobooth.desktop.controller.DesktopBoothController
@@ -30,7 +32,9 @@ fun main() = application {
     
     Window(
         onCloseRequest = ::exitApplication,
-        title = "Photobooth Kiosk"
+        title = "Photobooth Kiosk",
+        undecorated = true,
+        state = rememberWindowState(placement = WindowPlacement.Fullscreen)
     ) {
         val config = remember { DesktopConfigLoader.load(DesktopAppPaths.appDataDir()) }
         val controller = remember { DesktopBoothController(projectDir = DesktopAppPaths.appDataDir(), config = config) }
