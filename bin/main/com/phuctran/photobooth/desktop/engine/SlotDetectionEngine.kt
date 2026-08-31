@@ -1869,32 +1869,29 @@ class SlotDetectionEngine {
             List(rows) { r -> anchorY + r * (medianH + medianGap) }
         } else yStarts
 
-        // Enforce symmetry: if there's only 1 column, the slot width should be symmetric
-        // padLeft and padRight should be equal
         var effectiveW = medianW
         if (cols == 1) {
             val padL = refinedXStarts[0]
             val padR = width - (refinedXStarts[0] + medianW)
             
-            if (padR <= 0 && padL > 0) {
-                // Slot bleeds to right edge - enforce symmetric width
-                effectiveW = width - 2 * padL
-                (refinedXStarts as MutableList)[0] = padL
-            } else if (padL <= 0 && padR > 0) {
-                effectiveW = width - 2 * padR
-                (refinedXStarts as MutableList)[0] = padR
-            } else {
-                // Perfectly center the 1-column layout
-                (refinedXStarts as MutableList)[0] = (padL + padR) / 2
+            // Only fix obvious bleeding errors, but DO NOT forcibly center asymmetric layouts.
+            if (padR < -10 && padL > 0) {
+                effectiveW = width - padL
+            } else if (padL < -10 && padR > 0) {
+                effectiveW = width - padR
+                (refinedXStarts as MutableList)[0] = 0
             }
         }
 
-        // Same for single row
         val effectiveH = if (rows == 1) {
             val padT = refinedYStarts[0]
             val padB = height - (refinedYStarts[0] + medianH)
-            if (padB <= 0 && padT > 0) {
-                height - 2 * padT
+            if (padB < -10 && padT > 0) {
+                height - padT
+            } else if (padT < -10 && padB > 0) {
+                val newH = height - padB
+                (refinedYStarts as MutableList)[0] = 0
+                newH
             } else {
                 medianH
             }

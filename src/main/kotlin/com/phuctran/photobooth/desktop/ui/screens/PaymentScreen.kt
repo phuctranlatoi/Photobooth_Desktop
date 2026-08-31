@@ -5,14 +5,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.model.*
@@ -30,6 +33,8 @@ fun PaymentScreen(
     onPaid: () -> Unit,
     onBack: () -> Unit
 ) {
+    var staffPanelVisible by remember { mutableStateOf(false) }
+
     Box(Modifier.fillMaxSize().background(NeutralBg)) {
         KioskBackButton(onBack, modifier = Modifier.align(Alignment.TopStart).padding(24.dp))
 
@@ -39,7 +44,15 @@ fun PaymentScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             PanelBox(Modifier.weight(0.9f).fillMaxHeight(0.78f)) {
-                SectionHeader("Bước 4", "Thanh toán", "Quét QR bằng ứng dụng ngân hàng hoặc nhờ nhân viên xác nhận tiền mặt.")
+                Column(
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { staffPanelVisible = true }
+                        )
+                    }
+                ) {
+                    SectionHeader("Bước 4", "Thanh toán", "Quét QR bằng ứng dụng ngân hàng hoặc nhờ nhân viên xác nhận tiền mặt.")
+                }
                 Spacer(Modifier.height(28.dp))
                 Text(formatVnd(totalAmount), style = MaterialTheme.typography.h2, fontWeight = FontWeight.Black, color = NeutralText)
                 Spacer(Modifier.height(20.dp))
@@ -73,6 +86,17 @@ fun PaymentScreen(
                         CircularProgressIndicator(color = AccentNude, strokeWidth = 5.dp, modifier = Modifier.size(72.dp))
                         Spacer(Modifier.height(20.dp))
                         Text("Đang tạo mã thanh toán...", color = NeutralSecondary, style = MaterialTheme.typography.subtitle1)
+                    } else if (paymentQrData == "ERROR") {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Error",
+                            tint = AccentAmber,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text("Không tạo được mã QR", style = MaterialTheme.typography.h6, fontWeight = FontWeight.Bold, color = AccentAmber)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Vui lòng kiểm tra mạng hoặc thanh toán bằng tiền mặt.", color = NeutralSecondary, textAlign = TextAlign.Center)
                     } else {
                         Box(
                             Modifier
@@ -101,20 +125,22 @@ fun PaymentScreen(
             }
         }
 
-        Row(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 26.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(NeutralPanel)
-                .border(1.dp, NeutralBorder, RoundedCornerShape(999.dp))
-                .clickable { onPaid() }
-                .padding(horizontal = 22.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(AccentAmber))
-            Text("Nhân viên xác nhận tiền mặt", color = NeutralSecondary, fontWeight = FontWeight.Bold)
+        if (staffPanelVisible || !isPaymentConfigured || paymentQrData == "ERROR") {
+            Row(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 26.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(NeutralPanel)
+                    .border(1.dp, NeutralBorder, RoundedCornerShape(999.dp))
+                    .clickable { onPaid() }
+                    .padding(horizontal = 22.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(AccentAmber))
+                Text("Nhân viên xác nhận tiền mặt", color = NeutralSecondary, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

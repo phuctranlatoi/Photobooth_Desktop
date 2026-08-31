@@ -45,10 +45,7 @@ fun FrameScreen(
             PrintPreview(layout, selectedMoments, selectedFrame, Modifier.weight(1f).fillMaxWidth())
         }
         PanelBox(Modifier.weight(1f).fillMaxHeight()) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                SectionHeader("Bước 7", "Chọn khung ảnh", "Chạm vào khung để xem ngay trên bản in.")
-                KioskSecondaryButton("Thêm PNG", { onAddFrame(false) }, modifier = Modifier.width(132.dp).height(50.dp))
-            }
+            SectionHeader("Bước 7", "Chọn khung ảnh", "Chạm vào khung để xem ngay trên bản in.")
             Spacer(Modifier.height(16.dp))
             
             if (frames.isEmpty()) {

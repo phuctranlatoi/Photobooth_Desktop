@@ -166,6 +166,10 @@ class DesktopBoothController(
         }
     }
 
+    fun forceAppReady() {
+        _isAppReady.value = true
+    }
+
     fun transitionTo(newState: SessionState) {
         stateMachine.transitionTo(newState)
         if (newState == SessionState.IDLE) {
@@ -214,7 +218,7 @@ class DesktopBoothController(
             val amount = _totalPrice.value.toInt()
             scope.launch(Dispatchers.IO) {
                 val qr = paymentService.createPaymentLink(orderCode, amount, "Photobooth $orderCode")
-                _paymentQrData.value = qr
+                _paymentQrData.value = qr ?: "ERROR"
                 if (qr != null) {
                     paymentPollingJob = scope.launch(Dispatchers.IO) {
                         while (isActive) {
@@ -704,6 +708,11 @@ class DesktopBoothController(
     fun goBack() {
         when (sessionState.value) {
             SessionState.SELECTING_QUANTITY -> transitionTo(SessionState.SELECTING)
+            SessionState.PAYMENT_PENDING -> {
+                paymentPollingJob?.cancel()
+                paymentPollingJob = null
+                transitionTo(SessionState.SELECTING_QUANTITY)
+            }
             SessionState.EDITING -> transitionTo(SessionState.SELECTING_PHOTOS)
             SessionState.PRINT_PENDING -> transitionTo(SessionState.EDITING)
             else -> Unit

@@ -41,6 +41,9 @@ data class LayoutMode(
     val gapRatio: Float = paddingTopRatio,
     val gapHorizontalRatio: Float = gapRatio,
     val gapVerticalRatio: Float = gapRatio,
+    val qrCodeX: Int? = null,
+    val qrCodeY: Int? = null,
+    val qrCodeSize: Int? = null,
     val photoAspectRatio: Float = photoSlotAspectRatio(
         printAspectRatio = printAspectRatio,
         selectedPhotos = selectCount,
@@ -220,13 +223,13 @@ val DefaultLayoutModes = listOf(
 val DefaultEffectModes = listOf(
     EffectMode(
         id = "normal",
-        title = "Normal",
+        title = "Tự nhiên",
         description = "Màu tươi, nét cao, hợp đèn studio.",
         accentColor = 0xFF475569
     ),
     EffectMode(
         id = "black_white",
-        title = "Black & White",
+        title = "Trắng Đen",
         description = "Tối giản, cổ điển, nổi thần thái khuôn mặt.",
         accentColor = 0xFF2F3338,
         saturation = 0.0f,
@@ -235,7 +238,7 @@ val DefaultEffectModes = listOf(
     ),
     EffectMode(
         id = "vintage",
-        title = "Vintage",
+        title = "Cổ điển",
         description = "Hạt phim nhẹ và ánh sáng hoài cổ.",
         accentColor = 0xFF7A7268,
         saturation = 0.6f,

@@ -89,7 +89,7 @@ class DesktopCompositor(
         
         // Vẽ mã QR nếu có URL
         if (qrCodeUrl != null) {
-            drawQRCode(canvas, qrCodeUrl, width, height, frame)
+            drawQRCode(canvas, qrCodeUrl, width, height, frame, layout)
         }
 
         // Lưu ảnh nguyên bản (dùng cho web/Cloudinary) bằng định dạng PNG không nén để tránh bị bể nét
@@ -291,18 +291,18 @@ class DesktopCompositor(
         return "print_${timestamp}_${safeLayout}_${safeFrame}.png"
     }
 
-    private fun drawQRCode(canvas: BufferedImage, url: String, canvasWidth: Int, canvasHeight: Int, frame: FramePack) {
+    private fun drawQRCode(canvas: BufferedImage, url: String, canvasWidth: Int, canvasHeight: Int, frame: FramePack, layout: com.phuctran.photobooth.desktop.model.LayoutMode) {
         try {
-            val qrSize = frame.qrCodeSize ?: (canvasWidth * 0.15f).roundToInt().coerceAtLeast(100) // 15% width mặc định
+            val qrSize = frame.qrCodeSize ?: layout.qrCodeSize ?: (canvasWidth * 0.10f).roundToInt().coerceAtLeast(100) // 10% width mặc định (thu nhỏ lại để tránh lẹm ảnh)
             val hints = EnumMap<EncodeHintType, Any>(EncodeHintType::class.java)
             hints[EncodeHintType.ERROR_CORRECTION] = ErrorCorrectionLevel.M
             hints[EncodeHintType.MARGIN] = 1
 
             val bitMatrix = QRCodeWriter().encode(url, BarcodeFormat.QR_CODE, qrSize, qrSize, hints)
             
-            // Lấy tọa độ từ cấu hình frame, nếu không có thì mặc định góc dưới bên phải
-            val qrX = frame.qrCodeX ?: (canvasWidth - qrSize - 30)
-            val qrY = frame.qrCodeY ?: (canvasHeight - qrSize - 30)
+            // Ưu tiên 2 lớp: Lấy cấu hình từ Frame trước, nếu null thì lấy từ Layout, nếu null tiếp thì mặc định góc dưới bên phải
+            val qrX = frame.qrCodeX ?: layout.qrCodeX ?: (canvasWidth - qrSize - 30)
+            val qrY = frame.qrCodeY ?: layout.qrCodeY ?: (canvasHeight - qrSize - 30)
             
             val g2 = canvas.createGraphics()
             g2.configure()

@@ -113,6 +113,32 @@ object FirebaseManager {
     }
 
     /**
+     * Updates QR Code configuration fields of a layout.
+     */
+    fun updateLayoutQRConfig(layoutId: String, qrCodeX: Int?, qrCodeY: Int?, qrCodeSize: Int?) {
+        if (!isInitialized) {
+            println("Firebase is not initialized. Cannot update layout QR config.")
+            return
+        }
+
+        try {
+            val db = FirestoreClient.getFirestore()
+            val docRef = db.collection("layouts").document(layoutId)
+            
+            val updates = mutableMapOf<String, Any>()
+            qrCodeX?.let { updates["qrCodeX"] = it }
+            qrCodeY?.let { updates["qrCodeY"] = it }
+            qrCodeSize?.let { updates["qrCodeSize"] = it }
+            
+            val result = docRef.set(updates, SetOptions.merge()).get()
+            println("Layout QR config updated at: ${result.updateTime}")
+        } catch (e: Exception) {
+            println("Error updating layout QR config: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
      * Fetches layout data from Firestore and maps it to LayoutMode.
      */
     suspend fun fetchLayouts(): List<LayoutMode> = withContext(Dispatchers.IO) {
@@ -169,7 +195,10 @@ object FirebaseManager {
                                     printAspectRatio = pAspectRatio,
                                     gridColumns = doc.getLong("gridColumns")?.toInt() ?: 1,
                                     printSizeLabel = doc.getString("printSizeLabel") ?: "15 x 10 cm",
-                                    photoAspectRatio = photoAspect
+                                    photoAspectRatio = photoAspect,
+                                    qrCodeX = doc.getLong("qrCodeX")?.toInt(),
+                                    qrCodeY = doc.getLong("qrCodeY")?.toInt(),
+                                    qrCodeSize = doc.getLong("qrCodeSize")?.toInt()
                                 )
                             )
                 }

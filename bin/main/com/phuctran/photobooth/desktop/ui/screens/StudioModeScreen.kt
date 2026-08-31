@@ -223,7 +223,8 @@ fun Step1Layout(
         }
         
         // Bottom indicator / title
-        val currentLayout = layouts.getOrNull(pagerState.currentPage)
+        val safeLayoutCount = layouts.size.coerceAtLeast(1)
+        val currentLayout = layouts.getOrNull(pagerState.currentPage % safeLayoutCount)
         if (currentLayout != null) {
             Column(Modifier.fillMaxWidth().padding(bottom = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(currentLayout.title, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold, color = NeutralText)
@@ -262,7 +263,7 @@ fun Step2Effect(
             // Fallback if camera is off - DO NOT show PrintPreview here. Show a clean dark placeholder.
             Box(Modifier.fillMaxSize().background(Color(0xFF1A1A1A)), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Camera Not Available", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.h6)
+                    Text("Chưa có tín hiệu máy ảnh", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.h6)
                 }
             }
         }

@@ -22,9 +22,13 @@ import androidx.compose.foundation.background
 import androidx.compose.material.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.with
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.with
 
 fun main() = application {
     // Initialize Firebase Admin SDK
@@ -67,10 +71,46 @@ fun main() = application {
                 paymentConfigured = controller.isPaymentConfigured
             ) {
                 if (!isAppReady) {
+                    var loadingTimeout by remember { mutableStateOf(false) }
+                    LaunchedEffect(isAppReady) {
+                        if (!isAppReady) {
+                            kotlinx.coroutines.delay(8000)
+                            loadingTimeout = true
+                        }
+                    }
+
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            CircularProgressIndicator(color = com.phuctran.photobooth.desktop.ui.theme.AccentNude)
-                            Text("Đang tải bố cục chụp...", color = com.phuctran.photobooth.desktop.ui.theme.NeutralSecondary)
+                            if (!loadingTimeout) {
+                                CircularProgressIndicator(color = com.phuctran.photobooth.desktop.ui.theme.AccentNude)
+                                Text("Đang đọc cấu hình hệ thống & máy ảnh...", color = com.phuctran.photobooth.desktop.ui.theme.NeutralSecondary)
+                            } else {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Warning,
+                                    contentDescription = "Warning",
+                                    tint = com.phuctran.photobooth.desktop.ui.theme.AccentAmber,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Text(
+                                    "Đang dùng cấu hình tạm hoặc máy chủ phản hồi chậm.", 
+                                    color = com.phuctran.photobooth.desktop.ui.theme.NeutralText,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    OutlinedButton(
+                                        onClick = { controller.transitionTo(SessionState.ADMIN) },
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = com.phuctran.photobooth.desktop.ui.theme.NeutralText)
+                                    ) {
+                                        Text("Vào Admin kiểm tra")
+                                    }
+                                    Button(
+                                        onClick = { controller.forceAppReady() },
+                                        colors = ButtonDefaults.buttonColors(backgroundColor = com.phuctran.photobooth.desktop.ui.theme.AccentNude)
+                                    ) {
+                                        Text("Bỏ qua & Chụp ngay", color = Color.White)
+                                    }
+                                }
+                            }
                         }
                     }
                 } else {

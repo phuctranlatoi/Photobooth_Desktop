@@ -75,6 +75,10 @@ fun CalculatorApp(
     var specialEventName by remember { mutableStateOf("") }
     var detectedSizeInput by remember { mutableStateOf("") }
     
+    var qrXInput by remember { mutableStateOf("") }
+    var qrYInput by remember { mutableStateOf("") }
+    var qrSizeInput by remember { mutableStateOf("") }
+    
     val projectDir = com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir()
     val frameStore = remember { com.phuctran.photobooth.desktop.storage.FrameStore(projectDir) }
     var existingLayoutIds by remember { mutableStateOf(emptyList<String>()) }
@@ -111,11 +115,39 @@ fun CalculatorApp(
                         generatedCode = "LỖI: Không tìm thấy lỗ ảnh nào trong file này.\nHãy đảm bảo vùng để ảnh đã được đục lỗ (trong suốt) hoặc là các khối màu đặc hình chữ nhật."
                         currentResult = null
                         previewBitmap = image.toComposeImageBitmap()
+                        qrXInput = ""
+                        qrYInput = ""
+                        qrSizeInput = ""
                     } else {
                         currentResult = result
                         val sizeLabel = "${detectPrintSize(result.width, result.height)}_${result.slots.size}_anh"
                         detectedSizeInput = sizeLabel
                         generatedCode = generateKotlinCode(layoutIdInput, result)
+                        
+                        if (result.qrSlot != null) {
+                            qrXInput = (result.qrSlot.x * result.width).toInt().toString()
+                            qrYInput = (result.qrSlot.y * result.height).toInt().toString()
+                            qrSizeInput = (result.qrSlot.width * result.width).toInt().toString()
+                        } else {
+                            val jsonPath = java.io.File(file.parentFile, "${file.nameWithoutExtension}.json")
+                            if (jsonPath.exists()) {
+                                try {
+                                    val jsonStr = jsonPath.readText()
+                                    val jsonObject = com.google.gson.Gson().fromJson(jsonStr, com.google.gson.JsonObject::class.java)
+                                    qrXInput = if (jsonObject.has("qrCodeX")) jsonObject.get("qrCodeX").asInt.toString() else ""
+                                    qrYInput = if (jsonObject.has("qrCodeY")) jsonObject.get("qrCodeY").asInt.toString() else ""
+                                    qrSizeInput = if (jsonObject.has("qrCodeSize")) jsonObject.get("qrCodeSize").asInt.toString() else ""
+                                } catch (e: Exception) {
+                                    qrXInput = ""
+                                    qrYInput = ""
+                                    qrSizeInput = ""
+                                }
+                            } else {
+                                qrXInput = ""
+                                qrYInput = ""
+                                qrSizeInput = ""
+                            }
+                        }
                         
                         if (result.punchedImage != null) {
                             previewBitmap = result.punchedImage.toComposeImageBitmap()
@@ -176,6 +208,26 @@ fun CalculatorApp(
                     val sizeLabel = "${detectPrintSize(image.width, image.height)}_custom"
                     detectedSizeInput = sizeLabel
                     currentResult = null // Không chạy phân tích lỗ
+                    
+                    val jsonPath = java.io.File(file.parentFile, "${file.nameWithoutExtension}.json")
+                    if (jsonPath.exists()) {
+                        try {
+                            val jsonStr = jsonPath.readText()
+                            val jsonObject = com.google.gson.Gson().fromJson(jsonStr, com.google.gson.JsonObject::class.java)
+                            qrXInput = if (jsonObject.has("qrCodeX")) jsonObject.get("qrCodeX").asInt.toString() else ""
+                            qrYInput = if (jsonObject.has("qrCodeY")) jsonObject.get("qrCodeY").asInt.toString() else ""
+                            qrSizeInput = if (jsonObject.has("qrCodeSize")) jsonObject.get("qrCodeSize").asInt.toString() else ""
+                        } catch (e: Exception) {
+                            qrXInput = ""
+                            qrYInput = ""
+                            qrSizeInput = ""
+                        }
+                    } else {
+                        qrXInput = ""
+                        qrYInput = ""
+                        qrSizeInput = ""
+                    }
+                    
                     generatedCode = "Đã tải khung gốc thành công. Vui lòng chọn Mã Bố Cục tương ứng ở cột phải và nhấn 'Lưu Khung Ảnh (Local)'."
                 } catch (e: Exception) {
                     generatedCode = "LỖI: ${e.message}"
@@ -192,9 +244,18 @@ fun CalculatorApp(
     }
     
     fun saveLayoutToFirebase() {
-        val result = currentResult ?: return
         val id = layoutIdInput.trim()
         if (id.isEmpty()) return
+        
+        if (currentResult == null) {
+            coroutineScope.launch(Dispatchers.IO) {
+                FirebaseManager.updateLayoutQRConfig(id, qrXInput.toIntOrNull(), qrYInput.toIntOrNull(), qrSizeInput.toIntOrNull())
+                generatedCode = "ĐÃ CẬP NHẬT TỌA ĐỘ QR CHO BỐ CỤC: $id lên Firebase Firestore thành công!\n\n" + generatedCode
+            }
+            return
+        }
+        
+        val result = currentResult!!
         
         coroutineScope.launch(Dispatchers.IO) {
             val rawSize = detectedSizeInput.trim()
@@ -211,9 +272,9 @@ fun CalculatorApp(
                 (firstSlot.width / firstSlot.height) * pAspectRatio
             } else 1f
             
-            val layoutData = mapOf(
+            val layoutData = mutableMapOf<String, Any>(
                 "id" to id,
-                "title" to id,
+                "title" to id.capitalize(),
                 "subtitle" to "${result.slots.size} ảnh",
                 "description" to "Tự động phân tích từ ảnh gốc.",
                 "shotCount" to result.slots.size,
@@ -222,8 +283,8 @@ fun CalculatorApp(
                 "printAspectRatio" to pAspectRatio,
                 "photoAspectRatio" to photoAspect,
                 "mediaLabel" to "$formattedSize • ${result.slots.size} ảnh",
-                "width" to result.width,
-                "height" to result.height,
+                "width" to result.width.toInt(),
+                "height" to result.height.toInt(),
                 "slots" to result.slots.map { slot ->
                     mapOf(
                         "index" to slot.index,
@@ -238,6 +299,10 @@ fun CalculatorApp(
                 },
                 "createdAt" to System.currentTimeMillis()
             )
+            qrXInput.toIntOrNull()?.let { layoutData["qrCodeX"] = it }
+            qrYInput.toIntOrNull()?.let { layoutData["qrCodeY"] = it }
+            qrSizeInput.toIntOrNull()?.let { layoutData["qrCodeSize"] = it }
+            
             FirebaseManager.uploadLayout(id, layoutData)
             generatedCode = "ĐÃ LƯU BỐ CỤC: $id lên Firebase Firestore thành công!\n\n" + generatedCode
         }
@@ -260,14 +325,9 @@ fun CalculatorApp(
                 val projectDir = com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir()
                 val frameStore = com.phuctran.photobooth.desktop.storage.FrameStore(projectDir)
                 
-                var qrX: Int? = null
-                var qrY: Int? = null
-                var qrSize: Int? = null
-                if (currentResult?.qrSlot != null) {
-                    qrX = (currentResult!!.qrSlot!!.x * currentResult!!.width).toInt()
-                    qrY = (currentResult!!.qrSlot!!.y * currentResult!!.height).toInt()
-                    qrSize = (currentResult!!.qrSlot!!.width * currentResult!!.width).toInt()
-                }
+                val qrX = qrXInput.toIntOrNull()
+                val qrY = qrYInput.toIntOrNull()
+                val qrSize = qrSizeInput.toIntOrNull()
 
                 val newFrame = frameStore.addCustomFrame(
                     source = tempFile.toPath(), 
@@ -425,6 +485,34 @@ fun CalculatorApp(
                                     }
                                 }
                             }
+                            
+                            // Draw QR Code Preview (On top of everything)
+                            val qrX = qrXInput.toIntOrNull()
+                            val qrY = qrYInput.toIntOrNull()
+                            val qrSize = qrSizeInput.toIntOrNull()
+                            if (qrX != null && qrY != null && qrSize != null) {
+                                val rectX = offsetX + (qrX / imgW) * drawW
+                                val rectY = offsetY + (qrY / imgH) * drawH
+                                val rectW = (qrSize / imgW) * drawW
+                                val rectH = (qrSize / imgW) * drawW
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .offset(rectX.dp, rectY.dp)
+                                        .width(rectW.dp)
+                                        .height(rectH.dp)
+                                        .background(Color.White)
+                                        .border(2.dp, Color.Black)
+                                ) {
+                                    Text(
+                                        text = "QR Preview",
+                                        color = Color.Black,
+                                        style = MaterialTheme.typography.caption,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        modifier = Modifier.align(Alignment.Center)
+                                    )
+                                }
+                            }
                         }
                     } else {
                         Text("Chưa có ảnh xem trước", color = Color.Gray)
@@ -483,14 +571,19 @@ fun CalculatorApp(
                                             layoutIdInput = lId
                                             layoutDropdownExpanded = false
                                             
-                                            // Auto-fill the print size label based on the selected layout
                                             val matchedLayout = remoteLayouts.find { it.id == lId }
                                             if (matchedLayout != null) {
                                                 detectedSizeInput = matchedLayout.printSizeLabel
+                                                qrXInput = matchedLayout.qrCodeX?.toString() ?: ""
+                                                qrYInput = matchedLayout.qrCodeY?.toString() ?: ""
+                                                qrSizeInput = matchedLayout.qrCodeSize?.toString() ?: ""
                                             } else {
                                                 val defaultLayout = com.phuctran.photobooth.desktop.model.DefaultLayoutModes.find { it.id == lId }
                                                 if (defaultLayout != null) {
                                                     detectedSizeInput = defaultLayout.printSizeLabel
+                                                    qrXInput = defaultLayout.qrCodeX?.toString() ?: ""
+                                                    qrYInput = defaultLayout.qrCodeY?.toString() ?: ""
+                                                    qrSizeInput = defaultLayout.qrCodeSize?.toString() ?: ""
                                                 }
                                             }
                                         }) {
@@ -534,6 +627,34 @@ fun CalculatorApp(
                         )
                     }
                     
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = qrXInput,
+                            onValueChange = { qrXInput = it.filter { it.isDigit() } },
+                            label = { Text("QR X (px)") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                        )
+                        OutlinedTextField(
+                            value = qrYInput,
+                            onValueChange = { qrYInput = it.filter { it.isDigit() } },
+                            label = { Text("QR Y (px)") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                        )
+                        OutlinedTextField(
+                            value = qrSizeInput,
+                            onValueChange = { qrSizeInput = it.filter { it.isDigit() } },
+                            label = { Text("QR Size (px)") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                        )
+                    }
+                    Text("Bỏ trống để dùng cấu hình mặc định (Góc phải dưới, 10%)", color = Color.Gray, fontSize = 11.sp)
+                    
                     val pathPreview = if (detectedSizeInput.isNotBlank() && layoutIdInput.isNotBlank()) {
                         val evt = if (isSpecialFrame) "Special/" + specialEventName.trim().replace(Regex("[^a-zA-Z0-9_]+"), "_").ifEmpty { "Event" } else "Standard"
                         "${detectedSizeInput.trim()}/${layoutIdInput.trim()}/$evt"
@@ -546,7 +667,7 @@ fun CalculatorApp(
                         Button(
                             onClick = { saveLayoutToFirebase() },
                             modifier = Modifier.weight(1f),
-                            enabled = currentResult != null && layoutIdInput.isNotBlank()
+                            enabled = layoutIdInput.isNotBlank()
                         ) {
                             Text("1. LƯU BỐ CỤC")
                         }
