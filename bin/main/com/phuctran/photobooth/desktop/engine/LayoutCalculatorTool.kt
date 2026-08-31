@@ -73,6 +73,11 @@ fun CalculatorApp(
     var frameIdInput by remember { mutableStateOf("") }
     var isSpecialFrame by remember { mutableStateOf(false) }
     var specialEventName by remember { mutableStateOf("") }
+    var specialEventDropdownExpanded by remember { mutableStateOf(false) }
+    var isAddingNewSpecialEvent by remember { mutableStateOf(false) }
+    var existingSpecialEvents by remember { mutableStateOf(emptyList<String>()) }
+    
+
     var detectedSizeInput by remember { mutableStateOf("") }
     
     var qrXInput by remember { mutableStateOf("") }
@@ -87,6 +92,12 @@ fun CalculatorApp(
     LaunchedEffect(remoteLayouts) {
         val frames = frameStore.loadFrames()
         existingLayoutIds = (remoteLayouts.map { it.id } + com.phuctran.photobooth.desktop.model.DefaultLayoutModes.map { it.id } + frames.mapNotNull { it.targetLayoutId }).distinct().sorted()
+        
+        // Fetch existing special events
+        existingSpecialEvents = frames
+            .mapNotNull { it.specialEventName }
+            .distinct()
+            .sorted()
     }
 
     fun detectPrintSize(w: Int, h: Int): String {
@@ -617,14 +628,47 @@ fun CalculatorApp(
                     }
                     
                     if (isSpecialFrame) {
-                        OutlinedTextField(
-                            value = specialEventName,
-                            onValueChange = { specialEventName = it },
-                            label = { Text("Tên sự kiện (VD: Quoc_khanh_2_9)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
-                        )
+                        if (isAddingNewSpecialEvent || existingSpecialEvents.isEmpty()) {
+                            OutlinedTextField(
+                                value = specialEventName,
+                                onValueChange = { specialEventName = it },
+                                label = { Text("Tên sự kiện mới (VD: Quoc_khanh_2_9)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White),
+                                trailingIcon = {
+                                    if (existingSpecialEvents.isNotEmpty()) {
+                                        androidx.compose.material.IconButton(onClick = { isAddingNewSpecialEvent = false; specialEventName = "" }) {
+                                            Text("Hủy", color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
+                                        }
+                                    }
+                                }
+                            )
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    OutlinedButton(onClick = { specialEventDropdownExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                        Text(if (specialEventName.isEmpty()) "Chọn sự kiện..." else specialEventName)
+                                    }
+                                    DropdownMenu(
+                                        expanded = specialEventDropdownExpanded,
+                                        onDismissRequest = { specialEventDropdownExpanded = false }
+                                    ) {
+                                        existingSpecialEvents.forEach { evtName ->
+                                            DropdownMenuItem(onClick = {
+                                                specialEventName = evtName
+                                                specialEventDropdownExpanded = false
+                                            }) {
+                                                Text(evtName)
+                                            }
+                                        }
+                                    }
+                                }
+                                OutlinedButton(onClick = { isAddingNewSpecialEvent = true; specialEventName = "" }) {
+                                    Text("+ Mới")
+                                }
+                            }
+                        }
                     }
                     
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

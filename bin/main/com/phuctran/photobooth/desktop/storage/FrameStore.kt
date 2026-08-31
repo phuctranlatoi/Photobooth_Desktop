@@ -88,6 +88,7 @@ class FrameStore(projectDir: Path) {
         val targetPrintSize = if (parts.size >= 1) parts[0] else null
         val targetLayoutId = if (parts.size >= 2) parts[1] else null
         val isSpecial = parts.any { it.equals("Special", ignoreCase = true) }
+        val specialEventName = if (isSpecial && parts.size >= 5) parts[3] else null
 
         // Đọc cấu hình QR từ file JSON (nếu có)
         val jsonPath = this.parent.resolve("$name.json")
@@ -112,6 +113,7 @@ class FrameStore(projectDir: Path) {
             accentColor = 0xFF5F6B7A,
             isCustom = true,
             isSpecial = isSpecial,
+            specialEventName = specialEventName,
             customImagePath = this,
             targetPrintSize = targetPrintSize,
             targetLayoutId = targetLayoutId,

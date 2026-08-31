@@ -23,6 +23,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -121,20 +122,57 @@ fun StartScreen(
             contentAlignment = Alignment.Center
         ) {
             if (specialFrames.isNotEmpty()) {
-                Column(Modifier.fillMaxSize().padding(24.dp)) {
-                    Text("Sự Kiện Đặc Biệt", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Chọn ngay một mẫu khung bên dưới để bắt đầu", color = NeutralMuted, style = MaterialTheme.typography.body2)
-                    Spacer(Modifier.height(24.dp))
-                    
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(specialFrames) { frame ->
-                            SpecialBundleItem(frame = frame, onClick = { onSpecialSelected(frame) })
+                val groupedFrames = remember(specialFrames) {
+                    specialFrames.groupBy { it.specialEventName ?: "Sự Kiện Khác" }
+                }
+                var selectedEvent by remember { mutableStateOf<String?>(null) }
+                
+                if (selectedEvent == null) {
+                    Column(Modifier.fillMaxSize().padding(24.dp)) {
+                        Text("Sự Kiện Đặc Biệt", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Chọn một sự kiện để xem các mẫu khung", color = NeutralMuted, style = MaterialTheme.typography.body2)
+                        Spacer(Modifier.height(24.dp))
+                        
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(groupedFrames.keys.toList()) { eventName ->
+                                val firstFrame = groupedFrames[eventName]?.firstOrNull()
+                                SpecialEventItem(
+                                    eventName = eventName,
+                                    previewFrame = firstFrame,
+                                    onClick = { selectedEvent = eventName }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    val frames = groupedFrames[selectedEvent] ?: emptyList()
+                    Column(Modifier.fillMaxSize().padding(24.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material.IconButton(onClick = { selectedEvent = null }) {
+                                Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text(selectedEvent!!, color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text("Chọn ngay một mẫu khung bên dưới để bắt đầu", color = NeutralMuted, style = MaterialTheme.typography.body2)
+                        Spacer(Modifier.height(24.dp))
+                        
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(frames) { frame ->
+                                SpecialBundleItem(frame = frame, onClick = { onSpecialSelected(frame) })
+                            }
                         }
                     }
                 }
@@ -164,6 +202,63 @@ fun StartScreen(
                     Text("Photobooth", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
                     Text("Vui lòng thiết lập Khung Sự Kiện (Special) trong Admin.", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.body2)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SpecialEventItem(eventName: String, previewFrame: com.phuctran.photobooth.desktop.model.FramePack?, onClick: () -> Unit) {
+    var isHovered by remember { mutableStateOf(false) }
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered) 1.02f else 1f)
+    
+    val bitmap = remember(previewFrame?.customImagePath) { previewFrame?.customImagePath?.let(::loadImageBitmap) }
+    
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.8f)
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        color = Color(0xFF2A2631),
+        elevation = if (isHovered) 12.dp else 4.dp
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(Color.White.copy(alpha = 0.9f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = eventName,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                    )
+                } else {
+                    Icon(androidx.compose.material.icons.Icons.Default.Favorite, contentDescription = null, tint = AccentNude, modifier = Modifier.size(48.dp))
+                }
+            }
+            Column(Modifier.fillMaxWidth().background(Color(0xFF2A2631)).padding(16.dp)) {
+                Text(
+                    text = eventName,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.subtitle1,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Bấm để xem bộ khung",
+                    color = AccentNude,
+                    style = MaterialTheme.typography.caption,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }

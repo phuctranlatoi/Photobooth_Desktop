@@ -142,6 +142,7 @@ data class FramePack(
     val accentColor: Long,
     val isCustom: Boolean = false,
     val isSpecial: Boolean = false,
+    val specialEventName: String? = null,
     val customImagePath: Path? = null,
     val targetPrintSize: String? = null,
     val targetLayoutId: String? = null,
