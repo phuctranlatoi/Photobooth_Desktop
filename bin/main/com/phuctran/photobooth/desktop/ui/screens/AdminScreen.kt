@@ -116,11 +116,12 @@ fun AdminScreen(
                     SectionHeader("Admin", "Quản lý khung ảnh", "Xem, lọc và xóa các khung ảnh đã lưu trên hệ thống.")
                     Spacer(Modifier.height(12.dp))
                     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        if (adminFrames.isEmpty()) {
-                            Text("Chưa có khung ảnh custom nào.", color = NeutralSecondary, modifier = Modifier.padding(16.dp))
-                        } else {
-                            // Group by Print Size then Layout ID
-                            val groupedBySize = adminFrames.groupBy { it.targetPrintSize ?: "Kích thước Khác" }
+                        val standardFrames = adminFrames.filter { !it.isSpecial }
+                        val specialFrames = adminFrames.filter { it.isSpecial }
+                        
+                        if (standardFrames.isNotEmpty()) {
+                            Text("Khung Thường", style = MaterialTheme.typography.h5, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                            val groupedBySize = standardFrames.groupBy { it.targetPrintSize ?: "Kích thước Khác" }
                             groupedBySize.forEach { (size, framesBySize) ->
                                 Text("Khổ in: $size", style = MaterialTheme.typography.h6, color = AccentNudeDark, fontWeight = FontWeight.Bold)
                                 
@@ -141,6 +142,35 @@ fun AdminScreen(
                                 }
                                 Divider(color = NeutralBorder, modifier = Modifier.padding(vertical = 16.dp))
                             }
+                        }
+                        
+                        if (specialFrames.isNotEmpty()) {
+                            Text("Khung Sự Kiện Đặc Biệt", style = MaterialTheme.typography.h5, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp, top = 16.dp))
+                            val groupedByEvent = specialFrames.groupBy { it.specialEventName ?: "Sự Kiện Khác" }
+                            groupedByEvent.forEach { (eventName, framesByEvent) ->
+                                Text("Sự kiện: $eventName", style = MaterialTheme.typography.h6, color = AccentNudeDark, fontWeight = FontWeight.Bold)
+                                
+                                val groupedByLayout = framesByEvent.groupBy { it.targetLayoutId ?: "Bố cục Khác" }
+                                groupedByLayout.forEach { (layout, framesByLayout) ->
+                                    Text("Bố cục: $layout", style = MaterialTheme.typography.subtitle1, color = NeutralSecondary, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                                    
+                                    framesByLayout.forEach { frame -> 
+                                        Box(modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp)) {
+                                            FrameAdminCard(frame) {
+                                                if (frame.customImagePath != null) {
+                                                    java.nio.file.Files.deleteIfExists(frame.customImagePath)
+                                                    refreshAdminFrames()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                Divider(color = NeutralBorder, modifier = Modifier.padding(vertical = 16.dp))
+                            }
+                        }
+                        
+                        if (standardFrames.isEmpty() && specialFrames.isEmpty()) {
+                            Text("Chưa có khung ảnh custom nào.", color = NeutralSecondary, modifier = Modifier.padding(16.dp))
                         }
                     }
                 }

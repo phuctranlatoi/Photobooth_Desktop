@@ -136,7 +136,7 @@ fun StartScreen(
                         Spacer(Modifier.height(24.dp))
                         
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
+                            columns = GridCells.Adaptive(minSize = 240.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                             modifier = Modifier.fillMaxSize()
