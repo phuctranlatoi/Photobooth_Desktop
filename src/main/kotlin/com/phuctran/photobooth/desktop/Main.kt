@@ -119,11 +119,15 @@ fun main() = application {
                         animationSpec = androidx.compose.animation.core.tween(400)
                     ) { targetState ->
                         when (targetState) {
-                        SessionState.IDLE -> StartScreen(
-                            liveViewBitmap = liveViewBitmap,
-                            onStart = { controller.transitionTo(SessionState.SELECTING) },
-                            onAdmin = { controller.transitionTo(SessionState.ADMIN) }
-                        )
+                        SessionState.IDLE -> {
+                            val specialFrames by controller.specialFrames.collectAsState()
+                            StartScreen(
+                                specialFrames = specialFrames,
+                                onSpecialSelected = { controller.selectSpecialBundle(it) },
+                                onStart = { controller.transitionTo(SessionState.SELECTING) },
+                                onAdmin = { controller.transitionTo(SessionState.ADMIN) }
+                            )
+                        }
                         SessionState.SELECTING -> StudioModeScreen(
                             layouts = availableLayouts,
                             effects = com.phuctran.photobooth.desktop.model.DefaultEffectModes,

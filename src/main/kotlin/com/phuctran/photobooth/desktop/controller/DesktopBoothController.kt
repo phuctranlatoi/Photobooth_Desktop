@@ -96,6 +96,9 @@ class DesktopBoothController(
     ))
     val selectedFrame = _selectedFrame.asStateFlow()
 
+    private val _specialFrames = MutableStateFlow<List<com.phuctran.photobooth.desktop.model.FramePack>>(emptyList())
+    val specialFrames = _specialFrames.asStateFlow()
+
     private val _printCopies = MutableStateFlow(1)
     val printCopies = _printCopies.asStateFlow()
 
@@ -150,6 +153,7 @@ class DesktopBoothController(
                 } catch (e: Exception) {
                     println("Failed to fetch layouts from Firebase: ${e.message}")
                 }
+                _specialFrames.value = frameStore.loadFrames().filter { it.isSpecial }
                 refreshEffects()
                 refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
                 refreshCameraDevices()
@@ -186,6 +190,21 @@ class DesktopBoothController(
         _exportSummary.value = ExportSummary(0, 0, 0)
         refreshFramesForLayout(layout, preserveSelection = false)
         _statusMessage.value = "Đã chọn ${layout.mediaLabel}."
+    }
+
+    fun selectSpecialBundle(frame: com.phuctran.photobooth.desktop.model.FramePack) {
+        val targetLayout = _availableLayouts.value.firstOrNull { it.id == frame.targetLayoutId }
+        if (targetLayout != null) {
+            _selectedLayout.value = targetLayout
+            refreshFramesForLayout(targetLayout, preserveSelection = false)
+            _selectedFrame.value = frame
+            _selectedMoments.value = emptyList()
+            _capturedMoments.value = emptyList()
+            _exportSummary.value = ExportSummary(0, 0, 0)
+            _statusMessage.value = "Đã chọn khung sự kiện: ${frame.title}"
+            // Go directly to quantity selection for a faster flow
+            transitionTo(SessionState.SELECTING_QUANTITY)
+        }
     }
 
     val liveViewStream: StateFlow<androidx.compose.ui.graphics.ImageBitmap?> = cameraService.liveViewStream

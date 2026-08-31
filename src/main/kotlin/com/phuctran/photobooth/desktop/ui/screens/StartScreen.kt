@@ -30,16 +30,24 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
 import androidx.compose.ui.text.font.FontWeight
+
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.shadow
 import com.phuctran.photobooth.desktop.ui.components.BouncyButton
 import com.phuctran.photobooth.desktop.ui.components.InfoPill
 import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
 import com.phuctran.photobooth.desktop.ui.theme.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.Surface
+import androidx.compose.ui.text.style.TextOverflow
+import com.phuctran.photobooth.desktop.ui.components.loadImageBitmap
 
 @Composable
 fun StartScreen(
-    liveViewBitmap: ImageBitmap?,
+    specialFrames: List<com.phuctran.photobooth.desktop.model.FramePack>,
+    onSpecialSelected: (com.phuctran.photobooth.desktop.model.FramePack) -> Unit,
     onStart: () -> Unit, 
     onAdmin: () -> Unit
 ) {
@@ -112,31 +120,26 @@ fun StartScreen(
                 .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center
         ) {
-            if (liveViewBitmap != null) {
-                Image(
-                    bitmap = liveViewBitmap,
-                    contentDescription = "Live camera preview",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = -1f)
-                )
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Black.copy(alpha = 0.08f), Color.Transparent, Color.Black.copy(alpha = 0.58f))
-                            )
-                        )
-                )
-                Column(
-                    Modifier.align(Alignment.BottomStart).padding(28.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    InfoPill("Live preview", bgColor = Color.White.copy(alpha = 0.18f), textColor = Color.White)
-                    Text("Sẵn sàng cho phiên chụp mới", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
-                    Text("Đứng vào khung, bấm bắt đầu và làm phần còn lại thật vui.", color = Color.White.copy(alpha = 0.76f), style = MaterialTheme.typography.body2)
+            if (specialFrames.isNotEmpty()) {
+                Column(Modifier.fillMaxSize().padding(24.dp)) {
+                    Text("Sự Kiện Đặc Biệt", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Chọn ngay một mẫu khung bên dưới để bắt đầu", color = NeutralMuted, style = MaterialTheme.typography.body2)
+                    Spacer(Modifier.height(24.dp))
+                    
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(specialFrames) { frame ->
+                            SpecialBundleItem(frame = frame, onClick = { onSpecialSelected(frame) })
+                        }
+                    }
                 }
             } else {
+                // Hiển thị đồ họa mặc định nếu không có sự kiện đặc biệt
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -158,9 +161,66 @@ fun StartScreen(
                     Modifier.align(Alignment.BottomStart).padding(28.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Studio preview", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
-                    Text("Camera sẽ hiển thị tại đây khi sẵn sàng.", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.body2)
+                    Text("Photobooth", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
+                    Text("Vui lòng thiết lập Khung Sự Kiện (Special) trong Admin.", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.body2)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, onClick: () -> Unit) {
+    var isHovered by remember { mutableStateOf(false) }
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered) 1.02f else 1f)
+    
+    val bitmap = remember(frame.customImagePath) { frame.customImagePath?.let(::loadImageBitmap) }
+    
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.7f)
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        color = Color(0xFF2A2631),
+        elevation = if (isHovered) 12.dp else 4.dp
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = frame.title,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(12.dp)
+                    )
+                } else {
+                    Text("No Image", color = Color.Gray)
+                }
+            }
+            Column(Modifier.fillMaxWidth().background(Color(0xFF2A2631)).padding(16.dp)) {
+                Text(
+                    text = frame.title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.subtitle1,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Bấm để chụp",
+                    color = AccentNude,
+                    style = MaterialTheme.typography.caption,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
