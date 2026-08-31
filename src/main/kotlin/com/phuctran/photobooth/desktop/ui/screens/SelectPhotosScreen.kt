@@ -20,6 +20,10 @@ import com.phuctran.photobooth.desktop.ui.theme.*
 
 
 import java.nio.file.Path
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 
 @Composable
 fun SelectPhotosScreen(
@@ -43,7 +47,21 @@ fun SelectPhotosScreen(
                         }
                     }
                 } else {
-                    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    val state = rememberScrollState()
+                    val coroutineScope = rememberCoroutineScope()
+                    Column(
+                        Modifier
+                            .verticalScroll(state)
+                            .pointerInput(Unit) {
+                                detectVerticalDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    coroutineScope.launch {
+                                        state.scrollBy(-dragAmount)
+                                    }
+                                }
+                            }, 
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
                         capturedMoments.chunked(4).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 row.forEach { moment ->

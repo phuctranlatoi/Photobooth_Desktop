@@ -59,7 +59,16 @@ class DesktopCloudinaryClient(
         }
 
         val json = response.body()
-        val secureUrl = SimpleJson.string(json, "secure_url") ?: return null
+        val rawSecureUrl = SimpleJson.string(json, "secure_url") ?: return null
+        
+        // Tự động chèn filter của Cloudinary để ép nó encode lại video/ảnh cực chuẩn cho iOS và Android
+        val optimizedUrl = if (rawSecureUrl.contains("/upload/v")) {
+            val transform = if (extension == "mp4") "f_auto,q_auto,vc_h264" else "f_auto,q_auto"
+            rawSecureUrl.replaceFirst("/upload/", "/upload/$transform/")
+        } else {
+            rawSecureUrl
+        }
+        
         val assetId = SimpleJson.string(json, "asset_id")
         val publicId = SimpleJson.string(json, "public_id").orEmpty()
         val version = SimpleJson.long(json, "version")?.toString() ?: "1"
@@ -71,7 +80,7 @@ class DesktopCloudinaryClient(
         val bytes = SimpleJson.int(json, "bytes") ?: Files.size(file).toInt()
 
         return UploadedCloudAsset(
-            secureUrl = secureUrl,
+            secureUrl = optimizedUrl,
             finalizeRequest = FinalizeAssetRequest(
                 kind = kind,
                 position = position,

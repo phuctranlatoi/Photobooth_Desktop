@@ -58,7 +58,10 @@ fun main() = application {
 }
 
 @Composable
-fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothConfig? = null) {
+fun CalculatorApp(
+    config: com.phuctran.photobooth.desktop.config.DesktopBoothConfig? = null,
+    remoteLayouts: List<com.phuctran.photobooth.desktop.model.LayoutMode> = emptyList()
+) {
     val coroutineScope = rememberCoroutineScope()
     var selectedFile by remember { mutableStateOf<File?>(null) }
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -77,9 +80,9 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
     var existingLayoutIds by remember { mutableStateOf(emptyList<String>()) }
     var isAddingNewLayout by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(remoteLayouts) {
         val frames = frameStore.loadFrames()
-        existingLayoutIds = (com.phuctran.photobooth.desktop.model.DefaultLayoutModes.map { it.id } + frames.mapNotNull { it.targetLayoutId }).distinct().sorted()
+        existingLayoutIds = (remoteLayouts.map { it.id } + com.phuctran.photobooth.desktop.model.DefaultLayoutModes.map { it.id } + frames.mapNotNull { it.targetLayoutId }).distinct().sorted()
     }
 
     fun detectPrintSize(w: Int, h: Int): String {
@@ -138,18 +141,48 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
     }
 
     fun openFileChooser() {
-        val chooser = JFileChooser()
-        chooser.dialogTitle = "Chọn file Frame PNG"
-        val filter = FileNameExtensionFilter("PNG Images", "png")
-        chooser.fileFilter = filter
+        val parentWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow as? java.awt.Frame
+        val dialog = java.awt.FileDialog(parentWindow, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
+        dialog.file = "*.png"
         val userDir = System.getProperty("user.dir")
-        chooser.currentDirectory = File(userDir)
+        dialog.directory = userDir
+        dialog.isVisible = true
         
-        val result = chooser.showOpenDialog(null)
-        if (result == JFileChooser.APPROVE_OPTION) {
-            val file = chooser.selectedFile
+        if (dialog.file != null) {
+            val file = File(dialog.directory, dialog.file)
             selectedFile = file
             processImage(file)
+        }
+    }
+
+    fun openFileChooserDirect() {
+        val parentWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow as? java.awt.Frame
+        val dialog = java.awt.FileDialog(parentWindow, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
+        dialog.file = "*.png"
+        val userDir = System.getProperty("user.dir")
+        dialog.directory = userDir
+        dialog.isVisible = true
+        
+        if (dialog.file != null) {
+            val file = File(dialog.directory, dialog.file)
+            selectedFile = file
+            layoutIdInput = file.nameWithoutExtension
+            frameIdInput = file.nameWithoutExtension
+            isProcessing = true
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val image = ImageIO.read(file)
+                    previewBitmap = image.toComposeImageBitmap()
+                    val sizeLabel = "${detectPrintSize(image.width, image.height)}_custom"
+                    detectedSizeInput = sizeLabel
+                    currentResult = null // Không chạy phân tích lỗ
+                    generatedCode = "Đã tải khung gốc thành công. Vui lòng chọn Mã Bố Cục tương ứng ở cột phải và nhấn 'Lưu Khung Ảnh (Local)'."
+                } catch (e: Exception) {
+                    generatedCode = "LỖI: ${e.message}"
+                } finally {
+                    isProcessing = false
+                }
+            }
         }
     }
 
@@ -211,17 +244,18 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
     }
 
     fun saveFrameToFirebase() {
-        val result = currentResult ?: return
         val file = selectedFile ?: return
         val lId = layoutIdInput.trim()
         val fId = frameIdInput.trim()
-        if (lId.isEmpty() || fId.isEmpty() || result.punchedImage == null) return
+        if (lId.isEmpty() || fId.isEmpty()) return
         
         coroutineScope.launch(Dispatchers.IO) {
             try {
                 // Save locally using FrameStore
+                // Nếu currentResult != null thì lấy ảnh đã phân tích, nếu null thì lấy thẳng ảnh gốc
+                val imageToSave = currentResult?.punchedImage ?: ImageIO.read(file)
                 val tempFile = java.io.File(file.parentFile, "$fId.png")
-                javax.imageio.ImageIO.write(result.punchedImage, "png", tempFile)
+                javax.imageio.ImageIO.write(imageToSave, "png", tempFile)
                 
                 val projectDir = com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir()
                 val frameStore = com.phuctran.photobooth.desktop.storage.FrameStore(projectDir)
@@ -229,10 +263,10 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
                 var qrX: Int? = null
                 var qrY: Int? = null
                 var qrSize: Int? = null
-                if (result.qrSlot != null) {
-                    qrX = (result.qrSlot.x * result.width).toInt()
-                    qrY = (result.qrSlot.y * result.height).toInt()
-                    qrSize = (result.qrSlot.width * result.width).toInt()
+                if (currentResult?.qrSlot != null) {
+                    qrX = (currentResult!!.qrSlot!!.x * currentResult!!.width).toInt()
+                    qrY = (currentResult!!.qrSlot!!.y * currentResult!!.height).toInt()
+                    qrSize = (currentResult!!.qrSlot!!.width * currentResult!!.width).toInt()
                 }
 
                 val newFrame = frameStore.addCustomFrame(
@@ -260,11 +294,21 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
             Text("Layout Calculator Tool", style = MaterialTheme.typography.h5, color = Color.White)
             Text("Công cụ tự động đo đạc tỷ lệ và khoảng cách cho khung ảnh", color = Color.Gray)
             
-            Button(
-                onClick = { openFileChooser() },
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) {
-                Text("Chọn File Frame PNG...")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { openFileChooser() },
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) {
+                    Text("1. Chọn Ảnh để Đo Đạc", fontSize = 13.sp)
+                }
+                
+                Button(
+                    onClick = { openFileChooserDirect() },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF4DB6AC))
+                ) {
+                    Text("Thêm Khung Đã Đục Lỗ Trực Tiếp", color = Color.White, fontSize = 13.sp)
+                }
             }
 
             if (selectedFile != null) {
@@ -438,6 +482,17 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
                                         DropdownMenuItem(onClick = {
                                             layoutIdInput = lId
                                             layoutDropdownExpanded = false
+                                            
+                                            // Auto-fill the print size label based on the selected layout
+                                            val matchedLayout = remoteLayouts.find { it.id == lId }
+                                            if (matchedLayout != null) {
+                                                detectedSizeInput = matchedLayout.printSizeLabel
+                                            } else {
+                                                val defaultLayout = com.phuctran.photobooth.desktop.model.DefaultLayoutModes.find { it.id == lId }
+                                                if (defaultLayout != null) {
+                                                    detectedSizeInput = defaultLayout.printSizeLabel
+                                                }
+                                            }
                                         }) {
                                             Text(lId)
                                         }
@@ -499,7 +554,7 @@ fun CalculatorApp(config: com.phuctran.photobooth.desktop.config.DesktopBoothCon
                         Button(
                             onClick = { saveFrameToFirebase() },
                             modifier = Modifier.weight(1f),
-                            enabled = currentResult != null && layoutIdInput.isNotBlank() && frameIdInput.isNotBlank()
+                            enabled = selectedFile != null && layoutIdInput.isNotBlank() && frameIdInput.isNotBlank()
                         ) {
                             Text("2. LƯU KHUNG (Local)")
                         }

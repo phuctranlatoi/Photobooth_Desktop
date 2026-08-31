@@ -560,48 +560,9 @@ class DesktopBoothController(
             val masterFile = renderResult?.finalImagePath
             val printFile = renderResult?.printImagePath
 
-            // 3. Upload Ảnh NGAY LẬP TỨC (đợi xong mới ra QR)
-            _statusMessage.value = "Đang tải ảnh lên web..."
-            val albumResult = if (config.canUploadAlbum) {
-                withContext(Dispatchers.IO) {
-                    albumUploader.uploadSessionPhotos(
-                        sessionId = sessionId,
-                        preCreatedAlbumId = preAlbum?.albumId,
-                        capturedMoments = _capturedMoments.value,
-                        masterPrint = masterFile
-                    )
-                }
-            } else null
-
-            // 4. Hiển thị QR và chuyển sang màn hình Delivery
-            val finalQrUrl = preAlbum?.albumUrl ?: if (config.enableLocalServer && masterFile != null) {
-                val ip = com.phuctran.photobooth.desktop.utils.NetworkUtility.getLocalIpAddress()
-                val filename = masterFile.fileName.toString()
-                "http://$ip:${config.localServerPort}/download/$filename"
-            } else null
-
-            val initialSummary = ExportSummary(
-                printPhotoCount = _selectedMoments.value.size,
-                uploadedPhotoCount = albumResult?.uploadedCount ?: 0,
-                uploadedVideoCount = 0,
-                qrUrl = finalQrUrl, // LUÔN GIỮ URL GỐC, KHÔNG BỊ GHI ĐÈ
-                masterUrl = albumResult?.finalPhotoUrl ?: finalQrUrl,
-                albumId = preAlbum?.albumId,
-                outputPath = masterFile,
-                printStatus = "Đang in ảnh và xử lý video..."
-            )
-            _exportSummary.value = initialSummary
-            
-            if (finalQrUrl != null) {
-                _statusMessage.value = "Hoàn tất! Mời quét mã QR. Máy đang in và tạo video..."
-            } else {
-                _statusMessage.value = "Đang in ảnh và xử lý nền..."
-            }
-            transitionTo(SessionState.DELIVERY)
-
-            // 5. Các tác vụ nặng chạy ngầm (In ấn, Tạo Video)
-            scope.launch(Dispatchers.IO) {
-                // In ảnh
+            // 3. Khởi chạy tác vụ IN ẢNH SONG SONG NGAY LẬP TỨC (để không phải đợi Upload xong mới in)
+            var printStatusMessage = "Đang in ảnh và xử lý nền..."
+            val printJob = scope.launch(Dispatchers.IO) {
                 val printStatus = if (printFile != null && activeConfig.value.enableSystemPrint) {
                     val layout = _selectedLayout.value
                     val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
@@ -621,8 +582,59 @@ class DesktopBoothController(
                 } else {
                     "Chưa render được file in."
                 }
+                
+                printStatusMessage = printStatus.toString()
+                
+                // Nếu đã vào màn hình Delivery thì cập nhật UI ngay lập tức
+                if (sessionState.value == SessionState.DELIVERY) {
+                    _exportSummary.value = _exportSummary.value.copy(printStatus = printStatusMessage)
+                }
+            }
 
-                _exportSummary.value = _exportSummary.value.copy(printStatus = printStatus.toString())
+            // 4. Upload Ảnh (Network IO)
+            _statusMessage.value = "Đang tải ảnh lên web..."
+            val albumResult = if (config.canUploadAlbum) {
+                withContext(Dispatchers.IO) {
+                    albumUploader.uploadSessionPhotos(
+                        sessionId = sessionId,
+                        preCreatedAlbumId = preAlbum?.albumId,
+                        capturedMoments = _capturedMoments.value,
+                        masterPrint = masterFile
+                    )
+                }
+            } else null
+
+            // 5. Hiển thị QR và chuyển sang màn hình Delivery
+            val finalQrUrl = preAlbum?.albumUrl ?: if (config.enableLocalServer && masterFile != null) {
+                val ip = com.phuctran.photobooth.desktop.utils.NetworkUtility.getLocalIpAddress()
+                val filename = masterFile.fileName.toString()
+                "http://$ip:${config.localServerPort}/download/$filename"
+            } else null
+
+            val initialSummary = ExportSummary(
+                printPhotoCount = _selectedMoments.value.size,
+                uploadedPhotoCount = albumResult?.uploadedCount ?: 0,
+                uploadedVideoCount = 0,
+                qrUrl = finalQrUrl, // LUÔN GIỮ URL GỐC, KHÔNG BỊ GHI ĐÈ
+                masterUrl = albumResult?.finalPhotoUrl ?: finalQrUrl,
+                albumId = preAlbum?.albumId,
+                outputPath = masterFile,
+                printStatus = printStatusMessage // Lấy status in mới nhất
+            )
+            _exportSummary.value = initialSummary
+            
+            if (finalQrUrl != null) {
+                _statusMessage.value = "Hoàn tất! Mời quét mã QR. Máy đang in và tạo video..."
+            } else {
+                _statusMessage.value = "Đang in ảnh và xử lý nền..."
+            }
+            transitionTo(SessionState.DELIVERY)
+
+            // 6. Các tác vụ nặng còn lại chạy ngầm (Tạo Video)
+            scope.launch(Dispatchers.IO) {
+                // Đợi chắc chắn lệnh in đã vào hàng đợi của OS
+                printJob.join()
+                _exportSummary.value = _exportSummary.value.copy(printStatus = printStatusMessage)
 
                 // Bước 2: Tạo Video
                 _videoEncodingJobs.forEach { it.join() }

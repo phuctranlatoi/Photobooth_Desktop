@@ -41,8 +41,9 @@ class DesktopCompositor(
 
         val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
 
-        val width = if (isStrip) 592 else 1184
-        val height = 1790 // Tỷ lệ cứng chuẩn theo kích thước người dùng đo được
+        val renderScale = 2 // Render ở 600 DPI thay vì 300 DPI để ảnh cực nét
+        val width = (if (isStrip) 592 else 1184) * renderScale
+        val height = 1790 * renderScale // Tỷ lệ cứng chuẩn theo kích thước người dùng đo được
         val canvas = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
         val graphics = canvas.createGraphics()
         
@@ -58,8 +59,8 @@ class DesktopCompositor(
 
                 val image = ImageIO.read(photoPath.toFile())
                 if (image != null) {
-                    // Increase bleed margin to 40 pixels total (20px per side) to ensure no gaps
-                    val bleedPx = 40
+                    // Increase bleed margin to 80 pixels total (40px per side) at 2x scale
+                    val bleedPx = 40 * renderScale
                     val bleedSlot = Rectangle(
                         slot.x - bleedPx / 2,
                         slot.y - bleedPx / 2,
@@ -95,10 +96,8 @@ class DesktopCompositor(
         ImageIO.write(canvas, "png", finalPath.toFile())
         
         val printPath = if (isStrip) {
-            // Lề trái nhích lại 0.5mm (+6px) -> 8 + 6 = 14
-            // Lề phải giữ nguyên 26
-            val paperWidth = 1226 // Tổng = 14 + 592 + 2 + 592 + 26
-            val paperHeight = 1829
+            val paperWidth = 1226 * renderScale 
+            val paperHeight = 1829 * renderScale
             
             val compositeCanvas = BufferedImage(paperWidth, paperHeight, BufferedImage.TYPE_INT_RGB)
             val g2 = compositeCanvas.createGraphics()
@@ -106,12 +105,12 @@ class DesktopCompositor(
             g2.color = Color.WHITE
             g2.fillRect(0, 0, paperWidth, paperHeight)
             
-            val paddingTop = 39
-            val paddingLeft = 14
-            val gap = 2
+            val paddingTop = 39 * renderScale
+            val paddingLeft = 14 * renderScale
+            val gap = 2 * renderScale
             
-            val scaledWidth = 592
-            val scaledHeight = 1790
+            val scaledWidth = 592 * renderScale
+            val scaledHeight = 1790 * renderScale
             
             // Tấm 1
             g2.drawImage(canvas, paddingLeft, paddingTop, scaledWidth, scaledHeight, null)
@@ -129,8 +128,8 @@ class DesktopCompositor(
             val printFileName = "print_$fileName"
             val pPath = outputDir.resolve(printFileName)
             
-            val paperWidth = 1226
-            val paperHeight = 1829 // Khổ giấy thực tế in
+            val paperWidth = 1226 * renderScale
+            val paperHeight = 1829 * renderScale // Khổ giấy thực tế in
             
             val compositeCanvas = BufferedImage(paperWidth, paperHeight, BufferedImage.TYPE_INT_RGB)
             val g2 = compositeCanvas.createGraphics()
@@ -138,11 +137,11 @@ class DesktopCompositor(
             g2.color = Color.WHITE
             g2.fillRect(0, 0, paperWidth, paperHeight)
             
-            val paddingTop = 39
-            val paddingLeft = 14 // Cho đồng bộ với Strip
+            val paddingTop = 39 * renderScale
+            val paddingLeft = 14 * renderScale // Cho đồng bộ với Strip
             
-            val scaledWidth = 1184 // Hoặc 1186 nếu mún full gap
-            val scaledHeight = 1790
+            val scaledWidth = 1184 * renderScale // Hoặc 1186 nếu mún full gap
+            val scaledHeight = 1790 * renderScale
             
             g2.drawImage(canvas, paddingLeft, paddingTop, scaledWidth, scaledHeight, null)
             g2.dispose()

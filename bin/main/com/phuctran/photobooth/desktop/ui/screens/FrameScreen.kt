@@ -17,12 +17,15 @@ import com.phuctran.photobooth.desktop.domain.SessionState
 import com.phuctran.photobooth.desktop.model.*
 import com.phuctran.photobooth.desktop.ui.components.*
 import com.phuctran.photobooth.desktop.ui.theme.*
-
-
 import java.nio.file.Path
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 
 @Composable
 fun FrameScreen(
@@ -56,9 +59,19 @@ fun FrameScreen(
                     }
                 }
             } else {
+                val state = rememberLazyGridState()
+                val coroutineScope = rememberCoroutineScope()
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(190.dp),
-                    modifier = Modifier.weight(1f),
+                    state = state,
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.weight(1f).pointerInput(Unit) {
+                        detectVerticalDragGestures { change, dragAmount ->
+                            change.consume()
+                            coroutineScope.launch {
+                                state.scrollBy(-dragAmount)
+                            }
+                        }
+                    },
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {

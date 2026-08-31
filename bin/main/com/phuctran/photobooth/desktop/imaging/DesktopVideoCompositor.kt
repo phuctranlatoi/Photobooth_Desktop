@@ -94,7 +94,7 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         
         // Scale the frame to match canvas (in case user uploaded a 1184x1790 double-strip PNG)
         filter.append("[$frameIndex:v]scale=$canvasWidth:$canvasHeight[scaled_frame];")
-        filter.append("[$lastOut][scaled_frame]overlay=0:0[out]")
+        filter.append("[$lastOut][scaled_frame]overlay=0:0,scale=-2:1080[out]")
 
         cmd.add("-filter_complex")
         cmd.add(filter.toString())
@@ -104,12 +104,18 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         // Video codec options for web-optimized mp4
         cmd.add("-c:v")
         cmd.add("libx264")
+        cmd.add("-profile:v")
+        cmd.add("high") 
+        cmd.add("-level")
+        cmd.add("4.1")
         cmd.add("-preset")
         cmd.add("fast")
         cmd.add("-crf")
-        cmd.add("17")
+        cmd.add("23") // Giảm bitrate xuống mức vừa phải cho Web (load lẹ hơn trên đt)
         cmd.add("-pix_fmt")
         cmd.add("yuv420p")
+        cmd.add("-movflags")
+        cmd.add("+faststart") // Crucial for iOS web streaming
         
         // Since we are combining multiple clips, we must ensure there's no audio mapping issue
         cmd.add("-an")

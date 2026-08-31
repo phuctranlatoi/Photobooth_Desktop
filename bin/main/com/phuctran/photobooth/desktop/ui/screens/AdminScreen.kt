@@ -331,7 +331,7 @@ fun AdminScreen(
                         modifier = Modifier.fillMaxSize(),
                         color = androidx.compose.material.MaterialTheme.colors.background
                     ) {
-                        com.phuctran.photobooth.desktop.engine.CalculatorApp(config)
+                        com.phuctran.photobooth.desktop.engine.CalculatorApp(config, layouts)
                     }
                 }
             } else if (selectedTab == 4) {
