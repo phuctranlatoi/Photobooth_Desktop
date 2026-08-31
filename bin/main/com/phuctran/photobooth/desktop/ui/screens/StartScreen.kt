@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -129,9 +130,9 @@ fun StartScreen(
                 
                 if (selectedEvent == null) {
                     Column(Modifier.fillMaxSize().padding(24.dp)) {
-                        Text("Sự Kiện Đặc Biệt", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                        Text("Bundle Special", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
-                        Text("Chọn một sự kiện để xem các mẫu khung", color = NeutralMuted, style = MaterialTheme.typography.body2)
+                        Text("Chọn dịp để xem các khung độc quyền", color = NeutralMuted, style = MaterialTheme.typography.body2)
                         Spacer(Modifier.height(24.dp))
                         
                         LazyVerticalGrid(
@@ -141,10 +142,10 @@ fun StartScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(groupedFrames.keys.toList()) { eventName ->
-                                val firstFrame = groupedFrames[eventName]?.firstOrNull()
+                                val frames = groupedFrames[eventName] ?: emptyList()
                                 SpecialEventItem(
                                     eventName = eventName,
-                                    previewFrame = firstFrame,
+                                    frames = frames,
                                     onClick = { selectedEvent = eventName }
                                 )
                             }
@@ -152,25 +153,56 @@ fun StartScreen(
                     }
                 } else {
                     val frames = groupedFrames[selectedEvent] ?: emptyList()
+                    val layouts = remember(frames) { frames.mapNotNull { it.targetLayoutId }.distinct().sorted() }
+                    var selectedLayoutId by remember(selectedEvent) { mutableStateOf(layouts.firstOrNull()) }
+                    
                     Column(Modifier.fillMaxSize().padding(24.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             androidx.compose.material.IconButton(onClick = { selectedEvent = null }) {
                                 Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text(selectedEvent!!, color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                            Column {
+                                Text(selectedEvent!!.uppercase(), color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                Text("${layouts.size} bố cục • ${frames.size} mẫu khung", color = AccentNude, style = MaterialTheme.typography.caption)
+                            }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text("Chọn ngay một mẫu khung bên dưới để bắt đầu", color = NeutralMuted, style = MaterialTheme.typography.body2)
-                        Spacer(Modifier.height(24.dp))
                         
+                        Spacer(Modifier.height(24.dp))
+                        Text("Chọn bố cục", color = Color.White, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            layouts.forEach { layoutId ->
+                                val isSelected = selectedLayoutId == layoutId
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) Color.White else Color.Transparent,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) Color.Transparent else Color.White.copy(alpha = 0.3f)),
+                                    modifier = Modifier.clickable { selectedLayoutId = layoutId }
+                                ) {
+                                    Text(
+                                        text = layoutId,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                        
+                        Spacer(Modifier.height(24.dp))
+                        Text("Chọn mẫu khung", color = Color.White, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        
+                        val framesForLayout = frames.filter { it.targetLayoutId == selectedLayoutId }
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.weight(1f)
                         ) {
-                            items(frames) { frame ->
+                            items(framesForLayout) { frame ->
                                 SpecialBundleItem(frame = frame, onClick = { onSpecialSelected(frame) })
                             }
                         }
@@ -208,11 +240,21 @@ fun StartScreen(
 }
 
 @Composable
-fun SpecialEventItem(eventName: String, previewFrame: com.phuctran.photobooth.desktop.model.FramePack?, onClick: () -> Unit) {
+fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.desktop.model.FramePack>, onClick: () -> Unit) {
     var isHovered by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered) 1.02f else 1f)
     
-    val bitmap = remember(previewFrame?.customImagePath) { previewFrame?.customImagePath?.let(::loadImageBitmap) }
+    val coverPath = remember(eventName) {
+        com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir().resolve("data").resolve("covers").resolve("$eventName.png")
+    }
+    val coverBitmap = remember(coverPath) {
+        if (java.nio.file.Files.exists(coverPath)) loadImageBitmap(coverPath) else null
+    }
+    val previewBitmap = remember(frames, coverBitmap) {
+        coverBitmap ?: frames.firstOrNull()?.customImagePath?.let(::loadImageBitmap)
+    }
+    
+    val layouts = remember(frames) { frames.mapNotNull { it.targetLayoutId }.distinct() }
     
     Surface(
         modifier = Modifier
@@ -232,33 +274,48 @@ fun SpecialEventItem(eventName: String, previewFrame: com.phuctran.photobooth.de
                     .background(Color.White.copy(alpha = 0.9f)),
                 contentAlignment = Alignment.Center
             ) {
-                if (bitmap != null) {
+                if (previewBitmap != null) {
                     Image(
-                        bitmap = bitmap,
+                        bitmap = previewBitmap,
                         contentDescription = eventName,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                        contentScale = if (coverBitmap != null) ContentScale.Crop else ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(if (coverBitmap != null) 0.dp else 16.dp)
                     )
                 } else {
                     Icon(androidx.compose.material.icons.Icons.Default.Favorite, contentDescription = null, tint = AccentNude, modifier = Modifier.size(48.dp))
                 }
             }
             Column(Modifier.fillMaxWidth().background(Color(0xFF2A2631)).padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = eventName,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.subtitle1,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "SPECIAL BUNDLE",
+                        color = AccentNude,
+                        style = MaterialTheme.typography.overline,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    text = eventName,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.subtitle1,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = "${layouts.size} bố cục · ${frames.size} mẫu khung",
+                    color = NeutralMuted,
+                    style = MaterialTheme.typography.caption
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Bấm để xem bộ khung",
-                    color = AccentNude,
-                    style = MaterialTheme.typography.caption,
-                    fontWeight = FontWeight.Medium
-                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Xem bundle", color = Color.White, style = MaterialTheme.typography.body2, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(androidx.compose.material.icons.Icons.Default.ArrowForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                }
             }
         }
     }

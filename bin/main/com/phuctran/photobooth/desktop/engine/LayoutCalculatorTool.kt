@@ -669,6 +669,26 @@ fun CalculatorApp(
                                 }
                             }
                         }
+
+                        if (specialEventName.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Cover Bundle:", color = Color.White, modifier = Modifier.width(100.dp))
+                                OutlinedButton(onClick = {
+                                    val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Select Cover Image", java.awt.FileDialog.LOAD)
+                                    dialog.setFilenameFilter { _, name -> name.endsWith(".png", true) || name.endsWith(".jpg", true) }
+                                    dialog.isVisible = true
+                                    val file = dialog.file
+                                    val dir = dialog.directory
+                                    if (file != null && dir != null) {
+                                        val sourcePath = java.io.File(dir, file).toPath()
+                                        frameStore.setSpecialEventCover(specialEventName, sourcePath)
+                                    }
+                                }) {
+                                    Text("Upload Cover (Tự lưu)")
+                                }
+                            }
+                        }
                     }
                     
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

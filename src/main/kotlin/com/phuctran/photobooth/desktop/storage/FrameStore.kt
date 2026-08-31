@@ -14,6 +14,17 @@ import com.google.gson.JsonObject
 
 class FrameStore(projectDir: Path) {
     val frameDir = projectDir.resolve("data").resolve("frames")
+    val coverDir = projectDir.resolve("data").resolve("covers")
+
+    fun getSpecialEventCoverPath(eventName: String): Path {
+        return coverDir.resolve("$eventName.png")
+    }
+
+    fun setSpecialEventCover(eventName: String, source: Path) {
+        val dest = getSpecialEventCoverPath(eventName)
+        Files.createDirectories(dest.parent)
+        Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING)
+    }
 
     fun loadFrames(): List<FramePack> {
         Files.createDirectories(frameDir)
