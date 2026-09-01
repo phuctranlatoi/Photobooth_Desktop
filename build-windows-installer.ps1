@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
 
-$appName = "PrettyBoothDesktop"
+$appName = "LeSouvenirDesktop"
 $version = "1.0.0"
 $releaseDir = Join-Path $projectRoot "release"
 

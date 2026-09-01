@@ -36,7 +36,7 @@ fun main() = application {
     
     Window(
         onCloseRequest = ::exitApplication,
-        title = "Photobooth Kiosk",
+        title = "Le Souvenir Kiosk",
         undecorated = true,
         state = rememberWindowState(placement = WindowPlacement.Fullscreen)
     ) {

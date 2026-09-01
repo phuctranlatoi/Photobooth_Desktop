@@ -5,9 +5,16 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 object DesktopAppPaths {
-    const val APP_DIR_NAME = "PrettyBoothDesktop"
+    const val APP_DIR_NAME = "LeSouvenirDesktop"
 
     fun appDataDir(): Path {
+        // If it's a portable build, prioritize local data directory or .portable flag
+        val workingDirData = workingDir().resolve("data")
+        val isPortable = Files.exists(workingDirData) || Files.exists(workingDir().resolve(".portable"))
+        if (isPortable) {
+            return workingDir()
+        }
+
         val localAppData = System.getenv("LOCALAPPDATA")?.takeIf { it.isNotBlank() }
         val base = if (localAppData != null) {
             Paths.get(localAppData)

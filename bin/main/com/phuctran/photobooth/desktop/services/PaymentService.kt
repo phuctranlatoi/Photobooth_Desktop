@@ -20,7 +20,7 @@ class PaymentService(private val config: DesktopBoothConfig) {
     fun createPaymentLink(orderCode: Long, amount: Int, description: String): String? {
         if (payOS == null) return null
         return try {
-            val item = PaymentLinkItem.builder().name("Photobooth").quantity(1).price(amount.toLong()).build()
+            val item = PaymentLinkItem.builder().name("Le Souvenir").quantity(1).price(amount.toLong()).build()
             val paymentRequest = CreatePaymentLinkRequest.builder()
                 .orderCode(orderCode)
                 .amount(amount.toLong())

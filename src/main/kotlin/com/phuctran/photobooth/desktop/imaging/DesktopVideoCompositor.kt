@@ -92,9 +92,10 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         // 4. Overlay frame PNG on top of everything
         val frameIndex = validMoments.size
         
-        // Scale the frame to match canvas (in case user uploaded a 1184x1790 double-strip PNG)
+        // Scale the frame to match canvas
         filter.append("[$frameIndex:v]scale=$canvasWidth:$canvasHeight[scaled_frame];")
-        filter.append("[$lastOut][scaled_frame]overlay=0:0,scale=-2:1080[out]")
+        // iOS MUST have even dimensions. Scale height to 1080, and dynamically calculate even width
+        filter.append("[$lastOut][scaled_frame]overlay=0:0,scale='trunc(iw*1080/ih/2)*2':1080,format=yuv420p[out]")
 
         cmd.add("-filter_complex")
         cmd.add(filter.toString())
@@ -105,9 +106,9 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         cmd.add("-c:v")
         cmd.add("libx264")
         cmd.add("-profile:v")
-        cmd.add("high") 
+        cmd.add("main") 
         cmd.add("-level")
-        cmd.add("4.1")
+        cmd.add("3.1")
         cmd.add("-preset")
         cmd.add("fast")
         cmd.add("-crf")

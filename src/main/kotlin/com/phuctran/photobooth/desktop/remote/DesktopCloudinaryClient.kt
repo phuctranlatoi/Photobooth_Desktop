@@ -30,7 +30,7 @@ class DesktopCloudinaryClient(
 
         val reqResourceType = if (extension == "mp4") "video" else "image"
         val uploadUrl = "https://api.cloudinary.com/v1_1/${config.cloudinaryCloudName}/$reqResourceType/upload"
-        val boundary = "----PrettyBooth${UUID.randomUUID().toString().replace("-", "")}"
+        val boundary = "----LeSouvenir${UUID.randomUUID().toString().replace("-", "")}"
         val mimeType = when (extension) {
             "png" -> "image/png"
             "mp4" -> "video/mp4"

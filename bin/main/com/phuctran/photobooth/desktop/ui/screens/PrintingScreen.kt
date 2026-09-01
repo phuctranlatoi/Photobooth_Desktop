@@ -38,7 +38,7 @@ fun PrintingScreen(layout: LayoutMode, frame: FramePack, statusMessage: String) 
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                "PrettyBooth", 
+                "Le Souvenir", 
                 style = MaterialTheme.typography.h3, 
                 fontWeight = FontWeight.Black, 
                 color = AccentNudeDark

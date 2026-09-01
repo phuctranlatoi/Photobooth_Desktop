@@ -241,7 +241,7 @@ class DesktopBoothController(
             val orderCode = System.currentTimeMillis()
             val amount = _totalPrice.value.toInt()
             scope.launch(Dispatchers.IO) {
-                val qr = paymentService.createPaymentLink(orderCode, amount, "Photobooth $orderCode")
+                val qr = paymentService.createPaymentLink(orderCode, amount, "Le Souvenir $orderCode")
                 _paymentQrData.value = qr ?: "ERROR"
                 if (qr != null) {
                     paymentPollingJob = scope.launch(Dispatchers.IO) {
@@ -451,9 +451,11 @@ class DesktopBoothController(
                     "-framerate", "24", 
                     "-i", "${framesDir.toAbsolutePath()}\\frame_%03d.jpg", 
                     "-c:v", "libx264", 
+                    "-profile:v", "main",
+                    "-level", "3.1",
                     "-preset", "fast",
                     "-crf", "17",
-                    "-pix_fmt", "yuv420p",
+                    "-vf", "scale='trunc(iw/2)*2':'trunc(ih/2)*2',format=yuv420p",
                     outputFile.toAbsolutePath().toString()
                 ).redirectErrorStream(true).start()
             } else if (photoPath != null && java.nio.file.Files.exists(photoPath)) {
@@ -464,12 +466,13 @@ class DesktopBoothController(
                     "-loop", "1",
                     "-framerate", "15",
                     "-i", photoPath.toAbsolutePath().toString(), 
-                    "-vf", "scale=-2:1080",
+                    "-vf", "scale='trunc(iw*1080/ih/2)*2':1080,format=yuv420p",
                     "-c:v", "libx264", 
+                    "-profile:v", "main",
+                    "-level", "3.1",
                     "-preset", "superfast",
                     "-crf", "23",
                     "-t", "3",
-                    "-pix_fmt", "yuv420p",
                     outputFile.toAbsolutePath().toString()
                 ).redirectErrorStream(true).start()
             } else {

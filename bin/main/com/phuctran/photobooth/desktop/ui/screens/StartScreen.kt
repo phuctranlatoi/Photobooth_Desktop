@@ -288,7 +288,7 @@ fun StartScreen(
                     Modifier.align(Alignment.BottomStart).padding(28.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Photobooth", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
+                    Text("Le Souvenir", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
                     Text("Vui lòng thiết lập Khung Sự Kiện (Special) trong Admin.", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.body2)
                 }
             }

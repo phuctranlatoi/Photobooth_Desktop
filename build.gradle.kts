@@ -30,12 +30,13 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb
             )
             appResourcesRootDir.set(project.layout.projectDirectory.dir("app-resources"))
-            packageName = "PrettyBoothDesktop"
-            packageVersion = "1.0.0"
+            packageName = "LeSouvenirDesktop"
+            packageVersion = "1.0.1"
 
             buildTypes.release.proguard {
                 isEnabled.set(false)

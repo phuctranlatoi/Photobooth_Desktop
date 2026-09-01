@@ -122,7 +122,7 @@ object WindowCaptureHelper {
         if (foundHwnd == null) return false
 
         try {
-            // Nhớ lại cửa sổ hiện tại (Photobooth Kiosk)
+            // Nhớ lại cửa sổ hiện tại (Le Souvenir Kiosk)
             var myHwnd: WinDef.HWND? = null
             User32.INSTANCE.EnumWindows(object : WinUser.WNDENUMPROC {
                 override fun callback(hwnd: WinDef.HWND, arg: com.sun.jna.Pointer?): Boolean {
@@ -130,7 +130,7 @@ object WindowCaptureHelper {
                     val windowText = CharArray(512)
                     User32.INSTANCE.GetWindowText(hwnd, windowText, 512)
                     val title = String(windowText).trim { it <= ' ' }
-                    if (title.contains("Photobooth Kiosk", ignoreCase = true)) {
+                    if (title.contains("Le Souvenir Kiosk", ignoreCase = true)) {
                         myHwnd = hwnd
                         return false
                     }
@@ -149,7 +149,7 @@ object WindowCaptureHelper {
             robot.keyRelease(java.awt.event.KeyEvent.VK_SPACE)
             Thread.sleep(100)
 
-            // Trả lại focus cho Photobooth Kiosk
+            // Trả lại focus cho Le Souvenir Kiosk
             if (myHwnd != null) {
                 User32.INSTANCE.SetForegroundWindow(myHwnd)
             }
