@@ -129,10 +129,21 @@ fun main() = application {
                                 onAdmin = { controller.transitionTo(SessionState.ADMIN) }
                             )
                         }
-                        SessionState.SELECTING -> StudioModeScreen(
+                        SessionState.SELECTING -> {
+                            val specialFrames by controller.specialFrames.collectAsState()
+                            val allStandardFrames by controller.allStandardFrames.collectAsState()
+                            StudioModeScreen(
                             layouts = availableLayouts.filter { l -> 
-                                val framesForLayout = availableFrames.filter { it.targetLayoutId == l.id }
-                                framesForLayout.isEmpty() || framesForLayout.any { !it.isSpecial }
+                                // A layout is considered special if any special frame targets it (by Layout ID or Print Size due to user typo).
+                                val isSpecialLayout = specialFrames.any { it.targetLayoutId == l.id || it.targetPrintSize == l.id }
+                                // It can still appear in normal mode if it ALSO has standard frames targeting it.
+                                val hasStandardFrames = allStandardFrames.any { it.targetLayoutId == l.id || it.targetPrintSize == l.id }
+                                
+                                if (isSpecialLayout) {
+                                    hasStandardFrames
+                                } else {
+                                    true
+                                }
                             }.sortedBy { it.id },
                             effects = com.phuctran.photobooth.desktop.model.DefaultEffectModes,
                             selectedLayout = layout,
@@ -143,6 +154,7 @@ fun main() = application {
                             onConfirm = { controller.confirmStudioSetup() },
                             onBack = { controller.transitionTo(SessionState.IDLE) }
                         )
+                        }
                     SessionState.SELECTING_QUANTITY -> QuantityScreen(
                         layout = layout,
                         effect = effect,

@@ -13,6 +13,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -35,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.ui.components.*
 import com.phuctran.photobooth.desktop.ui.theme.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StartScreen(
     layouts: List<com.phuctran.photobooth.desktop.model.LayoutMode>,
@@ -56,6 +60,8 @@ fun StartScreen(
     )
     
     var tapCount by remember { mutableStateOf(0) }
+    var selectedEvent by remember { mutableStateOf<String?>(null) }
+    var selectedLayoutId by remember { mutableStateOf<String?>(null) }
 
     Row(
         Modifier
@@ -116,95 +122,145 @@ fun StartScreen(
                 val groupedFrames = remember(specialFrames) {
                     specialFrames.groupBy { it.specialEventName ?: "Sự Kiện Khác" }
                 }
-                var selectedEvent by remember { mutableStateOf<String?>(null) }
+                val eventNames = groupedFrames.keys.toList()
                 
-                if (selectedEvent == null) {
-                    Column(Modifier.fillMaxSize().padding(24.dp)) {
-                        Text("Bundle Special", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Chọn dịp để xem các khung độc quyền", color = NeutralMuted, style = MaterialTheme.typography.body2)
-                        Spacer(Modifier.height(24.dp))
-                        
-                        LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 240.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(groupedFrames.keys.toList()) { eventName ->
-                                val frames = groupedFrames[eventName] ?: emptyList()
-                                SpecialEventItem(
-                                    eventName = eventName,
-                                    frames = frames,
-                                    onClick = { selectedEvent = eventName }
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    val frames = groupedFrames[selectedEvent] ?: emptyList()
-                    val layoutIds = remember(frames) { frames.mapNotNull { it.targetLayoutId }.distinct().sorted() }
-                    var selectedLayoutId by remember(selectedEvent) { mutableStateOf(layoutIds.firstOrNull()) }
-                    
-                    Column(Modifier.fillMaxSize().padding(24.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material.IconButton(onClick = { selectedEvent = null }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text(selectedEvent!!.uppercase(), color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(4.dp))
-                                Text("${layoutIds.size} bố cục • ${frames.size} mẫu khung", color = AccentNude, style = MaterialTheme.typography.caption)
-                            }
-                        }
-                        
-                        Spacer(Modifier.height(24.dp))
-                        Text("Chọn bố cục", color = Color.White, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
-                            layoutIds.forEach { layoutId ->
-                                val isSelected = selectedLayoutId == layoutId
-                                val targetLayout = layouts.find { it.id == layoutId }
-                                
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) AccentNude else Color(0xFF2A2631),
-                                    modifier = Modifier
-                                        .height(280.dp)
-                                        .aspectRatio(targetLayout?.printAspectRatio ?: 0.66f)
-                                        .clickable { selectedLayoutId = layoutId }
+                Column(Modifier.fillMaxSize().padding(24.dp)) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = selectedLayoutId != null
+                    ) { showFrames ->
+                        if (!showFrames) {
+                            Column(Modifier.fillMaxSize()) {
+                                // TOP ROW: Chọn bundle
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(Modifier.fillMaxSize().padding(4.dp), contentAlignment = Alignment.Center) {
-                                        if (targetLayout != null) {
-                                            LayoutThumbnail(
-                                                layout = targetLayout,
-                                                modifier = Modifier.fillMaxSize(),
-                                                accentColor = Color(targetLayout.accentColor)
-                                            )
-                                        } else {
-                                            Text(
-                                                text = layoutId,
-                                                color = if (isSelected) Color.Black else Color.White,
-                                                modifier = Modifier.padding(16.dp),
-                                                fontWeight = FontWeight.Medium
-                                            )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                                        Spacer(Modifier.width(8.dp))
+                                        Column {
+                                            Text("Chọn bundle", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                                            Spacer(Modifier.height(4.dp))
+                                            Text("Nhiều khung ảnh theo chủ đề đặc biệt cho bạn lựa chọn", color = NeutralMuted, style = MaterialTheme.typography.body2)
                                         }
                                     }
                                 }
+                                
+                                Spacer(Modifier.height(24.dp))
+                                
+                                // Bundle Slider
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                                ) {
+                                    eventNames.forEach { eventName ->
+                                        val isSelected = selectedEvent == eventName
+                                        SpecialEventItem(
+                                            eventName = eventName,
+                                            frames = groupedFrames[eventName] ?: emptyList(),
+                                            isSelected = isSelected,
+                                            onClick = { 
+                                                selectedEvent = eventName 
+                                                selectedLayoutId = null // Reset layout selection when changing bundle
+                                            }
+                                        )
+                                    }
+                                }
+                                
+                                Spacer(Modifier.height(24.dp))
+                                
+                                // BOTTOM ROW: Chọn bố cục
+                                if (selectedEvent != null) {
+                                    val frames = groupedFrames[selectedEvent] ?: emptyList()
+                                    // Extract ALL possible identifiers the user might have used (targetLayoutId or targetPrintSize)
+                                    val possibleLayoutIds = remember(frames) { 
+                                        frames.flatMap { listOfNotNull(it.targetLayoutId, it.targetPrintSize) }.distinct() 
+                                    }
+                                    
+                                    // Find all layouts that match any of the identifiers
+                                    val matchedLayouts = remember(possibleLayoutIds, layouts) {
+                                        layouts.filter { it.id in possibleLayoutIds }.sortedBy { it.id }
+                                    }
+                                    
+                                    Text("Chọn bố cục", color = Color.White, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.height(12.dp))
+                                    
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        matchedLayouts.forEach { targetLayout ->
+                                            val isLayoutSelected = selectedLayoutId == targetLayout.id
+                                            LayoutSelectionCard(
+                                                layout = targetLayout,
+                                                isSelected = isLayoutSelected,
+                                                onClick = { selectedLayoutId = targetLayout.id },
+                                                modifier = if (matchedLayouts.size <= 2) Modifier.width(220.dp).height(80.dp) else Modifier.width(180.dp).height(80.dp)
+                                            )
+                                        }
+                                    }
+                                    
+                                    Spacer(Modifier.weight(1f))
+                                    // Bottom Banner
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFF2A2631))
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("✨ Mỗi bundle có nhiều mẫu khung độc quyền, cùng bố cục để bạn tha hồ lựa chọn!", color = AccentNude, style = MaterialTheme.typography.body2)
+                                    }
+                                }
                             }
-                        }
-                        
-                        Spacer(Modifier.height(24.dp))
-                        Text("Chọn mẫu khung", color = Color.White, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
-                        
-                        val framesForLayout = frames.filter { it.targetLayoutId == selectedLayoutId }
-                        val selectedTargetLayout = layouts.find { it.id == selectedLayoutId }
-                        
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
-                            framesForLayout.forEach { frame ->
-                                SpecialBundleItem(frame = frame, targetLayout = selectedTargetLayout, onClick = { onSpecialSelected(frame) })
+                        } else {
+                            // SHOW FRAMES PAGE
+                            Column(Modifier.fillMaxSize()) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { selectedLayoutId = null },
+                                        modifier = Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF2A2631))
+                                    ) {
+                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                                    }
+                                    Spacer(Modifier.width(16.dp))
+                                    Column {
+                                        Text("Chọn mẫu khung", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.height(4.dp))
+                                        Text("Lướt để xem các khung ảnh và chọn mẫu ưng ý nhất", color = NeutralMuted, style = MaterialTheme.typography.body2)
+                                    }
+                                }
+                                
+                                Spacer(Modifier.height(32.dp))
+                                
+                                val frames = groupedFrames[selectedEvent] ?: emptyList()
+                                val filteredFrames = frames.filter { it.targetLayoutId == selectedLayoutId || it.targetPrintSize == selectedLayoutId }
+                                val targetLayout = layouts.find { it.id == selectedLayoutId }
+                                
+                                // Apply size scaling if there are only 1 or 2 frames
+                                val itemModifier = if (filteredFrames.size <= 2) {
+                                    Modifier.height(520.dp) // Make them even larger if only 2 left
+                                } else {
+                                    Modifier.height(380.dp) // Normal large size
+                                }
+                                
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                                    modifier = Modifier.fillMaxWidth().weight(1f).horizontalScroll(rememberScrollState()),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    filteredFrames.forEach { frame ->
+                                        SpecialBundleItem(
+                                            frame = frame,
+                                            targetLayout = targetLayout,
+                                            onClick = { onSpecialSelected(frame) },
+                                            modifier = itemModifier
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -241,9 +297,9 @@ fun StartScreen(
 }
 
 @Composable
-fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.desktop.model.FramePack>, onClick: () -> Unit) {
+fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.desktop.model.FramePack>, isSelected: Boolean, onClick: () -> Unit) {
     var isHovered by remember { mutableStateOf(false) }
-    val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered) 1.02f else 1f)
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered && !isSelected) 1.02f else 1f)
     
     val coverPath = remember(eventName) {
         com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir().resolve("data").resolve("covers").resolve("$eventName.png")
@@ -255,67 +311,60 @@ fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.des
         coverBitmap ?: frames.firstOrNull()?.customImagePath?.let(::loadImageBitmap)
     }
     
-    val layouts = remember(frames) { frames.mapNotNull { it.targetLayoutId }.distinct() }
-    
     Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.8f)
+            .width(220.dp)
+            .height(330.dp)
             .graphicsLayer(scaleX = scale, scaleY = scale)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .border(
+                width = if (isSelected) 2.dp else 0.dp, 
+                color = if (isSelected) AccentNude else Color.Transparent, 
+                shape = RoundedCornerShape(12.dp)
+            )
             .clickable(onClick = onClick),
         color = Color(0xFF2A2631),
-        elevation = if (isHovered) 12.dp else 4.dp
+        elevation = if (isSelected || isHovered) 8.dp else 0.dp
     ) {
-        Column(Modifier.fillMaxSize()) {
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(Color.White.copy(alpha = 0.9f)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (previewBitmap != null) {
-                    Image(
-                        bitmap = previewBitmap,
-                        contentDescription = eventName,
-                        contentScale = if (coverBitmap != null) ContentScale.Crop else ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(if (coverBitmap != null) 0.dp else 16.dp)
-                    )
-                } else {
+        Box(Modifier.fillMaxSize()) {
+            if (previewBitmap != null) {
+                Image(
+                    bitmap = previewBitmap,
+                    contentDescription = eventName,
+                    contentScale = if (coverBitmap != null) ContentScale.Crop else ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Box(Modifier.fillMaxSize().background(Color(0xFF333333)), contentAlignment = Alignment.Center) {
                     Icon(androidx.compose.material.icons.Icons.Default.Favorite, contentDescription = null, tint = AccentNude, modifier = Modifier.size(48.dp))
                 }
             }
-            Column(Modifier.fillMaxWidth().background(Color(0xFF2A2631)).padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            
+            // Text overlay at the bottom
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha=0.8f))
+                        )
+                    )
+                    .padding(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = eventName,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.subtitle1,
+                        style = MaterialTheme.typography.subtitle2,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "SPECIAL BUNDLE",
-                        color = AccentNude,
-                        style = MaterialTheme.typography.overline,
-                        fontWeight = FontWeight.Black
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "${layouts.size} bố cục · ${frames.size} mẫu khung",
-                    color = NeutralMuted,
-                    style = MaterialTheme.typography.caption
-                )
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Xem bundle", color = Color.White, style = MaterialTheme.typography.body2, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.width(4.dp))
-                    Icon(androidx.compose.material.icons.Icons.Default.ArrowForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    if (isSelected) {
+                        Icon(androidx.compose.material.icons.Icons.Default.Favorite, contentDescription = null, tint = AccentNude, modifier = Modifier.size(16.dp))
+                    }
                 }
             }
         }
@@ -323,7 +372,56 @@ fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.des
 }
 
 @Composable
-fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, targetLayout: com.phuctran.photobooth.desktop.model.LayoutMode?, onClick: () -> Unit) {
+fun LayoutSelectionCard(
+    layout: com.phuctran.photobooth.desktop.model.LayoutMode, 
+    isSelected: Boolean = false, 
+    modifier: Modifier = Modifier.height(80.dp).width(180.dp),
+    onClick: () -> Unit
+) {
+    var isHovered by remember { mutableStateOf(false) }
+    
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) AccentNude else Color(0xFF2A2631),
+        border = if (isSelected) BorderStroke(1.dp, Color.White) else null,
+        modifier = modifier.clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.fillMaxHeight().aspectRatio(layout.printAspectRatio), contentAlignment = Alignment.Center) {
+                LayoutThumbnail(
+                    layout = layout,
+                    modifier = Modifier.fillMaxSize(),
+                    accentColor = Color(layout.accentColor)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(verticalArrangement = Arrangement.Center, modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Bố cục ${layout.shotCount} ảnh",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.subtitle2,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val cleanSize = layout.printSizeLabel.split("_").firstOrNull() ?: layout.printSizeLabel
+                Text(
+                    text = "Khổ $cleanSize",
+                    color = NeutralMuted,
+                    style = MaterialTheme.typography.caption,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, targetLayout: com.phuctran.photobooth.desktop.model.LayoutMode?, modifier: Modifier = Modifier.height(240.dp), onClick: () -> Unit) {
     var isHovered by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered) 1.02f else 1f)
     
@@ -333,8 +431,7 @@ fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, ta
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = if (isHovered) AccentNude else Color(0xFF2A2631),
-        modifier = Modifier
-            .height(280.dp)
+        modifier = modifier
             .aspectRatio(aspectRatio)
             .graphicsLayer(scaleX = scale, scaleY = scale)
             .clickable(onClick = onClick)

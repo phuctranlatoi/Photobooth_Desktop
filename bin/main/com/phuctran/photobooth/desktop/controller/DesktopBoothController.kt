@@ -99,6 +99,9 @@ class DesktopBoothController(
     private val _specialFrames = MutableStateFlow<List<com.phuctran.photobooth.desktop.model.FramePack>>(emptyList())
     val specialFrames = _specialFrames.asStateFlow()
 
+    private val _allStandardFrames = MutableStateFlow<List<com.phuctran.photobooth.desktop.model.FramePack>>(emptyList())
+    val allStandardFrames = _allStandardFrames.asStateFlow()
+
     private val _printCopies = MutableStateFlow(1)
     val printCopies = _printCopies.asStateFlow()
 
@@ -153,7 +156,9 @@ class DesktopBoothController(
                 } catch (e: Exception) {
                     println("Failed to fetch layouts from Firebase: ${e.message}")
                 }
-                _specialFrames.value = frameStore.loadFrames().filter { it.isSpecial }
+                val loadedFrames = frameStore.loadFrames()
+                _specialFrames.value = loadedFrames.filter { it.isSpecial }
+                _allStandardFrames.value = loadedFrames.filter { !it.isSpecial }
                 refreshEffects()
                 refreshFramesForLayout(_selectedLayout.value, preserveSelection = false)
                 refreshCameraDevices()

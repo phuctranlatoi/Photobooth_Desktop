@@ -728,15 +728,8 @@ fun EventAdminCard(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material.OutlinedButton(
                             onClick = {
-                                val activeWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow 
-                                    ?: java.awt.Window.getWindows().firstOrNull { it.isActive } 
-                                    ?: java.awt.Window.getWindows().firstOrNull { it.isShowing }
-                                    
-                                val dialog = when (activeWindow) {
-                                    is java.awt.Dialog -> java.awt.FileDialog(activeWindow, "Chọn Ảnh Bìa (Cover)", java.awt.FileDialog.LOAD)
-                                    is java.awt.Frame -> java.awt.FileDialog(activeWindow, "Chọn Ảnh Bìa (Cover)", java.awt.FileDialog.LOAD)
-                                    else -> java.awt.FileDialog(null as java.awt.Frame?, "Chọn Ảnh Bìa (Cover)", java.awt.FileDialog.LOAD)
-                                }
+                                val parentFrame = java.awt.Window.getWindows().firstOrNull { it.isShowing && it is javax.swing.JFrame } as? java.awt.Frame
+                                val dialog = java.awt.FileDialog(parentFrame, "Chọn Ảnh Bìa (Cover)", java.awt.FileDialog.LOAD)
                                 dialog.isAlwaysOnTop = true
                                 dialog.setFilenameFilter { _, name -> name.endsWith(".png", true) || name.endsWith(".jpg", true) }
                                 dialog.isVisible = true

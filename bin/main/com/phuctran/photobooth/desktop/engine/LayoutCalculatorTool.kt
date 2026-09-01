@@ -184,15 +184,8 @@ fun CalculatorApp(
     }
 
     fun openFileChooser() {
-        val activeWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow 
-            ?: java.awt.Window.getWindows().firstOrNull { it.isActive } 
-            ?: java.awt.Window.getWindows().firstOrNull { it.isShowing }
-            
-        val dialog = when (activeWindow) {
-            is java.awt.Dialog -> java.awt.FileDialog(activeWindow, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
-            is java.awt.Frame -> java.awt.FileDialog(activeWindow, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
-            else -> java.awt.FileDialog(null as java.awt.Frame?, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
-        }
+        val parentFrame = java.awt.Window.getWindows().firstOrNull { it.isShowing && it is javax.swing.JFrame } as? java.awt.Frame
+        val dialog = java.awt.FileDialog(parentFrame, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
         dialog.isAlwaysOnTop = true
         dialog.file = "*.png"
         val userDir = System.getProperty("user.dir")
@@ -207,15 +200,8 @@ fun CalculatorApp(
     }
 
     fun openFileChooserDirect() {
-        val activeWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow 
-            ?: java.awt.Window.getWindows().firstOrNull { it.isActive } 
-            ?: java.awt.Window.getWindows().firstOrNull { it.isShowing }
-            
-        val dialog = when (activeWindow) {
-            is java.awt.Dialog -> java.awt.FileDialog(activeWindow, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
-            is java.awt.Frame -> java.awt.FileDialog(activeWindow, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
-            else -> java.awt.FileDialog(null as java.awt.Frame?, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
-        }
+        val parentFrame = java.awt.Window.getWindows().firstOrNull { it.isShowing && it is javax.swing.JFrame } as? java.awt.Frame
+        val dialog = java.awt.FileDialog(parentFrame, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
         dialog.isAlwaysOnTop = true
         dialog.file = "*.png"
         val userDir = System.getProperty("user.dir")
@@ -695,15 +681,8 @@ fun CalculatorApp(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Cover Bundle:", color = Color.White, modifier = Modifier.width(100.dp))
                                 OutlinedButton(onClick = {
-                                    val activeWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow 
-                                        ?: java.awt.Window.getWindows().firstOrNull { it.isActive } 
-                                        ?: java.awt.Window.getWindows().firstOrNull { it.isShowing }
-                                        
-                                    val dialog = when (activeWindow) {
-                                        is java.awt.Dialog -> java.awt.FileDialog(activeWindow, "Select Cover Image", java.awt.FileDialog.LOAD)
-                                        is java.awt.Frame -> java.awt.FileDialog(activeWindow, "Select Cover Image", java.awt.FileDialog.LOAD)
-                                        else -> java.awt.FileDialog(null as java.awt.Frame?, "Select Cover Image", java.awt.FileDialog.LOAD)
-                                    }
+                                    val parentFrame = java.awt.Window.getWindows().firstOrNull { it.isShowing && it is javax.swing.JFrame } as? java.awt.Frame
+                                    val dialog = java.awt.FileDialog(parentFrame, "Select Cover Image", java.awt.FileDialog.LOAD)
                                     dialog.isAlwaysOnTop = true
                                     dialog.setFilenameFilter { _, name -> name.endsWith(".png", true) || name.endsWith(".jpg", true) }
                                     dialog.isVisible = true
