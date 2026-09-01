@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.Image
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -148,24 +149,12 @@ fun AdminScreen(
                             Text("Khung Sự Kiện Đặc Biệt", style = MaterialTheme.typography.h5, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp, top = 16.dp))
                             val groupedByEvent = specialFrames.groupBy { it.specialEventName ?: "Sự Kiện Khác" }
                             groupedByEvent.forEach { (eventName, framesByEvent) ->
-                                Text("Sự kiện: $eventName", style = MaterialTheme.typography.h6, color = AccentNudeDark, fontWeight = FontWeight.Bold)
-                                
-                                val groupedByLayout = framesByEvent.groupBy { it.targetLayoutId ?: "Bố cục Khác" }
-                                groupedByLayout.forEach { (layout, framesByLayout) ->
-                                    Text("Bố cục: $layout", style = MaterialTheme.typography.subtitle1, color = NeutralSecondary, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
-                                    
-                                    framesByLayout.forEach { frame -> 
-                                        Box(modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp)) {
-                                            FrameAdminCard(frame) {
-                                                if (frame.customImagePath != null) {
-                                                    java.nio.file.Files.deleteIfExists(frame.customImagePath)
-                                                    refreshAdminFrames()
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                Divider(color = NeutralBorder, modifier = Modifier.padding(vertical = 16.dp))
+                                EventAdminCard(
+                                    eventName = eventName,
+                                    frames = framesByEvent,
+                                    frameStore = frameStore,
+                                    onRefresh = { refreshAdminFrames() }
+                                )
                             }
                         }
                         
@@ -663,3 +652,140 @@ fun LayoutAdminCard(layout: LayoutMode, onEdit: () -> Unit, onDelete: () -> Unit
     }
 }
 
+@Composable
+fun EventAdminCard(
+    eventName: String, 
+    frames: List<com.phuctran.photobooth.desktop.model.FramePack>, 
+    frameStore: com.phuctran.photobooth.desktop.storage.FrameStore, 
+    onRefresh: () -> Unit
+) {
+    val coverPath = remember(eventName) { frameStore.getSpecialEventCoverPath(eventName) }
+    var coverLastModified by remember { mutableStateOf(if (java.nio.file.Files.exists(coverPath)) java.nio.file.Files.getLastModifiedTime(coverPath).toMillis() else 0L) }
+    val coverBitmap = remember(coverPath, coverLastModified) {
+        if (java.nio.file.Files.exists(coverPath)) com.phuctran.photobooth.desktop.ui.components.loadImageBitmap(coverPath) else null
+    }
+    var showConfirm by remember { mutableStateOf(false) }
+    var isExpanded by remember { mutableStateOf(false) }
+    
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+        color = NeutralPanel,
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Cover Preview
+                Box(
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)).background(Color.LightGray),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val currentBitmap = coverBitmap
+                    if (currentBitmap != null) {
+                        Image(
+                            bitmap = currentBitmap,
+                            contentDescription = "Cover",
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text("Trống", color = NeutralSecondary, style = MaterialTheme.typography.caption)
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(eventName, style = MaterialTheme.typography.h6, color = NeutralText, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Tổng cộng: ${frames.size} khung", color = NeutralSecondary, style = MaterialTheme.typography.body2)
+                }
+                Spacer(Modifier.width(16.dp))
+                
+                // Actions
+                if (showConfirm) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Xóa toàn bộ sự kiện này?", color = AccentRed, style = MaterialTheme.typography.body2)
+                        androidx.compose.material.OutlinedButton(
+                            onClick = { showConfirm = false },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralSecondary)
+                        ) { Text("Hủy") }
+                        androidx.compose.material.Button(
+                            onClick = { 
+                                showConfirm = false
+                                frames.forEach { frame ->
+                                    if (frame.customImagePath != null) {
+                                        java.nio.file.Files.deleteIfExists(frame.customImagePath)
+                                    }
+                                }
+                                java.nio.file.Files.deleteIfExists(coverPath)
+                                onRefresh() 
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material.ButtonDefaults.buttonColors(backgroundColor = AccentRed, contentColor = Color.White)
+                        ) { Text("Xóa") }
+                    }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material.OutlinedButton(
+                            onClick = {
+                                val activeWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow 
+                                    ?: java.awt.Window.getWindows().firstOrNull { it.isActive } 
+                                    ?: java.awt.Window.getWindows().firstOrNull { it.isShowing }
+                                    
+                                val dialog = when (activeWindow) {
+                                    is java.awt.Dialog -> java.awt.FileDialog(activeWindow, "Chọn Ảnh Bìa (Cover)", java.awt.FileDialog.LOAD)
+                                    is java.awt.Frame -> java.awt.FileDialog(activeWindow, "Chọn Ảnh Bìa (Cover)", java.awt.FileDialog.LOAD)
+                                    else -> java.awt.FileDialog(null as java.awt.Frame?, "Chọn Ảnh Bìa (Cover)", java.awt.FileDialog.LOAD)
+                                }
+                                dialog.isAlwaysOnTop = true
+                                dialog.setFilenameFilter { _, name -> name.endsWith(".png", true) || name.endsWith(".jpg", true) }
+                                dialog.isVisible = true
+                                val file = dialog.file
+                                val dir = dialog.directory
+                                if (file != null && dir != null) {
+                                    val sourcePath = java.io.File(dir, file).toPath()
+                                    frameStore.setSpecialEventCover(eventName, sourcePath)
+                                    coverLastModified = java.nio.file.Files.getLastModifiedTime(coverPath).toMillis()
+                                }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralText)
+                        ) { Text("Đổi Ảnh Bìa") }
+                        
+                        androidx.compose.material.OutlinedButton(
+                            onClick = { isExpanded = !isExpanded },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralText)
+                        ) { Text(if (isExpanded) "Thu gọn" else "Xem khung") }
+                        
+                        androidx.compose.material.OutlinedButton(
+                            onClick = { showConfirm = true },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentRed)
+                        ) { Text("Xóa Sự kiện") }
+                    }
+                }
+            }
+            
+            if (isExpanded) {
+                Spacer(Modifier.height(16.dp))
+                Divider(color = NeutralBorder)
+                Spacer(Modifier.height(16.dp))
+                val groupedByLayout = frames.groupBy { it.targetLayoutId ?: "Bố cục Khác" }
+                groupedByLayout.forEach { (layout, framesByLayout) ->
+                    Text("Bố cục: $layout", style = MaterialTheme.typography.subtitle2, color = AccentNude, modifier = Modifier.padding(bottom = 8.dp))
+                    framesByLayout.forEach { frame -> 
+                        Box(modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) {
+                            FrameAdminCard(frame) {
+                                if (frame.customImagePath != null) {
+                                    java.nio.file.Files.deleteIfExists(frame.customImagePath)
+                                    onRefresh()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

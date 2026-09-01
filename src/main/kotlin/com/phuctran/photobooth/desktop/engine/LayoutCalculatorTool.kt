@@ -184,8 +184,16 @@ fun CalculatorApp(
     }
 
     fun openFileChooser() {
-        val parentWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow as? java.awt.Frame
-        val dialog = java.awt.FileDialog(parentWindow, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
+        val activeWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow 
+            ?: java.awt.Window.getWindows().firstOrNull { it.isActive } 
+            ?: java.awt.Window.getWindows().firstOrNull { it.isShowing }
+            
+        val dialog = when (activeWindow) {
+            is java.awt.Dialog -> java.awt.FileDialog(activeWindow, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
+            is java.awt.Frame -> java.awt.FileDialog(activeWindow, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
+            else -> java.awt.FileDialog(null as java.awt.Frame?, "Chọn file Frame PNG", java.awt.FileDialog.LOAD)
+        }
+        dialog.isAlwaysOnTop = true
         dialog.file = "*.png"
         val userDir = System.getProperty("user.dir")
         dialog.directory = userDir
@@ -199,8 +207,16 @@ fun CalculatorApp(
     }
 
     fun openFileChooserDirect() {
-        val parentWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow as? java.awt.Frame
-        val dialog = java.awt.FileDialog(parentWindow, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
+        val activeWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow 
+            ?: java.awt.Window.getWindows().firstOrNull { it.isActive } 
+            ?: java.awt.Window.getWindows().firstOrNull { it.isShowing }
+            
+        val dialog = when (activeWindow) {
+            is java.awt.Dialog -> java.awt.FileDialog(activeWindow, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
+            is java.awt.Frame -> java.awt.FileDialog(activeWindow, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
+            else -> java.awt.FileDialog(null as java.awt.Frame?, "Chọn file Frame PNG (Đã đục lỗ sẵn)", java.awt.FileDialog.LOAD)
+        }
+        dialog.isAlwaysOnTop = true
         dialog.file = "*.png"
         val userDir = System.getProperty("user.dir")
         dialog.directory = userDir
@@ -345,10 +361,14 @@ fun CalculatorApp(
                     printSizeLabel = detectedSizeInput.trim(), 
                     layoutId = lId, 
                     isSpecial = isSpecialFrame,
+                    specialEventName = if (isSpecialFrame) specialEventName else null,
                     qrCodeX = qrX,
                     qrCodeY = qrY,
                     qrCodeSize = qrSize
                 )
+                
+                val updatedFrames = frameStore.loadFrames()
+                existingSpecialEvents = updatedFrames.mapNotNull { it.specialEventName }.distinct().sorted()
                 
                 tempFile.delete() // Clean up temp file
                 
@@ -533,7 +553,7 @@ fun CalculatorApp(
         }
 
         // Right Column (Result Code & Firebase Actions)
-        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // Firebase Actions
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -628,7 +648,7 @@ fun CalculatorApp(
                     }
                     
                     if (isSpecialFrame) {
-                        if (isAddingNewSpecialEvent || existingSpecialEvents.isEmpty()) {
+                        if (isAddingNewSpecialEvent) {
                             OutlinedTextField(
                                 value = specialEventName,
                                 onValueChange = { specialEventName = it },
@@ -675,7 +695,16 @@ fun CalculatorApp(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Cover Bundle:", color = Color.White, modifier = Modifier.width(100.dp))
                                 OutlinedButton(onClick = {
-                                    val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Select Cover Image", java.awt.FileDialog.LOAD)
+                                    val activeWindow = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow 
+                                        ?: java.awt.Window.getWindows().firstOrNull { it.isActive } 
+                                        ?: java.awt.Window.getWindows().firstOrNull { it.isShowing }
+                                        
+                                    val dialog = when (activeWindow) {
+                                        is java.awt.Dialog -> java.awt.FileDialog(activeWindow, "Select Cover Image", java.awt.FileDialog.LOAD)
+                                        is java.awt.Frame -> java.awt.FileDialog(activeWindow, "Select Cover Image", java.awt.FileDialog.LOAD)
+                                        else -> java.awt.FileDialog(null as java.awt.Frame?, "Select Cover Image", java.awt.FileDialog.LOAD)
+                                    }
+                                    dialog.isAlwaysOnTop = true
                                     dialog.setFilenameFilter { _, name -> name.endsWith(".png", true) || name.endsWith(".jpg", true) }
                                     dialog.isVisible = true
                                     val file = dialog.file
@@ -756,7 +785,7 @@ fun CalculatorApp(
             }
 
             Surface(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.fillMaxWidth().height(250.dp),
                 color = MaterialTheme.colors.surface,
                 shape = RoundedCornerShape(8.dp)
             ) {

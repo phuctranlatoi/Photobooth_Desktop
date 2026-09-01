@@ -122,6 +122,7 @@ fun main() = application {
                         SessionState.IDLE -> {
                             val specialFrames by controller.specialFrames.collectAsState()
                             StartScreen(
+                                layouts = availableLayouts,
                                 specialFrames = specialFrames,
                                 onSpecialSelected = { controller.selectSpecialBundle(it) },
                                 onStart = { controller.transitionTo(SessionState.SELECTING) },
@@ -129,7 +130,10 @@ fun main() = application {
                             )
                         }
                         SessionState.SELECTING -> StudioModeScreen(
-                            layouts = availableLayouts,
+                            layouts = availableLayouts.filter { l -> 
+                                val framesForLayout = availableFrames.filter { it.targetLayoutId == l.id }
+                                framesForLayout.isEmpty() || framesForLayout.any { !it.isSpecial }
+                            }.sortedBy { it.id },
                             effects = com.phuctran.photobooth.desktop.model.DefaultEffectModes,
                             selectedLayout = layout,
                             selectedEffect = effect,

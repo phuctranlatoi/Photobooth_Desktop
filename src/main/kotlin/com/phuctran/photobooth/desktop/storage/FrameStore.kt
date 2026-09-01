@@ -44,6 +44,7 @@ class FrameStore(projectDir: Path) {
         printSizeLabel: String, 
         layoutId: String, 
         isSpecial: Boolean = false,
+        specialEventName: String? = null,
         qrCodeX: Int? = null,
         qrCodeY: Int? = null,
         qrCodeSize: Int? = null
@@ -56,7 +57,10 @@ class FrameStore(projectDir: Path) {
         }
 
         val category = if (isSpecial) "Special" else "Standard"
-        val targetDir = frameDir.resolve(printSizeLabel).resolve(layoutId).resolve(category)
+        var targetDir = frameDir.resolve(printSizeLabel).resolve(layoutId).resolve(category)
+        if (isSpecial && !specialEventName.isNullOrBlank()) {
+            targetDir = targetDir.resolve(specialEventName.trim())
+        }
         Files.createDirectories(targetDir)
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val slug = source.fileName.toString()

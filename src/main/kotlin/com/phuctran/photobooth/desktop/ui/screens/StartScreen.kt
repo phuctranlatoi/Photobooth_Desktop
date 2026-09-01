@@ -1,53 +1,43 @@
 package com.phuctran.photobooth.desktop.ui.screens
 
-import androidx.compose.animation.core.*
 import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.draw.shadow
-import com.phuctran.photobooth.desktop.ui.components.BouncyButton
-import com.phuctran.photobooth.desktop.ui.components.InfoPill
-import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
-import com.phuctran.photobooth.desktop.ui.theme.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.Surface
 import androidx.compose.ui.text.style.TextOverflow
-import com.phuctran.photobooth.desktop.ui.components.loadImageBitmap
+import androidx.compose.ui.unit.dp
+import com.phuctran.photobooth.desktop.ui.components.*
+import com.phuctran.photobooth.desktop.ui.theme.*
 
 @Composable
 fun StartScreen(
+    layouts: List<com.phuctran.photobooth.desktop.model.LayoutMode>,
     specialFrames: List<com.phuctran.photobooth.desktop.model.FramePack>,
     onSpecialSelected: (com.phuctran.photobooth.desktop.model.FramePack) -> Unit,
     onStart: () -> Unit, 
@@ -153,8 +143,8 @@ fun StartScreen(
                     }
                 } else {
                     val frames = groupedFrames[selectedEvent] ?: emptyList()
-                    val layouts = remember(frames) { frames.mapNotNull { it.targetLayoutId }.distinct().sorted() }
-                    var selectedLayoutId by remember(selectedEvent) { mutableStateOf(layouts.firstOrNull()) }
+                    val layoutIds = remember(frames) { frames.mapNotNull { it.targetLayoutId }.distinct().sorted() }
+                    var selectedLayoutId by remember(selectedEvent) { mutableStateOf(layoutIds.firstOrNull()) }
                     
                     Column(Modifier.fillMaxSize().padding(24.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -165,28 +155,42 @@ fun StartScreen(
                             Column {
                                 Text(selectedEvent!!.uppercase(), color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(4.dp))
-                                Text("${layouts.size} bố cục • ${frames.size} mẫu khung", color = AccentNude, style = MaterialTheme.typography.caption)
+                                Text("${layoutIds.size} bố cục • ${frames.size} mẫu khung", color = AccentNude, style = MaterialTheme.typography.caption)
                             }
                         }
                         
                         Spacer(Modifier.height(24.dp))
                         Text("Chọn bố cục", color = Color.White, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            layouts.forEach { layoutId ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
+                            layoutIds.forEach { layoutId ->
                                 val isSelected = selectedLayoutId == layoutId
+                                val targetLayout = layouts.find { it.id == layoutId }
+                                
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) Color.White else Color.Transparent,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) Color.Transparent else Color.White.copy(alpha = 0.3f)),
-                                    modifier = Modifier.clickable { selectedLayoutId = layoutId }
+                                    color = if (isSelected) AccentNude else Color(0xFF2A2631),
+                                    modifier = Modifier
+                                        .height(280.dp)
+                                        .aspectRatio(targetLayout?.printAspectRatio ?: 0.66f)
+                                        .clickable { selectedLayoutId = layoutId }
                                 ) {
-                                    Text(
-                                        text = layoutId,
-                                        color = if (isSelected) Color.Black else Color.White,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    Box(Modifier.fillMaxSize().padding(4.dp), contentAlignment = Alignment.Center) {
+                                        if (targetLayout != null) {
+                                            LayoutThumbnail(
+                                                layout = targetLayout,
+                                                modifier = Modifier.fillMaxSize(),
+                                                accentColor = Color(targetLayout.accentColor)
+                                            )
+                                        } else {
+                                            Text(
+                                                text = layoutId,
+                                                color = if (isSelected) Color.Black else Color.White,
+                                                modifier = Modifier.padding(16.dp),
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -196,14 +200,11 @@ fun StartScreen(
                         Spacer(Modifier.height(12.dp))
                         
                         val framesForLayout = frames.filter { it.targetLayoutId == selectedLayoutId }
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            items(framesForLayout) { frame ->
-                                SpecialBundleItem(frame = frame, onClick = { onSpecialSelected(frame) })
+                        val selectedTargetLayout = layouts.find { it.id == selectedLayoutId }
+                        
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
+                            framesForLayout.forEach { frame ->
+                                SpecialBundleItem(frame = frame, targetLayout = selectedTargetLayout, onClick = { onSpecialSelected(frame) })
                             }
                         }
                     }
@@ -322,57 +323,38 @@ fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.des
 }
 
 @Composable
-fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, onClick: () -> Unit) {
+fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, targetLayout: com.phuctran.photobooth.desktop.model.LayoutMode?, onClick: () -> Unit) {
     var isHovered by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered) 1.02f else 1f)
     
     val bitmap = remember(frame.customImagePath) { frame.customImagePath?.let(::loadImageBitmap) }
+    val aspectRatio = targetLayout?.printAspectRatio ?: 0.66f
     
     Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (isHovered) AccentNude else Color(0xFF2A2631),
         modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.7f)
+            .height(280.dp)
+            .aspectRatio(aspectRatio)
             .graphicsLayer(scaleX = scale, scaleY = scale)
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick),
-        color = Color(0xFF2A2631),
-        elevation = if (isHovered) 12.dp else 4.dp
+            .clickable(onClick = onClick)
     ) {
-        Column(Modifier.fillMaxSize()) {
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
-            ) {
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap,
-                        contentDescription = frame.title,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(12.dp)
-                    )
-                } else {
-                    Text("No Image", color = Color.Gray)
-                }
-            }
-            Column(Modifier.fillMaxWidth().background(Color(0xFF2A2631)).padding(16.dp)) {
-                Text(
-                    text = frame.title,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.subtitle1,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(4.dp)
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = frame.title,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Bấm để chụp",
-                    color = AccentNude,
-                    style = MaterialTheme.typography.caption,
-                    fontWeight = FontWeight.Medium
-                )
+            } else {
+                Text("No Image", color = Color.Gray)
             }
         }
     }
@@ -437,6 +419,57 @@ fun FeatureItem(icon: String, title: String, subtitle: String) {
         Column {
             Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.subtitle1, color = NeutralText)
             Text(subtitle, color = NeutralMuted, style = MaterialTheme.typography.body2)
+        }
+    }
+}
+@Composable
+fun LayoutThumbnail(layout: com.phuctran.photobooth.desktop.model.LayoutMode, modifier: Modifier = Modifier, accentColor: Color) {
+    Canvas(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(Color.White)
+            .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+    ) {
+        val columns = layout.gridColumns.coerceAtLeast(1)
+        val rows = kotlin.math.ceil(layout.selectCount / columns.toFloat()).toInt().coerceAtLeast(1)
+        
+        val top = size.width * layout.paddingTopRatio
+        val left = size.width * layout.paddingLeftRatio
+        val right = size.width * layout.paddingRightRatio
+        val gapX = size.width * layout.gapHorizontalRatio
+        val gapY = size.width * layout.gapVerticalRatio
+        
+        val slotWidth = (size.width - left - right - gapX * (columns - 1).toFloat()) / columns.toFloat()
+        val slotHeight = slotWidth / layout.photoAspectRatio
+
+        val slotColor = Color(0xFFE0E0E0) // Light gray for slots
+
+        if (layout.absoluteSlots.isNotEmpty()) {
+            layout.absoluteSlots.forEach { slot ->
+                val x = size.width * slot.x
+                val y = size.height * slot.y
+                val slotW = size.width * slot.width
+                val slotH = size.height * slot.height
+                
+                drawRect(
+                    color = slotColor,
+                    topLeft = androidx.compose.ui.geometry.Offset(x, y),
+                    size = androidx.compose.ui.geometry.Size(slotW, slotH)
+                )
+            }
+        } else {
+            repeat(layout.selectCount) { index ->
+                val row = index / columns
+                val column = index % columns
+                val x = left + (slotWidth + gapX) * column.toFloat()
+                val y = top + (slotHeight + gapY) * row.toFloat()
+                
+                drawRect(
+                    color = slotColor,
+                    topLeft = androidx.compose.ui.geometry.Offset(x, y),
+                    size = androidx.compose.ui.geometry.Size(slotWidth, slotHeight)
+                )
+            }
         }
     }
 }

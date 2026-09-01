@@ -146,7 +146,7 @@ fun Step1Layout(
         Spacer(Modifier.height(32.dp))
 
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-            val pageWidth = 400.dp
+            val pageWidth = maxWidth * 0.3f
             val horizontalPadding = if (maxWidth > pageWidth) (maxWidth - pageWidth) / 2 else 0.dp
             
             androidx.compose.foundation.pager.HorizontalPager(
