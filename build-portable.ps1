@@ -1,5 +1,5 @@
 Write-Host "Building portable version..."
-gradle createReleaseDistributable
+.\gradlew createReleaseDistributable
 
 $dest = "build\compose\binaries\main-release\app\LeSouvenirDesktop"
 $appDest = "$dest\app"

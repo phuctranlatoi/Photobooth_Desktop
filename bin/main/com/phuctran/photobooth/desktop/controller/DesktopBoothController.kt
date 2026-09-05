@@ -764,7 +764,7 @@ class DesktopBoothController(
         )
         _exportSummary.value = ExportSummary(0, 0, 0)
         _statusMessage.value = "Sẵn sàng."
-        stateMachine.reset()
+        transitionTo(SessionState.IDLE)
     }
 
     val activeConfig = MutableStateFlow(config)

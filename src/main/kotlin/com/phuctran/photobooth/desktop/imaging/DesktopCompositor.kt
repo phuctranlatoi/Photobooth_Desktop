@@ -87,13 +87,13 @@ class DesktopCompositor(
         val fileName = buildFileName(layout.id, frame.id)
         val finalPath = outputDir.resolve(fileName)
         
-        // Vẽ mã QR nếu có URL
-        if (qrCodeUrl != null) {
-            drawQRCode(canvas, qrCodeUrl, width, height, frame, layout)
-        }
-
-        // Lưu ảnh nguyên bản (dùng cho web/Cloudinary) bằng định dạng PNG không nén để tránh bị bể nét
+        // 1. Lưu ảnh nguyên bản (dùng cho web/Cloudinary) bằng định dạng PNG trước khi có QR
         ImageIO.write(canvas, "png", finalPath.toFile())
+        
+        // 2. Vẽ mã QR lên canvas (chỉ ảnh hưởng đến bản in từ đây trở đi)
+        if (qrCodeUrl != null) {
+            drawQRCode(canvas, qrCodeUrl, width, height, frame, layout, renderScale)
+        }
         
         val printPath = if (isStrip) {
             val paperWidth = 1226 * renderScale 
@@ -105,7 +105,7 @@ class DesktopCompositor(
             g2.color = Color.WHITE
             g2.fillRect(0, 0, paperWidth, paperHeight)
             
-            val paddingTop = 39 * renderScale
+            val paddingTop = 27 * renderScale // shifted up by 12px (1mm) from original 39px
             val paddingLeft = 14 * renderScale
             val gap = 2 * renderScale
             
@@ -137,7 +137,7 @@ class DesktopCompositor(
             g2.color = Color.WHITE
             g2.fillRect(0, 0, paperWidth, paperHeight)
             
-            val paddingTop = 39 * renderScale
+            val paddingTop = 27 * renderScale // shifted up by 12px (1mm) from original 39px
             val paddingLeft = 14 * renderScale // Cho đồng bộ với Strip
             
             val scaledWidth = 1184 * renderScale // Hoặc 1186 nếu mún full gap
@@ -291,9 +291,10 @@ class DesktopCompositor(
         return "print_${timestamp}_${safeLayout}_${safeFrame}.png"
     }
 
-    private fun drawQRCode(canvas: BufferedImage, url: String, canvasWidth: Int, canvasHeight: Int, frame: FramePack, layout: com.phuctran.photobooth.desktop.model.LayoutMode) {
+    private fun drawQRCode(canvas: BufferedImage, url: String, canvasWidth: Int, canvasHeight: Int, frame: FramePack, layout: com.phuctran.photobooth.desktop.model.LayoutMode, renderScale: Int) {
         try {
-            val qrSize = frame.qrCodeSize ?: layout.qrCodeSize ?: (canvasWidth * 0.10f).roundToInt().coerceAtLeast(100) // 10% width mặc định (thu nhỏ lại để tránh lẹm ảnh)
+            val configuredSize = frame.qrCodeSize ?: layout.qrCodeSize
+            val qrSize = if (configuredSize != null) configuredSize * renderScale else (canvasWidth * 0.10f).roundToInt().coerceAtLeast(100) // 10% width mặc định
             val hints = EnumMap<EncodeHintType, Any>(EncodeHintType::class.java)
             hints[EncodeHintType.ERROR_CORRECTION] = ErrorCorrectionLevel.M
             hints[EncodeHintType.MARGIN] = 1
@@ -301,8 +302,10 @@ class DesktopCompositor(
             val bitMatrix = QRCodeWriter().encode(url, BarcodeFormat.QR_CODE, qrSize, qrSize, hints)
             
             // Ưu tiên 2 lớp: Lấy cấu hình từ Frame trước, nếu null thì lấy từ Layout, nếu null tiếp thì mặc định góc dưới bên phải
-            val qrX = frame.qrCodeX ?: layout.qrCodeX ?: (canvasWidth - qrSize - 30)
-            val qrY = frame.qrCodeY ?: layout.qrCodeY ?: (canvasHeight - qrSize - 30)
+            val configuredX = frame.qrCodeX ?: layout.qrCodeX
+            val configuredY = frame.qrCodeY ?: layout.qrCodeY
+            val qrX = if (configuredX != null) configuredX * renderScale else (canvasWidth - qrSize - 30 * renderScale)
+            val qrY = if (configuredY != null) configuredY * renderScale else (canvasHeight - qrSize - 30 * renderScale)
             
             val g2 = canvas.createGraphics()
             g2.configure()

@@ -38,6 +38,11 @@ class DesktopImageProcessor {
             graphics.configure()
             graphics.color = Color.WHITE
             graphics.fillRect(0, 0, rgb.width, rgb.height)
+            
+            // Lật ngang (mirror) ảnh để giống hệt như khách soi gương lúc Live View
+            graphics.translate(rgb.width, 0)
+            graphics.scale(-1.0, 1.0)
+            
             graphics.drawImage(filtered, 0, 0, null)
         } finally {
             graphics.dispose()

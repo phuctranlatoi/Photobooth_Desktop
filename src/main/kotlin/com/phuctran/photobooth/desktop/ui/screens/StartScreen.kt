@@ -400,7 +400,7 @@ fun LayoutSelectionCard(
             Spacer(Modifier.width(12.dp))
             Column(verticalArrangement = Arrangement.Center, modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Bố cục ${layout.shotCount} ảnh",
+                    text = "Bố cục ${layout.selectCount} ảnh",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.subtitle2,
