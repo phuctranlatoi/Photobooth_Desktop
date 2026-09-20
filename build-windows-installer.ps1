@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
@@ -52,16 +52,7 @@ $taskNames = $tasksOutput | ForEach-Object {
     }
 }
 
-$packageTasks = @()
-if ($taskNames -contains "packageExe") {
-    $packageTasks += "packageExe"
-}
-if ($taskNames -contains "packageMsi") {
-    $packageTasks += "packageMsi"
-}
-if ($packageTasks.Count -eq 0 -and $taskNames -contains "packageDistributionForCurrentOS") {
-    $packageTasks += "packageDistributionForCurrentOS"
-}
+$packageTasks = @("packageDistributionForCurrentOS")
 
 if ($packageTasks.Count -eq 0) {
     Write-Host "Khong tim thay task dong goi Windows trong Gradle project."

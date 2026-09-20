@@ -59,8 +59,8 @@ class DesktopCompositor(
 
                 val image = ImageIO.read(photoPath.toFile())
                 if (image != null) {
-                    // Increase bleed margin to 80 pixels total (40px per side) at 2x scale
-                    val bleedPx = 40 * renderScale
+                    // Reduce bleed margin to 4 pixels total (2px per side) at 2x scale to prevent bleeding into adjacent slots
+                    val bleedPx = 2 * renderScale
                     val bleedSlot = Rectangle(
                         slot.x - bleedPx / 2,
                         slot.y - bleedPx / 2,

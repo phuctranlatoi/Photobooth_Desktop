@@ -30,8 +30,7 @@ class DesktopImageProcessor {
         effectId: String = "normal"
     ): Path? {
         Files.createDirectories(outputDir)
-        val cropped = image.centerCropToAspect(photoAspectRatio)
-        val filtered = applyEffect(cropped, effectId)
+        val filtered = applyEffect(image, effectId)
         val rgb = BufferedImage(filtered.width, filtered.height, BufferedImage.TYPE_INT_RGB)
         val graphics = rgb.createGraphics()
         try {

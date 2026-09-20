@@ -26,7 +26,7 @@ class NativeEosCaptureService(
     override var lastProcessedFrame: BufferedImage? = null
         private set
 
-    private val camera: CanonCamera = CanonCamera()
+    private var camera: CanonCamera = CanonCamera()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var liveViewJob: Job? = null
     private var sessionOpen = false
@@ -52,6 +52,9 @@ class NativeEosCaptureService(
             while (isActive) {
                 if (!sessionOpen) {
                     try {
+                        println("Native EDSDK: Attempting to reconnect...")
+                        runCatching { camera.closeSession() }
+                        camera = CanonCamera() // Re-instantiate to clear dead USB reference
                         sessionOpen = camera.openSession()
                         if (sessionOpen) {
                             println("Native EDSDK: Camera Reconnected!")
@@ -60,7 +63,9 @@ class NativeEosCaptureService(
                                 startLiveView(currentEffectId)
                             }
                         }
-                    } catch (e: Exception) {}
+                    } catch (e: Exception) {
+                        println("Native EDSDK: Reconnect attempt failed: ${e.message}")
+                    }
                 } else {
                     // Check if connection is still alive by fetching a basic property
                     try {
@@ -139,16 +144,25 @@ class NativeEosCaptureService(
                 return@launch
             }
 
+            var nullCount = 0
             while (isActive) {
                 try {
                     val image = camera.downloadLiveView()
                     if (image != null) {
+                        nullCount = 0
                         val processed = imageProcessor.applyEffectForLiveView(image, effectId)
                         lastProcessedFrame = processed
                         _liveViewStream.value = processed.toComposeImageBitmap()
                         image.flush()
                     } else {
+                        nullCount++
                         emitErrorFrame("LiveView null (Camera mode wrong/lens cap?)")
+                        if (nullCount > 20) {
+                            println("Native EDSDK: LiveView returned null 20 times. Assuming camera disconnected.")
+                            sessionOpen = false
+                            stopLiveView()
+                        }
+                        delay(100)
                     }
                 } catch (e: Exception) {
                     emitErrorFrame("LV Error: ${e.message}")
