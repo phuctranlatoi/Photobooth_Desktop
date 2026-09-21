@@ -43,7 +43,7 @@ fun AdminScreen(
     onAddFrame: (String) -> Unit,
     onSaveLayoutConfig: (String, Long, Int, Int) -> Unit = { _, _, _, _ -> },
     onDeleteLayout: (String) -> Unit,
-    onSaveSettings: (Boolean, Boolean, String) -> Unit,
+    onSaveSettings: (Boolean, Boolean, String, Int) -> Unit,
     onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
     onBack: () -> Unit
 ) {
@@ -65,6 +65,7 @@ fun AdminScreen(
     var enablePrint by remember { mutableStateOf(config.enableSystemPrint) }
     var useHotFolder by remember { mutableStateOf(config.useHotFolder) }
     var hotFolderPath by remember { mutableStateOf(config.hotFolderPath) }
+    var postCaptureTimeoutSeconds by remember { mutableStateOf(config.postCaptureTimeoutSeconds.toString()) }
 
     Column(
         modifier = Modifier
@@ -76,7 +77,7 @@ fun AdminScreen(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 KioskSecondaryButton("Thoát admin", {
-                onSaveSettings(enablePrint, useHotFolder, hotFolderPath)
+                onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds.toIntOrNull() ?: 90)
                 onBack() 
                 }, modifier = Modifier.width(150.dp))
                 Column {
@@ -333,7 +334,7 @@ fun AdminScreen(
                     Spacer(Modifier.height(16.dp))
                     KioskPrimaryButton(
                         text = "Lưu cài đặt",
-                        onClick = { onSaveSettings(enablePrint, useHotFolder, hotFolderPath) },
+                        onClick = { onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds.toIntOrNull() ?: 90) },
                         modifier = Modifier.width(180.dp)
                     )
                 }

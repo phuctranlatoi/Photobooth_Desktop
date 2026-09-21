@@ -70,6 +70,10 @@ class DesktopBoothController(
 
     val sessionState: StateFlow<SessionState> = stateMachine.currentState
 
+    private val _inactivityTimeLeft = MutableStateFlow<Int?>(null)
+    val inactivityTimeLeft = _inactivityTimeLeft.asStateFlow()
+    private var inactivityJob: kotlinx.coroutines.Job? = null
+
     private val _isAppReady = MutableStateFlow(false)
     val isAppReady = _isAppReady.asStateFlow()
 
@@ -181,10 +185,71 @@ class DesktopBoothController(
 
     fun transitionTo(newState: SessionState) {
         stateMachine.transitionTo(newState)
-        if (newState == SessionState.IDLE) {
-            // Reset to normal effect when returning to idle
-            chooseEffect(_availableEffects.value.first().id)
+        
+        // Handle inactivity timer
+        when (newState) {
+            SessionState.SELECTING_PHOTOS, SessionState.EDITING, SessionState.PRINT_PENDING -> {
+                if (inactivityJob == null) {
+                    startInactivityTimer()
+                }
+            }
+            SessionState.IDLE -> {
+                stopInactivityTimer()
+                chooseEffect(_availableEffects.value.first().id) // Reset to normal effect
+            }
+            else -> {
+                stopInactivityTimer()
+            }
         }
+    }
+
+    private fun startInactivityTimer() {
+        inactivityJob?.cancel()
+        val timeoutSeconds = activeConfig.value.postCaptureTimeoutSeconds
+        _inactivityTimeLeft.value = timeoutSeconds
+        inactivityJob = scope.launch {
+            for (i in timeoutSeconds downTo 1) {
+                delay(1000)
+                _inactivityTimeLeft.value = i - 1
+            }
+            // Timeout reached!
+            handleInactivityTimeout()
+        }
+    }
+
+    private fun stopInactivityTimer() {
+        inactivityJob?.cancel()
+        inactivityJob = null
+        _inactivityTimeLeft.value = null
+    }
+
+    fun resetInactivityTimer() {
+        // Only reset if we are currently running the timer
+        if (_inactivityTimeLeft.value != null) {
+            startInactivityTimer()
+        }
+    }
+
+    private fun handleInactivityTimeout() {
+        // Auto-select remaining photos if needed
+        val requiredCount = _selectedLayout.value.selectCount
+        var currentSelected = _selectedMoments.value.toMutableList()
+        if (currentSelected.size < requiredCount) {
+            val available = _capturedMoments.value.filter { it !in currentSelected }
+            val needed = requiredCount - currentSelected.size
+            currentSelected.addAll(available.take(needed))
+            _selectedMoments.value = currentSelected
+        }
+        
+        // Ensure a frame is selected
+        if (_selectedFrame.value.id == "empty") {
+            _availableFrames.value.firstOrNull()?.let {
+                _selectedFrame.value = it
+            }
+        }
+
+        // Auto print
+        startPrinting()
     }
 
     fun chooseLayout(layoutId: String) {
@@ -769,12 +834,13 @@ class DesktopBoothController(
 
     val activeConfig = MutableStateFlow(config)
 
-    fun saveDeviceSettings(enablePrint: Boolean, useHotFolder: Boolean, hotFolderPath: String) {
+    fun saveDeviceSettings(enablePrint: Boolean, useHotFolder: Boolean, hotFolderPath: String, postCaptureTimeoutSeconds: Int) {
         val envFile = config.envSource ?: DesktopAppPaths.workingDir().resolve(".env")
         val updates = mapOf(
             "ENABLE_SYSTEM_PRINT" to enablePrint.toString(),
             "USE_HOT_FOLDER" to useHotFolder.toString(),
-            "HOT_FOLDER_PATH" to hotFolderPath
+            "HOT_FOLDER_PATH" to hotFolderPath,
+            "POST_CAPTURE_TIMEOUT_SECONDS" to postCaptureTimeoutSeconds.toString()
         )
         runCatching {
             com.phuctran.photobooth.desktop.config.SettingsManager.updateSettings(envFile, updates)
@@ -783,7 +849,8 @@ class DesktopBoothController(
             activeConfig.value = config.copy(
                 enableSystemPrint = enablePrint,
                 useHotFolder = useHotFolder,
-                hotFolderPath = hotFolderPath
+                hotFolderPath = hotFolderPath,
+                postCaptureTimeoutSeconds = postCaptureTimeoutSeconds
             )
         }.onFailure { e ->
             _statusMessage.value = "Lỗi lưu cài đặt: ${e.message}"

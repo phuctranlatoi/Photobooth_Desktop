@@ -23,12 +23,16 @@ import com.phuctran.photobooth.desktop.ui.theme.*
 import androidx.compose.ui.unit.sp
 import java.nio.file.Path
 
+import androidx.compose.material.CircularProgressIndicator
+
 @Composable
 fun AppShell(
     state: SessionState,
     albumEnabled: Boolean = false,
     printerEnabled: Boolean = false,
     paymentConfigured: Boolean = false,
+    inactivityTimeLeft: Int? = null,
+    inactivityTimeout: Int = 90,
     content: @Composable BoxScope.() -> Unit
 ) {
     val isFullscreen = state == SessionState.LIVE_VIEW || state == SessionState.COUNTDOWN || state == SessionState.CAPTURING
@@ -42,6 +46,33 @@ fun AppShell(
             Modifier.fillMaxSize().background(NeutralBg).padding(24.dp)
         ) {
             content()
+            
+            if (inactivityTimeLeft != null) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .size(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        progress = 1f,
+                        color = NeutralBorder,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    CircularProgressIndicator(
+                        progress = inactivityTimeLeft.toFloat() / inactivityTimeout.toFloat(),
+                        color = MaterialTheme.colors.primary,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Text(
+                        text = inactivityTimeLeft.toString(),
+                        fontWeight = FontWeight.Bold,
+                        color = NeutralText,
+                        fontSize = 14.sp
+                    )
+                }
+            }
         }
     }
 }

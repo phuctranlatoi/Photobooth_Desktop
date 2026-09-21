@@ -62,13 +62,16 @@ fun main() = application {
         val availableLayouts by controller.availableLayouts.collectAsState()
         val liveViewBitmap by controller.liveViewStream.collectAsState()
         val currentConfig by controller.activeConfig.collectAsState()
+        val inactivityTimeLeft by controller.inactivityTimeLeft.collectAsState()
 
         PhotoboothTheme {
             AppShell(
                 state = state,
                 albumEnabled = currentConfig.canUploadAlbum,
                 printerEnabled = currentConfig.enableSystemPrint,
-                paymentConfigured = controller.isPaymentConfigured
+                paymentConfigured = controller.isPaymentConfigured,
+                inactivityTimeLeft = inactivityTimeLeft,
+                inactivityTimeout = currentConfig.postCaptureTimeoutSeconds
             ) {
                 if (!isAppReady) {
                     var loadingTimeout by remember { mutableStateOf(false) }
@@ -268,8 +271,8 @@ fun main() = application {
                             onDeleteLayout = { layoutId ->
                                 controller.deleteLayout(layoutId)
                             },
-                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath ->
-                                controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath)
+                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds ->
+                                controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds)
                             },
                             onSaveEffects = { effects ->
                                 controller.saveEffects(effects)
