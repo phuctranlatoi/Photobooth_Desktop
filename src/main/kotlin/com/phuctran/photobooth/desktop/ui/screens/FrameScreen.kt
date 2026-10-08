@@ -35,8 +35,8 @@ fun FrameScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        CompactLocalHeader("Bước 7", "Chọn khung trang trí")
+    PremiumPageShell(title = "Chọn khung trang trí", onBack = onBack) {
+      Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
             Column(Modifier.weight(0.85f).fillMaxHeight()) {
                 SectionHeader("", "Bản in xem trước", "${selectedFrame.title} · ${layout.printSizeLabel}")
@@ -69,5 +69,6 @@ fun FrameScreen(
             }
         }
         BottomActionBar("Xem bản in", onConfirm, "Quay lại", onBack)
+      }
     }
 }

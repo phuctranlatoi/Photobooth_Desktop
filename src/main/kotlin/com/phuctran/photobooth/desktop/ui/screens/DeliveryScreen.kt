@@ -61,7 +61,7 @@ fun DeliveryScreen(
 
 @Composable
 private fun DeliveryHeading(hasQr: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(64.dp).clip(CircleShape).background(AccentMint.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentMint, modifier = Modifier.size(36.dp))
         }

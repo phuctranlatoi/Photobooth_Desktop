@@ -206,6 +206,52 @@ fun SectionHeader(badge: String, title: String, subtitle: String) {
 }
 
 @Composable
+fun MinimalStepIndicator(currentStep: Int, totalSteps: Int, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        (1..totalSteps).forEach { step ->
+            Box(
+                Modifier
+                    .size(width = if (step == currentStep) 32.dp else 12.dp, height = 6.dp)
+                    .clip(CircleShape)
+                    .background(if (step <= currentStep) AccentNude else NeutralBorder)
+            )
+        }
+        Spacer(Modifier.width(4.dp))
+        Text("$currentStep / $totalSteps", style = MaterialTheme.typography.caption, color = NeutralSecondary)
+    }
+}
+
+/** Open guest page wrapper; media and decisions are not enclosed in a card. */
+@Composable
+fun PremiumPageShell(
+    title: String,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String = "",
+    currentStep: Int? = null,
+    totalSteps: Int = 2,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+            KioskBackButton(onClick = onBack)
+            Spacer(Modifier.width(20.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.h4, color = NeutralText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (subtitle.isNotBlank()) {
+                    Text(subtitle, style = MaterialTheme.typography.body2, color = NeutralSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            if (currentStep != null) {
+                Spacer(Modifier.width(16.dp))
+                MinimalStepIndicator(currentStep, totalSteps)
+            }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth(), content = content)
+    }
+}
+
+@Composable
 fun InfoPill(text: String, modifier: Modifier = Modifier, bgColor: Color = NeutralBg, textColor: Color = NeutralText) {
     Text(
         text,

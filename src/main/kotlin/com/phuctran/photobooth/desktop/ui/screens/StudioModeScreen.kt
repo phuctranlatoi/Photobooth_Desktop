@@ -44,23 +44,12 @@ fun StudioModeScreen(
     var step by remember { mutableStateOf(1) }
 
     if (step == 1) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
-            KioskBackButton(onClick = { if (step == 1) onBack() else step = 1 })
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text(if (step == 1) "Chọn bố cục" else "Chọn màu ảnh", style = MaterialTheme.typography.h6, color = NeutralText)
-                Text("Bước $step / 2", style = MaterialTheme.typography.caption, color = NeutralSecondary)
-            }
-            Spacer(Modifier.weight(1f))
-            StepIndicator(step = 1, currentStep = step, label = "Bố cục")
-            Spacer(Modifier.width(32.dp))
-            Divider(Modifier.width(100.dp), color = if (step >= 2) MaterialTheme.colors.primary else NeutralBorder)
-            Spacer(Modifier.width(32.dp))
-            StepIndicator(step = 2, currentStep = step, label = "Màu ảnh")
-        }
-
-        PanelBox(Modifier.fillMaxSize()) {
+        PremiumPageShell(
+            title = "Chọn bố cục",
+            subtitle = "Lướt để xem các bố cục và nhấp vào bố cục ở giữa để đi tiếp.",
+            currentStep = 1,
+            onBack = onBack
+        ) {
             Step1Layout(
                 layouts = layouts,
                 selectedLayout = selectedLayout,
@@ -70,7 +59,6 @@ fun StudioModeScreen(
                 },
                 onBack = onBack
             )
-        }
         }
     } else {
         Step2Effect(
@@ -133,13 +121,6 @@ fun Step1Layout(
     )
 
     Column(Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SectionHeader("Bước 1", "Chọn bố cục", "Lướt để xem các bố cục và nhấp vào bố cục ở giữa để đi tiếp.")
-        }
-
         Spacer(Modifier.height(32.dp))
 
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
