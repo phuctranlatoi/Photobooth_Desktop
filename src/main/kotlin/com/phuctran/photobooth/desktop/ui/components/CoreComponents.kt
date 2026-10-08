@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +15,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,6 +52,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
+import kotlin.math.max
 
 
 
@@ -304,6 +311,41 @@ fun loadImageBitmap(path: Path, version: Long = 0L): ImageBitmap? {
     return ThumbnailCache.getOrLoad("photo:${path.toAbsolutePath().normalize()}:$version") { decodeImageThumbnail(path) }
 }
 
+/** Larger in-memory preview; never replaces the gallery thumbnail or changes the captured file. */
+@Composable
+fun rememberPreviewImageBitmap(path: Path?): ImageBitmap? {
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, path) {
+        value = path?.let { withContext(Dispatchers.IO) { loadPreviewImageBitmap(it) } }
+    }
+    return bitmap
+}
+
+private fun loadPreviewImageBitmap(path: Path): ImageBitmap? =
+    ThumbnailCache.getOrLoad("preview:${path.toAbsolutePath().normalize()}") {
+        try {
+            Files.newInputStream(path).use { stream ->
+                javax.imageio.ImageIO.createImageInputStream(stream).use { input ->
+                    val readers = javax.imageio.ImageIO.getImageReaders(input)
+                    if (!readers.hasNext()) return@getOrLoad null
+                    val reader = readers.next()
+                    try {
+                        reader.setInput(input, true, true)
+                        // Keep the long side near 2400px; unlike the grid, do not use thumb_ui_ files.
+                        val sample = max(1, (max(reader.getWidth(0), reader.getHeight(0)) + 2399) / 2400)
+                        val params = reader.defaultReadParam
+                        params.setSourceSubsampling(sample, sample, 0, 0)
+                        reader.read(0, params)?.toComposeImageBitmap()
+                    } finally {
+                        reader.dispose()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
 private fun decodeImageThumbnail(path: Path): ImageBitmap? {
     return try {
         val thumbPath = path.resolveSibling("thumb_ui_" + path.fileName.toString())
@@ -386,20 +428,40 @@ private fun decodeFrameThumbnail(path: Path): ImageBitmap? {
 }
 
 @Composable
-fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, isDimmed: Boolean = false, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, isDimmed: Boolean = false, onClick: () -> Unit, onPreview: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     val bitmap = rememberImageBitmap(moment.photoPath)
-    
-    val scale by androidx.compose.animation.core.animateFloatAsState(if (selectedOrder != null) 0.95f else 1f)
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnPreview by rememberUpdatedState(onPreview)
     val dimAlpha by androidx.compose.animation.core.animateFloatAsState(if (isDimmed) 0.4f else 0f)
 
     Box(
         modifier
             .aspectRatio(aspectRatio)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(14.dp))
             .background(NeutralPanelAlt)
             .border(if (selectedOrder != null) 4.dp else 1.dp, if (selectedOrder != null) AccentNude else NeutralBorder, RoundedCornerShape(14.dp))
-            .bouncyClickable(onClick = onClick)
+            .pointerInput(Unit) {
+                var showedPreview = false
+                detectTapGestures(
+                    onPress = {
+                        showedPreview = false
+                        coroutineScope {
+                            val previewJob = launch {
+                                delay(250)
+                                showedPreview = true
+                                currentOnPreview(true)
+                            }
+                            try {
+                                tryAwaitRelease()
+                            } finally {
+                                previewJob.cancel()
+                                currentOnPreview(false)
+                            }
+                        }
+                    },
+                    onTap = { if (!showedPreview) currentOnClick() }
+                )
+            }
     ) {
         if (bitmap != null) {
             Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())

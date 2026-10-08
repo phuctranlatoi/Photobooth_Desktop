@@ -2,13 +2,25 @@ package com.phuctran.photobooth.desktop.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.model.CapturedMoment
@@ -26,11 +38,14 @@ fun SelectPhotosScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    var previewingMoment by remember { mutableStateOf<CapturedMoment?>(null) }
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         CompactLocalHeader("Bước 6", "Chọn ảnh")
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
             Column(Modifier.weight(1.4f).fillMaxHeight()) {
                 SectionHeader("", "Chọn ảnh để in", "Đã chọn ${selectedMoments.size}/${layout.selectCount} ảnh · Album giữ toàn bộ ảnh.")
+                Text("Chạm để chọn · Giữ để xem lớn", style = MaterialTheme.typography.body2, color = NeutralSecondary)
                 Spacer(Modifier.height(18.dp))
                 if (capturedMoments.isEmpty()) {
                     Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -41,19 +56,20 @@ fun SelectPhotosScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
+                        columns = GridCells.Fixed(6),
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(bottom = 12.dp)
                     ) {
-                        itemsIndexed(capturedMoments, key = { index, moment -> "${moment.photoPath}:$index" }) { _, moment ->
+                        itemsIndexed(capturedMoments, key = { index, moment -> "${moment.photoPath}:$index" }, span = { _, _ -> GridItemSpan(if (layout.photoAspectRatio >= 1.1f) 3 else 2) }) { _, moment ->
                             MomentTile(
                                 moment = moment,
                                 selectedOrder = selectedMoments.indexOf(moment).takeIf { it >= 0 }?.plus(1),
                                 aspectRatio = layout.photoAspectRatio,
                                 isDimmed = selectedMoments.size >= layout.selectCount && !selectedMoments.contains(moment),
-                                onClick = { onMomentSelect(moment) }
+                                onClick = { onMomentSelect(moment) },
+                                onPreview = { previewingMoment = if (it) moment else null }
                             )
                         }
                     }
@@ -77,5 +93,26 @@ fun SelectPhotosScreen(
             onSecondary = onBack,
             primaryEnabled = selectedMoments.size == layout.selectCount
         )
+        }
+        AnimatedVisibility(
+            visible = previewingMoment != null,
+            modifier = Modifier.fillMaxSize(),
+            enter = fadeIn(),
+            exit = ExitTransition.None
+        ) {
+            previewingMoment?.let { moment ->
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f))) {
+                    val preview = rememberPreviewImageBitmap(moment.photoPath)
+                    if (preview != null) {
+                        Image(
+                            bitmap = preview,
+                            contentDescription = moment.photoLabel,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize().padding(24.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
