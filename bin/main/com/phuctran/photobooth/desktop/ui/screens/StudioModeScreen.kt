@@ -43,7 +43,8 @@ fun StudioModeScreen(
 ) {
     var step by remember { mutableStateOf(1) }
 
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    if (step == 1) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
             KioskBackButton(onClick = { if (step == 1) onBack() else step = 1 })
             Spacer(Modifier.width(16.dp))
@@ -60,31 +61,27 @@ fun StudioModeScreen(
         }
 
         PanelBox(Modifier.fillMaxSize()) {
-            androidx.compose.animation.AnimatedContent(
-                targetState = step
-            ) { targetStep ->
-                when (targetStep) {
-                    1 -> Step1Layout(
-                        layouts = layouts,
-                        selectedLayout = selectedLayout,
-                        onLayoutSelect = {
-                            onLayoutSelected(it.id)
-                            step = 2
-                        },
-                        onBack = onBack
-                    )
-                    2 -> Step2Effect(
-                        effects = effects,
-                        selectedEffect = selectedEffect,
-                        selectedLayout = selectedLayout,
-                        liveViewStream = liveViewStream,
-                        onEffectSelect = onEffectSelected,
-                        onBack = { step = 1 },
-                        onConfirm = onConfirm
-                    )
-                }
-            }
+            Step1Layout(
+                layouts = layouts,
+                selectedLayout = selectedLayout,
+                onLayoutSelect = {
+                    onLayoutSelected(it.id)
+                    step = 2
+                },
+                onBack = onBack
+            )
         }
+        }
+    } else {
+        Step2Effect(
+            effects = effects,
+            selectedEffect = selectedEffect,
+            selectedLayout = selectedLayout,
+            liveViewStream = liveViewStream,
+            onEffectSelect = onEffectSelected,
+            onBack = { step = 1 },
+            onConfirm = onConfirm
+        )
     }
 }
 
@@ -228,81 +225,90 @@ fun Step2Effect(
     onBack: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    Box(Modifier.fillMaxSize()) {
-        // Main Area: Live View / Preview (Full bleed)
-        StudioLiveView(liveViewStream, selectedEffect)
-        
-        // Gradient overlay for better text/button readability
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.5f),
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.6f)
-                        )
-                    )
-                )
-        )
-        
-        // Top Left: Back Button & Header
-        Row(Modifier.align(Alignment.TopStart).padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val compact = maxWidth < 1024.dp
+        val dock: @Composable () -> Unit = {
+            Row(
+                modifier = Modifier
+                    .widthIn(max = 540.dp)
+                    .shadow(12.dp, RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xE6262528))
+                    .padding(8.dp)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("←", fontSize = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = FontWeight.Bold, color = Color.White)
-            }
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text("Bước 2", style = MaterialTheme.typography.overline, color = Color.White.copy(alpha = 0.7f))
-                Text("Màu ảnh", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = Color.White)
-            }
-        }
-
-        // Top Right: Confirm Button
-        BouncyButton(
-            onClick = onConfirm,
-            colors = ButtonDefaults.buttonColors(backgroundColor = AccentNude, contentColor = Color.White),
-            modifier = Modifier.align(Alignment.TopEnd).padding(24.dp).height(56.dp).width(160.dp)
-        ) {
-            Text("TIẾP TỤC", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.subtitle1)
-        }
-
-        // Bottom Area: Floating Effect Selector
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(24.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            effects.forEach { effect ->
-                val isSelected = effect.id == selectedEffect.id
-                val bgColor = if (isSelected) AccentNude else Color.White
-                val textColor = if (isSelected) Color.White else NeutralText
-                
-                Column(
-                    modifier = Modifier
-                        .width(160.dp)
-                        .height(140.dp)
-                        .shadow(if (isSelected) 16.dp else 4.dp, RoundedCornerShape(20.dp))
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(bgColor)
-                        .clickable { onEffectSelect(effect.id) }
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Box(Modifier.size(56.dp).clip(CircleShape).background(Color(effect.accentColor)))
-                    Spacer(Modifier.height(12.dp))
-                    Text(effect.title, fontWeight = FontWeight.Bold, color = textColor, style = MaterialTheme.typography.subtitle1, maxLines = 1)
+                effects.forEach { effect ->
+                    val isSelected = effect.id == selectedEffect.id
+                    Row(
+                        modifier = Modifier
+                            .height(64.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(if (isSelected) AccentNude else Color.Transparent)
+                            .clickable { onEffectSelect(effect.id) }
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(14.dp).clip(CircleShape)
+                                .background(Color(effect.accentColor))
+                                .border(1.dp, Color.White.copy(alpha = 0.65f), CircleShape)
+                        )
+                        Text(
+                            effect.title,
+                            style = MaterialTheme.typography.subtitle1,
+                            color = Color.White,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
+        }
+
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp))) {
+            StudioLiveView(liveViewStream, selectedEffect)
+            Box(
+                Modifier.fillMaxSize().background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent, Color.Black.copy(alpha = 0.5f))
+                    )
+                )
+            )
+        }
+
+        Row(
+            Modifier.align(Alignment.TopStart).padding(24.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color(0xD9262528))
+                .padding(start = 8.dp, end = 24.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            KioskBackButton(onClick = onBack, light = true)
+            Spacer(Modifier.width(14.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Bước 2 / 2", style = MaterialTheme.typography.caption, color = Color.White.copy(alpha = 0.8f))
+                Text("Màu ảnh", style = MaterialTheme.typography.h5, color = Color.White)
+            }
+        }
+
+        if (compact) {
+            Column(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                dock()
+                KioskPrimaryButton("TIẾP TỤC", onClick = onConfirm, modifier = Modifier.align(Alignment.End).width(180.dp).height(64.dp))
+            }
+        } else {
+            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) { dock() }
+            KioskPrimaryButton(
+                "TIẾP TỤC",
+                onClick = onConfirm,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp).width(180.dp).height(64.dp)
+            )
         }
     }
 }
@@ -316,15 +322,33 @@ private fun StudioLiveView(liveViewStream: StateFlow<ImageBitmap?>, selectedEffe
         }
         Image(
             bitmap = liveViewBitmap!!,
-            contentDescription = "Live View Preview",
+            contentDescription = "Xem trực tiếp từ máy ảnh",
             modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = -1f),
             contentScale = ContentScale.Crop,
             colorFilter = colorFilter
         )
     } else {
-        Box(Modifier.fillMaxSize().background(Color(0xFF1A1A1A)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(CameraBlack), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Chưa có tín hiệu máy ảnh", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.h6)
+                androidx.compose.foundation.Canvas(Modifier.size(56.dp)) {
+                    val ink = Color.White.copy(alpha = 0.48f)
+                    drawRoundRect(
+                        color = ink,
+                        topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.08f, size.height * 0.25f),
+                        size = androidx.compose.ui.geometry.Size(size.width * 0.84f, size.height * 0.58f),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.1f),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
+                    )
+                    drawCircle(ink, radius = size.width * 0.14f, center = center,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx()))
+                    drawRoundRect(
+                        color = ink,
+                        topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.25f, size.height * 0.16f),
+                        size = androidx.compose.ui.geometry.Size(size.width * 0.28f, size.height * 0.1f),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+                    )
+                }
+                Text("Chưa có tín hiệu máy ảnh", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.h6)
             }
         }
     }
