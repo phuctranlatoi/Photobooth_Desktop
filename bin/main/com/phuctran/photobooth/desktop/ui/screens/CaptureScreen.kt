@@ -89,11 +89,11 @@ fun CaptureScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(84.dp)
+                        .size(108.dp)
                         .graphicsLayer { scaleX = shutterScale; scaleY = shutterScale }
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                        .background(Color.White.copy(alpha = 0.13f))
+                        .border(2.dp, Color.White.copy(alpha = 0.74f), CircleShape)
                         .clickable(
                             interactionSource = shutterInteractionSource,
                             indication = null,
@@ -105,10 +105,10 @@ fun CaptureScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(84.dp)
                             .clip(CircleShape)
-                            .background(Color.White)
-                            .border(2.dp, AccentNude.copy(alpha = 0.5f), CircleShape)
+                            .background(Color.White.copy(alpha = 0.94f))
+                            .border(2.dp, AccentNude.copy(alpha = 0.8f), CircleShape)
                     )
                 }
                 Text("Chạm để chụp", color = Color.White.copy(alpha = 0.86f), style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)

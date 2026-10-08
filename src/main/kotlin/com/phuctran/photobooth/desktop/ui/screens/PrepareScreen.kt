@@ -27,7 +27,8 @@ fun PrepareScreen(layout: LayoutMode, effect: EffectMode) {
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
             CameraPoseGuide(Modifier.weight(0.9f).fillMaxHeight(0.86f))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                SectionHeader("Bước 5", "Chuẩn bị tạo dáng", "Khi nhấn chụp, mỗi ảnh sẽ có 3 giây đếm ngược.")
+                CompactLocalHeader("Bước 5", "Chuẩn bị tạo dáng")
+                Text("Khi nhấn chụp, mỗi ảnh sẽ có 3 giây đếm ngược.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
                 Spacer(Modifier.height(28.dp))
                 Text("Đứng vào khung, nhìn camera và giữ dáng khi số đếm hiện lên.", style = MaterialTheme.typography.h4, fontWeight = FontWeight.Black, color = NeutralText)
                 Spacer(Modifier.height(24.dp))

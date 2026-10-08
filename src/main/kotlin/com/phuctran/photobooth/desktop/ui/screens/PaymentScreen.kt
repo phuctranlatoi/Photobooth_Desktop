@@ -11,13 +11,13 @@ import androidx.compose.ui.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.phuctran.photobooth.desktop.model.*
 import com.phuctran.photobooth.desktop.ui.components.*
 import com.phuctran.photobooth.desktop.ui.theme.*
@@ -35,54 +35,52 @@ fun PaymentScreen(
 ) {
     var staffPanelVisible by remember { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize().background(NeutralBg)) {
-        Row(
-            modifier = Modifier.align(Alignment.TopStart).padding(24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            KioskBackButton(onBack, modifier = Modifier.size(KioskControlTokens.buttonMinHeight))
-            Column(
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.align(Alignment.TopStart).padding(24.dp)) {
+            // Keep the staff-only long press on the title rather than exposing the override.
+            CompactLocalHeader("Bước 3", "Thanh toán", onBack,
                 modifier = Modifier.pointerInput(Unit) {
                     detectTapGestures(onLongPress = { staffPanelVisible = true })
-                }
-            ) {
-                SectionHeader("", "Thanh toán", "Quét QR bằng ứng dụng ngân hàng hoặc nhờ nhân viên xác nhận tiền mặt.")
-            }
+                })
+            Text("Quét QR bằng ứng dụng ngân hàng hoặc nhờ nhân viên xác nhận tiền mặt.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
         }
 
         Row(
-            modifier = Modifier.fillMaxSize().padding(start = 92.dp, end = 92.dp, top = 108.dp, bottom = 60.dp),
+            modifier = Modifier.fillMaxSize().padding(start = 68.dp, end = 68.dp, top = 116.dp, bottom = 76.dp),
             horizontalArrangement = Arrangement.spacedBy(28.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PanelBox(Modifier.weight(0.9f).fillMaxHeight(0.78f)) {
-                Text("Tổng thanh toán", style = MaterialTheme.typography.h5, color = NeutralText)
-                Spacer(Modifier.height(28.dp))
-                Text(formatVnd(totalAmount), style = MaterialTheme.typography.h2, fontWeight = FontWeight.Black, color = NeutralText)
-                Spacer(Modifier.height(20.dp))
+            Column(Modifier.weight(0.9f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                Text("Số tiền cần thanh toán", style = MaterialTheme.typography.h5, color = NeutralText)
+                Spacer(Modifier.height(12.dp))
+                Text(formatVnd(totalAmount), style = MaterialTheme.typography.h1.copy(fontSize = 44.sp), fontWeight = FontWeight.Black, color = AccentNudeDark)
+                Spacer(Modifier.height(32.dp))
                 OutputRow("Bố cục", layout.title)
                 Spacer(Modifier.height(10.dp))
                 OutputRow("Màu ảnh", effect.title)
                 Spacer(Modifier.height(10.dp))
                 OutputRow("Bản in", "$printCopies bản")
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(24.dp))
                 StatusChip(
-                    label = "PayOS",
-                    value = if (isPaymentConfigured) "Sẵn sàng" else "Chưa cấu hình",
-                    color = if (isPaymentConfigured) AccentMint else AccentAmber
+                    label = "Thanh toán QR",
+                    value = when {
+                        !isPaymentConfigured -> "Chưa sẵn sàng"
+                        paymentQrData == "ERROR" -> "Không thể tạo mã"
+                        paymentQrData == null -> "Đang tạo mã"
+                        else -> "Sẵn sàng"
+                    },
+                    color = if (isPaymentConfigured && paymentQrData != "ERROR") AccentMint else AccentAmber
                 )
             }
 
             Column(
                 Modifier
                     .weight(1f)
-                    .fillMaxHeight(0.86f)
-                    .shadow(18.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black.copy(alpha = 0.1f), spotColor = Color.Black.copy(alpha = 0.1f))
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(NeutralPanel)
-                    .border(1.dp, NeutralBorder, RoundedCornerShape(24.dp))
-                    .padding(32.dp),
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(NeutralPanel.copy(alpha = 0.94f))
+                    .border(1.dp, NeutralBorder, RoundedCornerShape(16.dp))
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -113,7 +111,7 @@ fun PaymentScreen(
                             QrCodeView(paymentQrData, Modifier.size(270.dp))
                         }
                         Spacer(Modifier.height(24.dp))
-                        Text("Quét mã để thanh toán", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText)
+                        Text("Quét mã bằng ứng dụng ngân hàng", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = NeutralText)
                         Spacer(Modifier.height(8.dp))
                         Text(
                             "Sau khi thanh toán thành công, hệ thống sẽ tự chuyển sang bước chụp.",
@@ -135,9 +133,9 @@ fun PaymentScreen(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 26.dp)
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(RoundedCornerShape(KioskControlTokens.floatingCornerRadius))
                     .background(NeutralPanel)
-                    .border(1.dp, NeutralBorder, RoundedCornerShape(999.dp))
+                    .border(1.dp, NeutralBorder, RoundedCornerShape(KioskControlTokens.floatingCornerRadius))
                     .clickable { onPaid() }
                     .padding(horizontal = 22.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,

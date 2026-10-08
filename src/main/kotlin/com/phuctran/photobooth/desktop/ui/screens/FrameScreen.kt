@@ -35,29 +35,15 @@ fun FrameScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit
 ) {
-    Row(Modifier.fillMaxSize().background(NeutralBg), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Surface(
-            modifier = Modifier.weight(0.85f).fillMaxHeight().shadow(4.dp, RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
-            color = NeutralPanel
-        ) {
-            Column(Modifier.padding(24.dp)) {
-                SectionHeader("", "Preview bản in", "${selectedFrame.title} · ${layout.printSizeLabel}")
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        CompactLocalHeader("Bước 7", "Chọn khung trang trí")
+        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+            Column(Modifier.weight(0.85f).fillMaxHeight()) {
+                SectionHeader("", "Bản in xem trước", "${selectedFrame.title} · ${layout.printSizeLabel}")
                 Spacer(Modifier.height(18.dp))
                 PrintPreview(layout, selectedMoments, selectedFrame, Modifier.weight(1f).fillMaxWidth())
             }
-        }
-        Surface(
-            modifier = Modifier.weight(1f).fillMaxHeight().shadow(4.dp, RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
-            color = NeutralPanel
-        ) {
-            Column(Modifier.padding(24.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    KioskBackButton(onClick = onBack)
-                    SectionHeader("Bước 7", "Chọn khung ảnh", "Chạm vào khung để xem ngay trên bản in.")
-                }
-                Spacer(Modifier.height(16.dp))
+            Column(Modifier.weight(1f).fillMaxHeight()) {
             
                 if (frames.isEmpty()) {
                     Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -80,12 +66,8 @@ fun FrameScreen(
                         }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    KioskSecondaryButton("Quay lại", onBack, modifier = Modifier.weight(1f))
-                    KioskPrimaryButton("Xem bản in", onConfirm, modifier = Modifier.weight(1f))
-                }
             }
         }
+        BottomActionBar("Xem bản in", onConfirm, "Quay lại", onBack)
     }
 }

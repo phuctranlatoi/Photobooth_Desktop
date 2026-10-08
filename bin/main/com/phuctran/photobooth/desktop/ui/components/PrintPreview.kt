@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.model.*
 import com.phuctran.photobooth.desktop.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 @Composable
@@ -56,14 +58,11 @@ fun PrintPreview(
                 val moment = moments.getOrNull(slot.index)
                 val bitmap = rememberImageBitmap(moment?.photoPath)
                 
-                // Increase bleed to 8.dp to ensure no background shows through
-                val bleedX = 8.dp
-                val bleedY = 8.dp
                 Box(
                     modifier = Modifier
-                        .offset(x - bleedX / 2, y - bleedY / 2)
-                        .width(slotW + bleedX)
-                        .height(slotH + bleedY)
+                        .offset(x, y)
+                        .width(slotW)
+                        .height(slotH)
                         .clip(RoundedCornerShape(0.dp))
                         .background(NeutralPanelAlt)
                         .border(1.dp, NeutralBorder.copy(alpha = 0.75f), RoundedCornerShape(0.dp))
@@ -88,13 +87,11 @@ fun PrintPreview(
                 val y = top + (slotHeight + gapY) * row.toFloat()
                 val moment = moments.getOrNull(index)
                 val bitmap = rememberImageBitmap(moment?.photoPath)
-                val bleedX = 8.dp
-                val bleedY = 8.dp
                 Box(
                     modifier = Modifier
-                        .offset(x - bleedX / 2, y - bleedY / 2)
-                        .width(slotWidth + bleedX)
-                        .height(slotHeight + bleedY)
+                        .offset(x, y)
+                        .width(slotWidth)
+                        .height(slotHeight)
                         .clip(RoundedCornerShape(0.dp))
                         .background(NeutralPanelAlt)
                         .border(1.dp, NeutralBorder.copy(alpha = 0.75f), RoundedCornerShape(0.dp))
@@ -114,22 +111,18 @@ fun PrintPreview(
         }
 
         if (frame.isCustom && frame.customImagePath != null) {
-            val overlay by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, frame.customImagePath) {
-                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    try {
-                        org.jetbrains.skia.Image.makeFromEncoded(java.nio.file.Files.readAllBytes(frame.customImagePath!!)).toComposeImageBitmap()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        null
-                    }
-                }
+            val framePath = frame.customImagePath
+            val overlay by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, framePath) {
+                // The on-screen preview only needs a thumbnail. The compositor still reads the
+                // original PNG for printing; the shared cache keeps decoded previews bounded.
+                value = withContext(Dispatchers.IO) { loadFrameThumbnail(framePath) }
             }
             val overlayBitmap = overlay
             if (overlayBitmap != null) {
                 Image(
                     bitmap = overlayBitmap,
                     contentDescription = null,
-                    contentScale = ContentScale.FillBounds,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize(),
                     filterQuality = androidx.compose.ui.graphics.FilterQuality.High
                 )

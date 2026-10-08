@@ -9,10 +9,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 
-val NeutralBg = Color(0xFFF9F8F6)
+val NeutralBg = Color(0xFFFBFBFC)
 val NeutralPanel = Color.White
 val NeutralPanelAlt = Color(0xFFF3F4F6)
-val NeutralText = Color(0xFF1C1917)
+val NeutralText = Color(0xFF242424)
 val NeutralSecondary = Color(0xFF596271)
 val NeutralMuted = Color(0xFF858D99)
 val NeutralBorder = Color(0xFFDCE2EA)
@@ -44,10 +44,10 @@ val KioskColors = androidx.compose.material.lightColors(
 
 private val KioskTypography = Typography(
     defaultFontFamily = FontFamily.SansSerif,
-    h1 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 30.sp, letterSpacing = 0.sp),
+    h1 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 28.sp, letterSpacing = 0.sp),
     h2 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 26.sp, letterSpacing = 0.sp),
     h3 = TextStyle(fontWeight = FontWeight.Medium, fontSize = 22.sp, letterSpacing = 0.sp),
-    h4 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 28.sp, letterSpacing = 0.sp),
+    h4 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 28.sp, letterSpacing = 0.sp),
     h5 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, letterSpacing = 0.sp),
     h6 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp, letterSpacing = 0.sp),
     subtitle1 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 16.sp, letterSpacing = 0.sp),

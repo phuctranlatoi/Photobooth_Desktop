@@ -264,6 +264,34 @@ private object ThumbnailCache {
     }
 }
 
+/** Stable, touch-sized actions on a lightly translucent floating surface. */
+@Composable
+fun BottomActionBar(
+    primaryText: String,
+    onPrimary: () -> Unit,
+    secondaryText: String? = null,
+    onSecondary: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    primaryEnabled: Boolean = true
+) {
+    val shape = RoundedCornerShape(KioskControlTokens.floatingCornerRadius)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(NeutralPanel.copy(alpha = 0.94f))
+            .border(1.dp, NeutralBorder.copy(alpha = 0.7f), shape)
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (secondaryText != null && onSecondary != null) {
+            KioskSecondaryButton(secondaryText, onSecondary, modifier = Modifier.weight(1f))
+        }
+        KioskPrimaryButton(primaryText, onPrimary, modifier = Modifier.weight(1f), enabled = primaryEnabled)
+    }
+}
+
 @Composable
 fun rememberImageBitmap(path: Path?, version: Long = 0L): ImageBitmap? {
     val bitmap by produceState<ImageBitmap?>(initialValue = null, path, version) {

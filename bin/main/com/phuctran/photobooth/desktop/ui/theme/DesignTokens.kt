@@ -4,7 +4,8 @@ import androidx.compose.ui.unit.dp
 
 /** Shared touch-control dimensions and press feedback. */
 object KioskControlTokens {
-    val buttonCornerRadius = 14.dp
+    val buttonCornerRadius = 16.dp
+    val floatingCornerRadius = 24.dp
     val buttonMinHeight = 56.dp
-    const val pressedScale = 0.95f
+    const val pressedScale = 0.97f
 }

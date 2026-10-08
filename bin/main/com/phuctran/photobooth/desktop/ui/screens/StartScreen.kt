@@ -62,7 +62,7 @@ fun StartScreen(
             modifier = Modifier.weight(0.9f).fillMaxHeight().padding(start = 28.dp, end = 16.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Le Souvenir", color = AccentNudeDark, fontWeight = FontWeight.Black, style = MaterialTheme.typography.h4, modifier = Modifier.clickable(
+            Text("LE SOUVENIR", color = AccentNudeDark, fontWeight = FontWeight.Black, style = MaterialTheme.typography.h4, modifier = Modifier.clickable(
                 indication = null, 
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             ) {
@@ -73,7 +73,7 @@ fun StartScreen(
                 }
             })
             Spacer(Modifier.height(14.dp))
-            Text("Chụp ảnh lấy ngay", style = MaterialTheme.typography.h2, fontWeight = FontWeight.Black, color = NeutralText)
+            Text("Chụp ảnh lấy ngay", style = MaterialTheme.typography.h1, fontWeight = FontWeight.Black, color = NeutralText)
             Spacer(Modifier.height(16.dp))
             Text(
                 "Chọn layout, tạo dáng, in ảnh và quét QR để tải album về điện thoại.",
@@ -90,7 +90,7 @@ fun StartScreen(
             KioskPrimaryButton(
                 text = "CHẠM ĐỂ BẮT ĐẦU",
                 onClick = onStart,
-                modifier = Modifier.width(300.dp).height(KioskControlTokens.buttonMinHeight)
+                modifier = Modifier.widthIn(min = 300.dp).heightIn(min = 80.dp)
             )
             
             Spacer(Modifier.height(28.dp))
@@ -118,20 +118,16 @@ fun StartScreen(
                     ) { showFrames ->
                         if (!showFrames) {
                             Column(Modifier.fillMaxSize()) {
-                                // TOP ROW: Chọn bundle
+                                // Event choices remain on the welcome screen, without a faux desktop back toolbar.
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = NeutralText)
-                                        Spacer(Modifier.width(8.dp))
-                                        Column {
-                                            Text("Chọn bundle", color = NeutralText, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
-                                            Spacer(Modifier.height(4.dp))
-                                            Text("Nhiều khung ảnh theo chủ đề đặc biệt cho bạn lựa chọn", color = NeutralSecondary, style = MaterialTheme.typography.body2)
-                                        }
+                                    Column {
+                                        Text("Bộ khung theo sự kiện", color = NeutralText, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.height(4.dp))
+                                        Text("Chạm để khám phá các khung ảnh đặc biệt", color = NeutralSecondary, style = MaterialTheme.typography.body2)
                                     }
                                 }
                                 
@@ -277,7 +273,7 @@ fun StartScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("Le Souvenir", color = NeutralText, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
-                    Text("Vui lòng thiết lập Khung Sự Kiện (Special) trong Admin.", color = NeutralSecondary, style = MaterialTheme.typography.body2)
+                    Text("Một khoảnh khắc, nhiều kỷ niệm để mang về.", color = NeutralSecondary, style = MaterialTheme.typography.body2)
                 }
             }
         }

@@ -43,7 +43,7 @@ fun StudioModeScreen(
 ) {
     var step by remember { mutableStateOf(1) }
 
-    Column(Modifier.fillMaxSize().background(NeutralBg), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
             KioskBackButton(onClick = { if (step == 1) onBack() else step = 1 })
             Spacer(Modifier.width(16.dp))
@@ -261,7 +261,7 @@ fun Step2Effect(
                 Text("Màu ảnh", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black, color = Color.White)
             }
         }
-        
+
         // Top Right: Confirm Button
         BouncyButton(
             onClick = onConfirm,
@@ -270,7 +270,7 @@ fun Step2Effect(
         ) {
             Text("TIẾP TỤC", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.subtitle1)
         }
-        
+
         // Bottom Area: Floating Effect Selector
         Row(
             modifier = Modifier
