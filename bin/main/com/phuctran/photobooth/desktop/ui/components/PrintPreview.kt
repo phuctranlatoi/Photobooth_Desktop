@@ -54,7 +54,7 @@ fun PrintPreview(
                 val slotW = maxWidth * slot.width
                 val slotH = maxHeight * slot.height
                 val moment = moments.getOrNull(slot.index)
-                val bitmap = remember(moment?.photoPath) { moment?.photoPath?.let(::loadImageBitmap) }
+                val bitmap = rememberImageBitmap(moment?.photoPath)
                 
                 // Increase bleed to 8.dp to ensure no background shows through
                 val bleedX = 8.dp
@@ -87,7 +87,7 @@ fun PrintPreview(
                 val x = left + (slotWidth + gapX) * column.toFloat()
                 val y = top + (slotHeight + gapY) * row.toFloat()
                 val moment = moments.getOrNull(index)
-                val bitmap = remember(moment?.photoPath) { moment?.photoPath?.let(::loadImageBitmap) }
+                val bitmap = rememberImageBitmap(moment?.photoPath)
                 val bleedX = 8.dp
                 val bleedY = 8.dp
                 Box(

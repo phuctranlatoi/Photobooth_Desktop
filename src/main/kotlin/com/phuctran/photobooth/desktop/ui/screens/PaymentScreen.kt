@@ -36,23 +36,28 @@ fun PaymentScreen(
     var staffPanelVisible by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(NeutralBg)) {
-        KioskBackButton(onBack, modifier = Modifier.align(Alignment.TopStart).padding(24.dp))
+        Row(
+            modifier = Modifier.align(Alignment.TopStart).padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            KioskBackButton(onBack, modifier = Modifier.size(KioskControlTokens.buttonMinHeight))
+            Column(
+                modifier = Modifier.pointerInput(Unit) {
+                    detectTapGestures(onLongPress = { staffPanelVisible = true })
+                }
+            ) {
+                SectionHeader("", "Thanh toán", "Quét QR bằng ứng dụng ngân hàng hoặc nhờ nhân viên xác nhận tiền mặt.")
+            }
+        }
 
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 92.dp, vertical = 48.dp),
+            modifier = Modifier.fillMaxSize().padding(start = 92.dp, end = 92.dp, top = 108.dp, bottom = 60.dp),
             horizontalArrangement = Arrangement.spacedBy(28.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             PanelBox(Modifier.weight(0.9f).fillMaxHeight(0.78f)) {
-                Column(
-                    modifier = Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onLongPress = { staffPanelVisible = true }
-                        )
-                    }
-                ) {
-                    SectionHeader("Bước 4", "Thanh toán", "Quét QR bằng ứng dụng ngân hàng hoặc nhờ nhân viên xác nhận tiền mặt.")
-                }
+                Text("Tổng thanh toán", style = MaterialTheme.typography.h5, color = NeutralText)
                 Spacer(Modifier.height(28.dp))
                 Text(formatVnd(totalAmount), style = MaterialTheme.typography.h2, fontWeight = FontWeight.Black, color = NeutralText)
                 Spacer(Modifier.height(20.dp))

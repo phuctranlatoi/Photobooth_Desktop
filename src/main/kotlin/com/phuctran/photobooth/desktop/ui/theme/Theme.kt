@@ -9,18 +9,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 
-val NeutralBg = Color(0xFFF4F6F8)
+val NeutralBg = Color(0xFFF9F8F6)
 val NeutralPanel = Color.White
-val NeutralPanelAlt = Color(0xFFEEF2F6)
-val NeutralText = Color(0xFF17171F)
+val NeutralPanelAlt = Color(0xFFF3F4F6)
+val NeutralText = Color(0xFF1C1917)
 val NeutralSecondary = Color(0xFF596271)
 val NeutralMuted = Color(0xFF858D99)
 val NeutralBorder = Color(0xFFDCE2EA)
 
-val AccentNude = Color(0xFFC9876A)
+val AccentNude = Color(0xFFB95C3F)
 val AccentNudeDark = Color(0xFF9C5D46)
 val AccentNudeLight = Color(0xFFFFF0E8)
-val AccentMint = Color(0xFF0E9F86)
+val AccentMint = Color(0xFF2A9D8F)
 val AccentBlue = Color(0xFF2563EB)
 val AccentAmber = Color(0xFFD97706)
 val AccentRed = Color(0xFFDC2626)
@@ -44,9 +44,9 @@ val KioskColors = androidx.compose.material.lightColors(
 
 private val KioskTypography = Typography(
     defaultFontFamily = FontFamily.SansSerif,
-    h1 = TextStyle(fontWeight = FontWeight.Black, fontSize = 72.sp, letterSpacing = 0.sp),
-    h2 = TextStyle(fontWeight = FontWeight.Black, fontSize = 48.sp, letterSpacing = 0.sp),
-    h3 = TextStyle(fontWeight = FontWeight.Black, fontSize = 36.sp, letterSpacing = 0.sp),
+    h1 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 30.sp, letterSpacing = 0.sp),
+    h2 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 26.sp, letterSpacing = 0.sp),
+    h3 = TextStyle(fontWeight = FontWeight.Medium, fontSize = 22.sp, letterSpacing = 0.sp),
     h4 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 28.sp, letterSpacing = 0.sp),
     h5 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, letterSpacing = 0.sp),
     h6 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp, letterSpacing = 0.sp),
@@ -54,7 +54,7 @@ private val KioskTypography = Typography(
     subtitle2 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 14.sp, letterSpacing = 0.sp),
     body1 = TextStyle(fontWeight = FontWeight.Normal, fontSize = 16.sp, letterSpacing = 0.sp),
     body2 = TextStyle(fontWeight = FontWeight.Normal, fontSize = 14.sp, letterSpacing = 0.sp),
-    button = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp, letterSpacing = 0.sp),
+    button = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 16.sp, letterSpacing = 0.sp),
     caption = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 0.sp),
     overline = TextStyle(fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 0.sp)
 )

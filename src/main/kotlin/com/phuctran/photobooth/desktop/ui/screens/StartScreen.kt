@@ -47,18 +47,6 @@ fun StartScreen(
     onStart: () -> Unit, 
     onAdmin: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition()
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.025f,
-        animationSpec = infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse)
-    )
-    val floatOffsetY by infiniteTransition.animateFloat(
-        initialValue = -10f,
-        targetValue = 10f,
-        animationSpec = infiniteRepeatable(tween(2600, easing = FastOutSlowInEasing), RepeatMode.Reverse)
-    )
-    
     var tapCount by remember { mutableStateOf(0) }
     var selectedEvent by remember { mutableStateOf<String?>(null) }
     var selectedLayoutId by remember { mutableStateOf<String?>(null) }
@@ -100,9 +88,9 @@ fun StartScreen(
             Spacer(Modifier.height(42.dp))
             
             KioskPrimaryButton(
-                text = "Bắt đầu chụp",
+                text = "CHẠM ĐỂ BẮT ĐẦU",
                 onClick = onStart,
-                modifier = Modifier.width(300.dp).height(72.dp).graphicsLayer(scaleX = pulseScale, scaleY = pulseScale)
+                modifier = Modifier.width(300.dp).height(KioskControlTokens.buttonMinHeight)
             )
             
             Spacer(Modifier.height(28.dp))
@@ -114,8 +102,8 @@ fun StartScreen(
                 .weight(1.2f)
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(24.dp))
-                .background(CameraBlack)
-                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp)),
+                .background(NeutralPanel)
+                .border(1.dp, NeutralBorder, RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center
         ) {
             if (specialFrames.isNotEmpty()) {
@@ -137,12 +125,12 @@ fun StartScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = NeutralText)
                                         Spacer(Modifier.width(8.dp))
                                         Column {
-                                            Text("Chọn bundle", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                                            Text("Chọn bundle", color = NeutralText, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
                                             Spacer(Modifier.height(4.dp))
-                                            Text("Nhiều khung ảnh theo chủ đề đặc biệt cho bạn lựa chọn", color = NeutralMuted, style = MaterialTheme.typography.body2)
+                                            Text("Nhiều khung ảnh theo chủ đề đặc biệt cho bạn lựa chọn", color = NeutralSecondary, style = MaterialTheme.typography.body2)
                                         }
                                     }
                                 }
@@ -183,7 +171,7 @@ fun StartScreen(
                                         layouts.filter { it.id in possibleLayoutIds }.sortedBy { it.id }
                                     }
                                     
-                                    Text("Chọn bố cục", color = Color.White, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
+                                    Text("Chọn bố cục", color = NeutralText, style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
                                     Spacer(Modifier.height(12.dp))
                                     
                                     FlowRow(
@@ -208,7 +196,7 @@ fun StartScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(12.dp))
-                                            .background(Color(0xFF2A2631))
+                                            .background(NeutralBg)
                                             .padding(16.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -222,15 +210,15 @@ fun StartScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
                                         onClick = { selectedLayoutId = null },
-                                        modifier = Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF2A2631))
+                                        modifier = Modifier.size(48.dp).clip(CircleShape).background(NeutralBg)
                                     ) {
-                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = NeutralText)
                                     }
                                     Spacer(Modifier.width(16.dp))
                                     Column {
-                                        Text("Chọn mẫu khung", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
+                                        Text("Chọn mẫu khung", color = NeutralText, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)
                                         Spacer(Modifier.height(4.dp))
-                                        Text("Lướt để xem các khung ảnh và chọn mẫu ưng ý nhất", color = NeutralMuted, style = MaterialTheme.typography.body2)
+                                        Text("Lướt để xem các khung ảnh và chọn mẫu ưng ý nhất", color = NeutralSecondary, style = MaterialTheme.typography.body2)
                                     }
                                 }
                                 
@@ -270,17 +258,17 @@ fun StartScreen(
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(Brush.linearGradient(listOf(Color(0xFF18151B), Color(0xFF3C2D2A))))
+                        .background(Brush.linearGradient(listOf(NeutralPanel, AccentNudeLight)))
                 )
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     PhotostripGraphic(
                         modifier = Modifier
-                            .offset(x = (-50).dp, y = floatOffsetY.dp)
+                            .offset(x = (-50).dp, y = 0.dp)
                             .graphicsLayer(rotationZ = -10f)
                     )
                     PhotostripGraphic(
                         modifier = Modifier
-                            .offset(x = 52.dp, y = (-floatOffsetY).dp)
+                            .offset(x = 52.dp, y = 0.dp)
                             .graphicsLayer(rotationZ = 7f)
                     )
                 }
@@ -288,8 +276,8 @@ fun StartScreen(
                     Modifier.align(Alignment.BottomStart).padding(28.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Le Souvenir", color = Color.White, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
-                    Text("Vui lòng thiết lập Khung Sự Kiện (Special) trong Admin.", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.body2)
+                    Text("Le Souvenir", color = NeutralText, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Black)
+                    Text("Vui lòng thiết lập Khung Sự Kiện (Special) trong Admin.", color = NeutralSecondary, style = MaterialTheme.typography.body2)
                 }
             }
         }
@@ -304,12 +292,9 @@ fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.des
     val coverPath = remember(eventName) {
         com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir().resolve("data").resolve("covers").resolve("$eventName.png")
     }
-    val coverBitmap = remember(coverPath) {
-        if (java.nio.file.Files.exists(coverPath)) loadImageBitmap(coverPath) else null
-    }
-    val previewBitmap = remember(frames, coverBitmap) {
-        coverBitmap ?: frames.firstOrNull()?.customImagePath?.let(::loadImageBitmap)
-    }
+    val coverBitmap = rememberImageBitmap(coverPath)
+    val frameBitmap = rememberImageBitmap(frames.firstOrNull()?.customImagePath)
+    val previewBitmap = coverBitmap ?: frameBitmap
     
     Surface(
         modifier = Modifier
@@ -425,7 +410,7 @@ fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, ta
     var isHovered by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered) 1.02f else 1f)
     
-    val bitmap = remember(frame.customImagePath) { frame.customImagePath?.let(::loadImageBitmap) }
+    val bitmap = rememberImageBitmap(frame.customImagePath)
     val aspectRatio = targetLayout?.printAspectRatio ?: 0.66f
     
     Surface(

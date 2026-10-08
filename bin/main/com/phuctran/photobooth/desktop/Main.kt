@@ -60,7 +60,6 @@ fun main() = application {
 
         val isAppReady by controller.isAppReady.collectAsState()
         val availableLayouts by controller.availableLayouts.collectAsState()
-        val liveViewBitmap by controller.liveViewStream.collectAsState()
         val currentConfig by controller.activeConfig.collectAsState()
         val inactivityTimeLeft by controller.inactivityTimeLeft.collectAsState()
 
@@ -151,7 +150,7 @@ fun main() = application {
                             effects = com.phuctran.photobooth.desktop.model.DefaultEffectModes,
                             selectedLayout = layout,
                             selectedEffect = effect,
-                            liveViewBitmap = liveViewBitmap,
+                            liveViewStream = controller.liveViewStream,
                             onLayoutSelected = { controller.chooseLayout(it) },
                             onEffectSelected = { controller.chooseEffect(it) },
                             onConfirm = { controller.confirmStudioSetup() },
@@ -188,7 +187,7 @@ fun main() = application {
                             capturedMoments = capturedMoments,
                             captureSources = captureSources,
                             cameraDevices = cameraDevices,
-                            liveViewBitmap = liveViewBitmap,
+                            liveViewStream = controller.liveViewStream,
                             isRecordingVideo = isRecordingVideo,
                             onImportSources = {
                                 val chooser = javax.swing.JFileChooser().apply { 
@@ -208,7 +207,8 @@ fun main() = application {
                         capturedMoments = capturedMoments,
                         selectedMoments = selectedMoments,
                         onMomentSelect = { controller.toggleMoment(it) },
-                        onConfirm = { controller.confirmSelection() }
+                        onConfirm = { controller.confirmSelection() },
+                        onBack = { controller.goBack() }
                     )
                     SessionState.EDITING -> FrameScreen(
                         frames = availableFrames,

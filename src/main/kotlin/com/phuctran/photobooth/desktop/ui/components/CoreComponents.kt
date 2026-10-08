@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +29,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import java.nio.file.Path
 import java.nio.file.Files
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.phuctran.photobooth.desktop.model.CapturedMoment
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.model.EffectMode
@@ -71,24 +72,19 @@ fun BouncyButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
+        targetValue = if (enabled && isPressed) KioskControlTokens.pressedScale else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium)
     )
-
     Button(
         onClick = onClick,
         enabled = enabled,
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(KioskControlTokens.buttonCornerRadius),
         colors = colors,
         elevation = ButtonDefaults.elevation(0.dp, 0.dp, 0.dp),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
-        modifier = modifier.graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
         content()
     }
@@ -108,9 +104,9 @@ fun KioskPrimaryButton(
             backgroundColor = if (enabled) AccentNude else NeutralBorder,
             contentColor = if (enabled) Color.White else NeutralMuted
         ),
-        modifier = modifier.heightIn(min = 56.dp)
+        modifier = modifier.heightIn(min = KioskControlTokens.buttonMinHeight)
     ) {
-        Text(text, fontWeight = FontWeight.Black, style = MaterialTheme.typography.button, maxLines = 1)
+        Text(text, style = MaterialTheme.typography.button, maxLines = 1)
     }
 }
 
@@ -121,10 +117,17 @@ fun KioskSecondaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (enabled && isPressed) KioskControlTokens.pressedScale else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium)
+    )
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(12.dp),
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(KioskControlTokens.buttonCornerRadius),
         colors = ButtonDefaults.outlinedButtonColors(
             backgroundColor = NeutralPanel,
             contentColor = NeutralText,
@@ -132,9 +135,10 @@ fun KioskSecondaryButton(
         ),
         border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder),
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
-        modifier = modifier.heightIn(min = 56.dp)
+        modifier = modifier.heightIn(min = KioskControlTokens.buttonMinHeight)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
-        Text(text, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.button, maxLines = 1)
+        Text(text, style = MaterialTheme.typography.button, maxLines = 1)
     }
 }
 
@@ -233,7 +237,46 @@ fun StatusChip(
 
 fun formatVnd(amount: Long): String = String.format("%,d đ", amount)
 
-fun loadImageBitmap(path: Path): ImageBitmap? {
+// Bounded cache shared by the gallery, print previews and frame grid. Keep photo and frame
+// thumbnails separate: the latter is encoded as PNG to retain transparency.
+private object ThumbnailCache {
+    private const val maxBytes = 64L * 1024 * 1024
+    private val entries = object : LinkedHashMap<String, ImageBitmap>(32, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ImageBitmap>): Boolean = false
+    }
+    private var bytes = 0L
+
+    @Synchronized
+    fun getOrLoad(key: String, load: () -> ImageBitmap?): ImageBitmap? {
+        entries[key]?.let { return it }
+        val bitmap = load() ?: return null
+        val weight = bitmap.width.toLong() * bitmap.height * 4
+        if (weight <= maxBytes) {
+            while (bytes + weight > maxBytes && entries.isNotEmpty()) {
+                val first = entries.entries.iterator().next()
+                bytes -= first.value.width.toLong() * first.value.height * 4
+                entries.remove(first.key)
+            }
+            entries[key] = bitmap
+            bytes += weight
+        }
+        return bitmap
+    }
+}
+
+@Composable
+fun rememberImageBitmap(path: Path?, version: Long = 0L): ImageBitmap? {
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, path, version) {
+        value = path?.let { withContext(Dispatchers.IO) { loadImageBitmap(it, version) } }
+    }
+    return bitmap
+}
+
+fun loadImageBitmap(path: Path, version: Long = 0L): ImageBitmap? {
+    return ThumbnailCache.getOrLoad("photo:${path.toAbsolutePath().normalize()}:$version") { decodeImageThumbnail(path) }
+}
+
+private fun decodeImageThumbnail(path: Path): ImageBitmap? {
     return try {
         val thumbPath = path.resolveSibling("thumb_ui_" + path.fileName.toString())
         if (Files.exists(thumbPath)) {
@@ -273,6 +316,10 @@ fun loadImageBitmap(path: Path): ImageBitmap? {
 }
 
 fun loadFrameThumbnail(path: Path): ImageBitmap? {
+    return ThumbnailCache.getOrLoad("frame:${path.toAbsolutePath().normalize()}") { decodeFrameThumbnail(path) }
+}
+
+private fun decodeFrameThumbnail(path: Path): ImageBitmap? {
     try {
         if (!Files.exists(path)) return null
         val thumbPath = path.resolveSibling("thumb_" + path.fileName.toString())
@@ -312,7 +359,7 @@ fun loadFrameThumbnail(path: Path): ImageBitmap? {
 
 @Composable
 fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, isDimmed: Boolean = false, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val bitmap = remember(moment.photoPath) { moment.photoPath?.let(::loadImageBitmap) }
+    val bitmap = rememberImageBitmap(moment.photoPath)
     
     val scale by androidx.compose.animation.core.animateFloatAsState(if (selectedOrder != null) 0.95f else 1f)
     val dimAlpha by androidx.compose.animation.core.animateFloatAsState(if (isDimmed) 0.4f else 0f)

@@ -15,14 +15,10 @@ import kotlinx.coroutines.launch
 
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.gestures.scrollBy
 import com.phuctran.photobooth.desktop.domain.SessionState
 import com.phuctran.photobooth.desktop.model.*
 import com.phuctran.photobooth.desktop.ui.components.*
@@ -30,6 +26,8 @@ import com.phuctran.photobooth.desktop.ui.theme.*
 
 
 import java.nio.file.Path
+import androidx.compose.ui.graphics.ImageBitmap
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun StudioModeScreen(
@@ -37,7 +35,7 @@ fun StudioModeScreen(
     effects: List<EffectMode>,
     selectedLayout: LayoutMode,
     selectedEffect: EffectMode,
-    liveViewBitmap: androidx.compose.ui.graphics.ImageBitmap?,
+    liveViewStream: StateFlow<ImageBitmap?>,
     onLayoutSelected: (String) -> Unit,
     onEffectSelected: (String) -> Unit,
     onConfirm: () -> Unit,
@@ -45,9 +43,15 @@ fun StudioModeScreen(
 ) {
     var step by remember { mutableStateOf(1) }
 
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        // Top Progress Bar
-        Row(Modifier.fillMaxWidth().height(60.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxSize().background(NeutralBg), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
+            KioskBackButton(onClick = { if (step == 1) onBack() else step = 1 })
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(if (step == 1) "Chọn bố cục" else "Chọn màu ảnh", style = MaterialTheme.typography.h6, color = NeutralText)
+                Text("Bước $step / 2", style = MaterialTheme.typography.caption, color = NeutralSecondary)
+            }
+            Spacer(Modifier.weight(1f))
             StepIndicator(step = 1, currentStep = step, label = "Bố cục")
             Spacer(Modifier.width(32.dp))
             Divider(Modifier.width(100.dp), color = if (step >= 2) MaterialTheme.colors.primary else NeutralBorder)
@@ -73,7 +77,7 @@ fun StudioModeScreen(
                         effects = effects,
                         selectedEffect = selectedEffect,
                         selectedLayout = selectedLayout,
-                        liveViewBitmap = liveViewBitmap,
+                        liveViewStream = liveViewStream,
                         onEffectSelect = onEffectSelected,
                         onBack = { step = 1 },
                         onConfirm = onConfirm
@@ -136,10 +140,6 @@ fun Step1Layout(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
-                Text("←", fontSize = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.width(16.dp))
             SectionHeader("Bước 1", "Chọn bố cục", "Lướt để xem các bố cục và nhấp vào bố cục ở giữa để đi tiếp.")
         }
 
@@ -158,23 +158,7 @@ fun Step1Layout(
                     state = pagerState,
                     pagerSnapDistance = androidx.compose.foundation.pager.PagerSnapDistance.atMost(20)
                 ),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .draggable(
-                        orientation = Orientation.Horizontal,
-                        state = rememberDraggableState { delta ->
-                            coroutineScope.launch {
-                                pagerState.scrollBy(-delta)
-                            }
-                        },
-                        onDragStopped = { velocity: Float ->
-                            coroutineScope.launch {
-                                val pagesToSpin = (velocity / 500f).toInt().coerceIn(-10, 10)
-                                val targetPage = pagerState.currentPage - pagesToSpin
-                                pagerState.animateScrollToPage(targetPage)
-                            }
-                        }
-                    )
+                modifier = Modifier.fillMaxSize()
             ) { page ->
                 val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                 val absoluteOffset = kotlin.math.abs(pageOffset)
@@ -239,34 +223,14 @@ fun Step2Effect(
     effects: List<EffectMode>,
     selectedEffect: EffectMode,
     selectedLayout: LayoutMode,
-    liveViewBitmap: androidx.compose.ui.graphics.ImageBitmap?,
+    liveViewStream: StateFlow<ImageBitmap?>,
     onEffectSelect: (String) -> Unit,
     onBack: () -> Unit,
     onConfirm: () -> Unit
 ) {
     Box(Modifier.fillMaxSize()) {
         // Main Area: Live View / Preview (Full bleed)
-        if (liveViewBitmap != null) {
-            val colorFilter = remember(selectedEffect) {
-                val matrix = selectedEffect.toComposeColorMatrix()
-                androidx.compose.ui.graphics.ColorFilter.colorMatrix(matrix)
-            }
-            
-            Image(
-                bitmap = liveViewBitmap,
-                contentDescription = "Live View Preview",
-                modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = -1f),
-                contentScale = ContentScale.Crop,
-                colorFilter = colorFilter
-            )
-        } else {
-            // Fallback if camera is off - DO NOT show PrintPreview here. Show a clean dark placeholder.
-            Box(Modifier.fillMaxSize().background(Color(0xFF1A1A1A)), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Chưa có tín hiệu máy ảnh", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.h6)
-                }
-            }
-        }
+        StudioLiveView(liveViewStream, selectedEffect)
         
         // Gradient overlay for better text/button readability
         Box(
@@ -338,6 +302,29 @@ fun Step2Effect(
                     Spacer(Modifier.height(12.dp))
                     Text(effect.title, fontWeight = FontWeight.Bold, color = textColor, style = MaterialTheme.typography.subtitle1, maxLines = 1)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudioLiveView(liveViewStream: StateFlow<ImageBitmap?>, selectedEffect: EffectMode) {
+    val liveViewBitmap by liveViewStream.collectAsState()
+    if (liveViewBitmap != null) {
+        val colorFilter = remember(selectedEffect) {
+            androidx.compose.ui.graphics.ColorFilter.colorMatrix(selectedEffect.toComposeColorMatrix())
+        }
+        Image(
+            bitmap = liveViewBitmap!!,
+            contentDescription = "Live View Preview",
+            modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = -1f),
+            contentScale = ContentScale.Crop,
+            colorFilter = colorFilter
+        )
+    } else {
+        Box(Modifier.fillMaxSize().background(Color(0xFF1A1A1A)), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Chưa có tín hiệu máy ảnh", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.h6)
             }
         }
     }

@@ -662,9 +662,7 @@ fun EventAdminCard(
 ) {
     val coverPath = remember(eventName) { frameStore.getSpecialEventCoverPath(eventName) }
     var coverLastModified by remember { mutableStateOf(if (java.nio.file.Files.exists(coverPath)) java.nio.file.Files.getLastModifiedTime(coverPath).toMillis() else 0L) }
-    val coverBitmap = remember(coverPath, coverLastModified) {
-        if (java.nio.file.Files.exists(coverPath)) com.phuctran.photobooth.desktop.ui.components.loadImageBitmap(coverPath) else null
-    }
+    val coverBitmap = com.phuctran.photobooth.desktop.ui.components.rememberImageBitmap(coverPath, coverLastModified)
     var showConfirm by remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
     

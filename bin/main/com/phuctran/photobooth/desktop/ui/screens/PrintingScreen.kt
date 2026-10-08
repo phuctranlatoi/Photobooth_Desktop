@@ -1,25 +1,23 @@
 package com.phuctran.photobooth.desktop.ui.screens
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import com.phuctran.photobooth.desktop.domain.SessionState
-import com.phuctran.photobooth.desktop.model.*
-import com.phuctran.photobooth.desktop.ui.components.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.phuctran.photobooth.desktop.model.FramePack
+import com.phuctran.photobooth.desktop.model.LayoutMode
+import com.phuctran.photobooth.desktop.ui.components.PanelBox
 import com.phuctran.photobooth.desktop.ui.theme.*
-import java.nio.file.Path
 
 @Composable
 fun PrintingScreen(layout: LayoutMode, frame: FramePack, statusMessage: String) {
@@ -31,51 +29,35 @@ fun PrintingScreen(layout: LayoutMode, frame: FramePack, statusMessage: String) 
         else -> 0
     }
 
-    PanelBox(Modifier.fillMaxSize()) {
-        Column(
-            Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                "Le Souvenir", 
-                style = MaterialTheme.typography.h3, 
-                fontWeight = FontWeight.Black, 
-                color = AccentNudeDark
-            )
-            Spacer(Modifier.height(48.dp))
-            
-            // Progress Pipeline
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+    Box(Modifier.fillMaxSize().background(NeutralBg).padding(32.dp)) {
+        PanelBox(Modifier.fillMaxSize()) {
+            Column(
+                Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                PipelineStep("Ghép ảnh", isActive = currentStep >= 1, isDone = currentStep > 1)
-                PipelineDivider(isActive = currentStep >= 2)
-                PipelineStep("In ảnh", isActive = currentStep >= 2, isDone = currentStep > 2)
-                PipelineDivider(isActive = currentStep >= 3)
-                PipelineStep("Album & QR", isActive = currentStep >= 3, isDone = currentStep > 3)
-                PipelineDivider(isActive = currentStep >= 4)
-                PipelineStep("Video", isActive = currentStep >= 4, isDone = currentStep > 4)
+                Text("Le Souvenir", style = MaterialTheme.typography.h3, fontWeight = FontWeight.Bold, color = NeutralText)
+                Spacer(Modifier.height(48.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PipelineStep("Ghép ảnh", currentStep >= 1, currentStep > 1)
+                    PipelineDivider(currentStep >= 2)
+                    PipelineStep("In ảnh", currentStep >= 2, currentStep > 2)
+                    PipelineDivider(currentStep >= 3)
+                    PipelineStep("Album & QR", currentStep >= 3, currentStep > 3)
+                    PipelineDivider(currentStep >= 4)
+                    PipelineStep("Video", currentStep >= 4, currentStep > 4)
+                }
+                Spacer(Modifier.height(48.dp))
+                CircularProgressIndicator(color = AccentMint, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    statusMessage.ifBlank { "Đang hoàn thiện tác phẩm của bạn..." },
+                    style = MaterialTheme.typography.h5,
+                    fontWeight = FontWeight.Medium,
+                    color = NeutralText,
+                    textAlign = TextAlign.Center
+                )
             }
-            
-            Spacer(Modifier.height(48.dp))
-            
-            CircularProgressIndicator(
-                color = AccentNudeDark,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(32.dp)
-            )
-            
-            Spacer(Modifier.height(16.dp))
-            
-            Text(
-                statusMessage.ifBlank { "Đang hoàn thiện tác phẩm của bạn..." }, 
-                style = MaterialTheme.typography.h5, 
-                fontWeight = FontWeight.Medium, 
-                color = NeutralText,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }
@@ -84,10 +66,7 @@ fun PrintingScreen(layout: LayoutMode, frame: FramePack, statusMessage: String) 
 fun PipelineStep(label: String, isActive: Boolean, isDone: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(if (isActive) AccentNude else NeutralBorder),
+            Modifier.size(40.dp).clip(CircleShape).background(if (isActive) AccentMint else NeutralBorder),
             contentAlignment = Alignment.Center
         ) {
             if (isDone) {
@@ -96,21 +75,12 @@ fun PipelineStep(label: String, isActive: Boolean, isDone: Boolean) {
                 CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
             }
         }
-        Text(
-            label, 
-            style = MaterialTheme.typography.subtitle2, 
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-            color = if (isActive) NeutralText else NeutralSecondary
-        )
+        Text(label, style = MaterialTheme.typography.subtitle2, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+            color = if (isActive) NeutralText else NeutralSecondary)
     }
 }
 
 @Composable
 fun PipelineDivider(isActive: Boolean) {
-    Box(
-        modifier = Modifier
-            .width(40.dp)
-            .height(2.dp)
-            .background(if (isActive) AccentNude else NeutralBorder)
-    )
+    Box(Modifier.width(40.dp).height(2.dp).background(if (isActive) AccentMint else NeutralBorder))
 }
