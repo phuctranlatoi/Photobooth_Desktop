@@ -24,6 +24,8 @@ data class DesktopBoothConfig(
     val payosApiKey: String = "",
     val payosChecksumKey: String = "",
     val postCaptureTimeoutSeconds: Int = 90,
+    val photoSelectionTimeoutSeconds: Int = 90,
+    val frameSelectionTimeoutSeconds: Int = 60,
     val printerNameStrip: String = "",
     val printerNameFull: String = ""
 ) {
@@ -70,6 +72,8 @@ object DesktopConfigLoader {
             payosApiKey = env["PAYOS_API_KEY"].orEmpty(),
             payosChecksumKey = env["PAYOS_CHECKSUM_KEY"].orEmpty(),
             postCaptureTimeoutSeconds = env["POST_CAPTURE_TIMEOUT_SECONDS"]?.toIntOrNull() ?: 90,
+            photoSelectionTimeoutSeconds = env["PHOTO_SELECTION_TIMEOUT_SECONDS"]?.toIntOrNull() ?: 90,
+            frameSelectionTimeoutSeconds = env["FRAME_SELECTION_TIMEOUT_SECONDS"]?.toIntOrNull() ?: 60,
             printerNameStrip = env["PRINTER_NAME_STRIP"].orEmpty(),
             printerNameFull = env["PRINTER_NAME_FULL"].orEmpty()
         )

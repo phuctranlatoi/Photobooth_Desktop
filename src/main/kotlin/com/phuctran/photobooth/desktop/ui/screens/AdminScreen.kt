@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -43,7 +44,7 @@ fun AdminScreen(
     onAddFrame: (String) -> Unit,
     onSaveLayoutConfig: (String, Long, Int, Int) -> Unit = { _, _, _, _ -> },
     onDeleteLayout: (String) -> Unit,
-    onSaveSettings: (Boolean, Boolean, String, Int) -> Unit,
+    onSaveSettings: (Boolean, Boolean, String, Int, Int, Int) -> Unit,
     onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
     onBack: () -> Unit
 ) {
@@ -65,7 +66,13 @@ fun AdminScreen(
     var enablePrint by remember { mutableStateOf(config.enableSystemPrint) }
     var useHotFolder by remember { mutableStateOf(config.useHotFolder) }
     var hotFolderPath by remember { mutableStateOf(config.hotFolderPath) }
-    var postCaptureTimeoutSeconds by remember { mutableStateOf(config.postCaptureTimeoutSeconds.toString()) }
+    var postCaptureTimeoutSeconds by remember { mutableIntStateOf(config.postCaptureTimeoutSeconds) }
+    var photoSelectionTimeoutSeconds by remember { mutableIntStateOf(config.photoSelectionTimeoutSeconds) }
+    var frameSelectionTimeoutSeconds by remember { mutableIntStateOf(config.frameSelectionTimeoutSeconds) }
+
+    fun saveSettings() {
+        onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds)
+    }
 
     Column(
         modifier = Modifier
@@ -77,7 +84,7 @@ fun AdminScreen(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 KioskSecondaryButton("Thoát admin", {
-                onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds.toIntOrNull() ?: 90)
+                saveSettings()
                 onBack() 
                 }, modifier = Modifier.width(150.dp))
                 Column {
@@ -331,10 +338,19 @@ fun AdminScreen(
                         }
                     }
                     
+                    Divider(color = NeutralBorder)
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text("Thời gian chờ", style = MaterialTheme.typography.h6, color = NeutralText)
+                        Text("Điều chỉnh thời gian để khách chọn ảnh và khung. 0 giây sẽ tự động tiếp tục.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
+                        NumberStepper("Chọn ảnh", photoSelectionTimeoutSeconds, { photoSelectionTimeoutSeconds = it })
+                        NumberStepper("Chọn khung", frameSelectionTimeoutSeconds, { frameSelectionTimeoutSeconds = it })
+                        NumberStepper("Sau khi chụp (dự phòng)", postCaptureTimeoutSeconds, { postCaptureTimeoutSeconds = it })
+                    }
+
                     Spacer(Modifier.height(16.dp))
                     KioskPrimaryButton(
                         text = "Lưu cài đặt",
-                        onClick = { onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds.toIntOrNull() ?: 90) },
+                        onClick = { saveSettings() },
                         modifier = Modifier.width(180.dp)
                     )
                 }
@@ -357,6 +373,32 @@ fun AdminScreen(
             } else if (selectedTab == 4) {
                 FilterAdminView(effects = effects, onSaveEffects = onSaveEffects)
             }
+        }
+    }
+}
+
+@Composable
+private fun NumberStepper(label: String, value: Int, onValueChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.body1, color = NeutralText, modifier = Modifier.weight(1f))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { onValueChange((value - 10).coerceAtLeast(0)) },
+                enabled = value > 0,
+                modifier = Modifier.size(48.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) { Text("−", style = MaterialTheme.typography.h6) }
+            Text("$value giây", style = MaterialTheme.typography.subtitle1, color = NeutralText, textAlign = TextAlign.Center, modifier = Modifier.width(88.dp))
+            OutlinedButton(
+                onClick = { onValueChange((value + 10).coerceAtMost(3600)) },
+                enabled = value < 3600,
+                modifier = Modifier.size(48.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) { Text("+", style = MaterialTheme.typography.h6) }
         }
     }
 }

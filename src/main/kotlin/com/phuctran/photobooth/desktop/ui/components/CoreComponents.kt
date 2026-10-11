@@ -221,6 +221,30 @@ fun MinimalStepIndicator(currentStep: Int, totalSteps: Int, modifier: Modifier =
     }
 }
 
+/** Small, stable countdown anchored over the guest page, without resizing the content. */
+@Composable
+fun DecisionTimerBadge(timeLeft: Int?, modifier: Modifier = Modifier) {
+    if (timeLeft == null) return
+    val urgent = timeLeft <= 15
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (urgent) AccentRed else NeutralPanel)
+            .border(1.dp, if (urgent) AccentRed else NeutralBorder, RoundedCornerShape(999.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text("Còn lại", style = MaterialTheme.typography.body2, color = if (urgent) Color.White else NeutralSecondary)
+        Text(
+            "%02d:%02d".format(timeLeft.coerceAtLeast(0) / 60, timeLeft.coerceAtLeast(0) % 60),
+            style = MaterialTheme.typography.subtitle1,
+            fontWeight = FontWeight.Bold,
+            color = if (urgent) Color.White else NeutralText
+        )
+    }
+}
+
 /** Open guest page wrapper; media and decisions are not enclosed in a card. */
 @Composable
 fun PremiumPageShell(

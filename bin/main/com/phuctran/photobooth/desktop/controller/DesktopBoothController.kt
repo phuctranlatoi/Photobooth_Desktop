@@ -73,6 +73,8 @@ class DesktopBoothController(
     private val _inactivityTimeLeft = MutableStateFlow<Int?>(null)
     val inactivityTimeLeft = _inactivityTimeLeft.asStateFlow()
     private var inactivityJob: kotlinx.coroutines.Job? = null
+    private var remainingPhotoTime: Int? = null
+    private var remainingFrameTime: Int? = null
 
     private val _isAppReady = MutableStateFlow(false)
     val isAppReady = _isAppReady.asStateFlow()
@@ -188,7 +190,10 @@ class DesktopBoothController(
         
         // Handle inactivity timer
         when (newState) {
-            SessionState.SELECTING_PHOTOS, SessionState.EDITING, SessionState.PRINT_PENDING -> {
+            SessionState.SELECTING_PHOTOS, SessionState.EDITING -> {
+                startInactivityTimer()
+            }
+            SessionState.PRINT_PENDING -> {
                 if (inactivityJob == null) {
                     startInactivityTimer()
                 }
@@ -205,12 +210,26 @@ class DesktopBoothController(
 
     private fun startInactivityTimer() {
         inactivityJob?.cancel()
-        val timeoutSeconds = activeConfig.value.postCaptureTimeoutSeconds
+        val timerState = stateMachine.currentState.value
+        val timeoutSeconds = when (timerState) {
+            SessionState.SELECTING_PHOTOS -> (remainingPhotoTime ?: activeConfig.value.photoSelectionTimeoutSeconds).also {
+                remainingPhotoTime = it
+            }
+            SessionState.EDITING -> (remainingFrameTime ?: activeConfig.value.frameSelectionTimeoutSeconds).also {
+                remainingFrameTime = it
+            }
+            else -> activeConfig.value.postCaptureTimeoutSeconds
+        }
         _inactivityTimeLeft.value = timeoutSeconds
         inactivityJob = scope.launch {
             for (i in timeoutSeconds downTo 1) {
                 delay(1000)
                 _inactivityTimeLeft.value = i - 1
+                when (timerState) {
+                    SessionState.SELECTING_PHOTOS -> remainingPhotoTime = i - 1
+                    SessionState.EDITING -> remainingFrameTime = i - 1
+                    else -> Unit
+                }
             }
             // Timeout reached!
             handleInactivityTimeout()
@@ -226,6 +245,11 @@ class DesktopBoothController(
     fun resetInactivityTimer() {
         // Only reset if we are currently running the timer
         if (_inactivityTimeLeft.value != null) {
+            when (stateMachine.currentState.value) {
+                SessionState.SELECTING_PHOTOS -> remainingPhotoTime = null
+                SessionState.EDITING -> remainingFrameTime = null
+                else -> Unit
+            }
             startInactivityTimer()
         }
     }
@@ -815,6 +839,8 @@ class DesktopBoothController(
         captureJob?.cancel()
         deliveryJob?.cancel()
         paymentPollingJob?.cancel()
+        remainingPhotoTime = null
+        remainingFrameTime = null
         currentSessionId = null
         cameraService.stopLiveView()
         _capturedMoments.value = emptyList()
@@ -834,13 +860,22 @@ class DesktopBoothController(
 
     val activeConfig = MutableStateFlow(config)
 
-    fun saveDeviceSettings(enablePrint: Boolean, useHotFolder: Boolean, hotFolderPath: String, postCaptureTimeoutSeconds: Int) {
+    fun saveDeviceSettings(
+        enablePrint: Boolean,
+        useHotFolder: Boolean,
+        hotFolderPath: String,
+        postCaptureTimeoutSeconds: Int,
+        photoSelectionTimeoutSeconds: Int,
+        frameSelectionTimeoutSeconds: Int
+    ) {
         val envFile = config.envSource ?: DesktopAppPaths.workingDir().resolve(".env")
         val updates = mapOf(
             "ENABLE_SYSTEM_PRINT" to enablePrint.toString(),
             "USE_HOT_FOLDER" to useHotFolder.toString(),
             "HOT_FOLDER_PATH" to hotFolderPath,
-            "POST_CAPTURE_TIMEOUT_SECONDS" to postCaptureTimeoutSeconds.toString()
+            "POST_CAPTURE_TIMEOUT_SECONDS" to postCaptureTimeoutSeconds.toString(),
+            "PHOTO_SELECTION_TIMEOUT_SECONDS" to photoSelectionTimeoutSeconds.toString(),
+            "FRAME_SELECTION_TIMEOUT_SECONDS" to frameSelectionTimeoutSeconds.toString()
         )
         runCatching {
             com.phuctran.photobooth.desktop.config.SettingsManager.updateSettings(envFile, updates)
@@ -850,7 +885,9 @@ class DesktopBoothController(
                 enableSystemPrint = enablePrint,
                 useHotFolder = useHotFolder,
                 hotFolderPath = hotFolderPath,
-                postCaptureTimeoutSeconds = postCaptureTimeoutSeconds
+                postCaptureTimeoutSeconds = postCaptureTimeoutSeconds,
+                photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds,
+                frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds
             )
         }.onFailure { e ->
             _statusMessage.value = "Lỗi lưu cài đặt: ${e.message}"

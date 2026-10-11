@@ -11,6 +11,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,9 +29,11 @@ import com.phuctran.photobooth.desktop.model.FramePack
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.ui.components.*
 import com.phuctran.photobooth.desktop.ui.theme.*
+import com.phuctran.photobooth.desktop.controller.DesktopBoothController
 
 @Composable
 fun SelectPhotosScreen(
+    controller: DesktopBoothController,
     layout: LayoutMode,
     capturedMoments: List<CapturedMoment>,
     selectedMoments: List<CapturedMoment>,
@@ -38,6 +41,7 @@ fun SelectPhotosScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit
 ) {
+    val timeLeft by controller.inactivityTimeLeft.collectAsState()
     var previewingMoment by remember { mutableStateOf<CapturedMoment?>(null) }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -94,6 +98,7 @@ fun SelectPhotosScreen(
             primaryEnabled = selectedMoments.size == layout.selectCount
         )
         }
+        DecisionTimerBadge(timeLeft, Modifier.align(Alignment.TopEnd))
         AnimatedVisibility(
             visible = previewingMoment != null,
             modifier = Modifier.fillMaxSize(),
