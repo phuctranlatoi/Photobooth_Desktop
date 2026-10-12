@@ -1,7 +1,7 @@
 ---
 description: Premium touch-first UI/UX designer for the LE SOUVENIR PhotoboothDesktop application.
 mode: subagent
-model: 9router/ag/gemini-pro-agent
+model: 9router/ag/claude-sonnet-4-6
 permissions:
   - action: edit
     resource: "*"
@@ -102,28 +102,28 @@ Avoid inconsistent fallback fonts.
 Recommended relative hierarchy:
 
 Page title:
-26–30 px
+26Ã¢â‚¬â€œ30 px
 
 Section title:
-20–24 px
+20Ã¢â‚¬â€œ24 px
 
 Item/card title:
-17–20 px
+17Ã¢â‚¬â€œ20 px
 
 Body:
-15–17 px
+15Ã¢â‚¬â€œ17 px
 
 Secondary:
-13–15 px
+13Ã¢â‚¬â€œ15 px
 
 Metadata:
-12–14 px
+12Ã¢â‚¬â€œ14 px
 
 Buttons:
-16–18 px
+16Ã¢â‚¬â€œ18 px
 
 Large numeric value:
-only when appropriate, approximately 44–56 px
+only when appropriate, approximately 44Ã¢â‚¬â€œ56 px
 
 Use mostly:
 400
@@ -213,7 +213,7 @@ Back
 
 Example:
 
-←    Bước 1    Chọn bố cục
+Ã¢â€ Â    BÃ†Â°Ã¡Â»â€ºc 1    ChÃ¡Â»Ân bÃ¡Â»â€˜ cÃ¡Â»Â¥c
 
 Do not permanently show:
 
@@ -229,7 +229,7 @@ on every focused step.
 Show system status only when contextually useful.
 
 ==================================================
-LAYOUT SELECTION — CENTERED CAROUSEL
+LAYOUT SELECTION Ã¢â‚¬â€ CENTERED CAROUSEL
 ==================================================
 
 This screen uses a centered carousel.
@@ -283,11 +283,11 @@ Use the REAL existing layout geometry.
 
 2x2 must visibly resemble:
 
-┌──────────┬──────────┐
-│  Ảnh 1   │  Ảnh 2   │
-├──────────┼──────────┤
-│  Ảnh 3   │  Ảnh 4   │
-└──────────┴──────────┘
+Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
+Ã¢â€â€š  Ã¡ÂºÂ¢nh 1   Ã¢â€â€š  Ã¡ÂºÂ¢nh 2   Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
+Ã¢â€â€š  Ã¡ÂºÂ¢nh 3   Ã¢â€â€š  Ã¡ÂºÂ¢nh 4   Ã¢â€â€š
+Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
 
 Three vertical photos must look like three vertical slots.
 
@@ -308,7 +308,7 @@ The center preview should be large enough to understand but NOT dominate the ent
 Leave breathing room.
 
 ==================================================
-DECORATIVE FRAME SELECTION — UNIFORM GRID
+DECORATIVE FRAME SELECTION Ã¢â‚¬â€ UNIFORM GRID
 ==================================================
 
 THIS SCREEN IS DIFFERENT FROM LAYOUT SELECTION.
@@ -388,7 +388,7 @@ The result should approximate the eventual printed photo.
 When another frame is touched:
 
 selectedFrame updates
-→ left preview updates immediately
+Ã¢â€ â€™ left preview updates immediately
 
 Do not alter print geometry.
 
@@ -428,7 +428,7 @@ MAIN SHUTTER:
 - large
 - obvious
 - centered or ergonomically positioned
-- approximately 72–96 px visual size depending on actual UI scale
+- approximately 72Ã¢â‚¬â€œ96 px visual size depending on actual UI scale
 - even larger invisible touch target if useful
 - soft outer ring / halo
 - elegant LE SOUVENIR treatment
@@ -494,15 +494,15 @@ Never remove required actions just to make a screen look cleaner.
 
 Preserve existing:
 
-- Quay lại
-- Tiếp tục
-- Xác nhận
-- Chụp
-- Chụp lại
-- Xem bản in
-- In ảnh
+- Quay lÃ¡ÂºÂ¡i
+- TiÃ¡ÂºÂ¿p tÃ¡Â»Â¥c
+- XÃƒÂ¡c nhÃ¡ÂºÂ­n
+- ChÃ¡Â»Â¥p
+- ChÃ¡Â»Â¥p lÃ¡ÂºÂ¡i
+- Xem bÃ¡ÂºÂ£n in
+- In Ã¡ÂºÂ£nh
 - QR
-- Hoàn tất
+- HoÃƒÂ n tÃ¡ÂºÂ¥t
 - Retry
 
 or their actual equivalents.
@@ -516,13 +516,13 @@ Use subtle motion.
 Typical:
 
 touch feedback:
-80–180 ms
+80Ã¢â‚¬â€œ180 ms
 
 micro interaction:
-120–250 ms
+120Ã¢â‚¬â€œ250 ms
 
 screen/state:
-200–350 ms
+200Ã¢â‚¬â€œ350 ms
 
 Good candidates:
 

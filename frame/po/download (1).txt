@@ -1,0 +1,1397 @@
+9.5s 1 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+9.5s 2 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+9.5s 3 0.00s - to python to disable frozen modules.
+9.5s 4 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+10.4s 5 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+10.4s 6 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+10.4s 7 0.00s - to python to disable frozen modules.
+10.4s 8 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+12.9s 9 {'RUN_MODE': 'FULL', 'resume_required': True, 'CPU_only': True, 'output': '/kaggle/working/stage10D_calibration_ensemble_v1_2', 'session_budget_hours': 10.0}
+13.1s 10 pycocotools==2.0.11
+13.1s 11 Installing missing dependency: ensemble-boxes==1.0.9
+15.8s 12 Collecting ensemble-boxes==1.0.9
+15.9s 13 Downloading ensemble_boxes-1.0.9-py3-none-any.whl.metadata (728 bytes)
+15.9s 14 Downloading ensemble_boxes-1.0.9-py3-none-any.whl (23 kB)
+16.0s 15 Installing collected packages: ensemble-boxes
+16.0s 16 Successfully installed ensemble-boxes-1.0.9
+16.0s 17 Collecting ensemble-boxes==1.0.9
+16.0s 18 Downloading ensemble_boxes-1.0.9-py3-none-any.whl.metadata (728 bytes)
+16.0s 19 Downloading ensemble_boxes-1.0.9-py3-none-any.whl (23 kB)
+16.0s 20 Installing collected packages: ensemble-boxes
+16.0s 21 Successfully installed ensemble-boxes-1.0.9
+16.4s 22 ensemble-boxes==1.0.9
+17.3s 23 {'numpy': '2.1.3', 'pandas': '2.3.3', 'python': '3.13.15'}
+17.5s 24 {'implementation_sha256': 'a4949015361e0f7b1011d0ba71a444c0c8556b8ecbb7d1d68302070adb4af471', 'supplement_sha256': '8b64c484c09ac08505d1115846effeab518c3078d5bb42700953504e4d878225'}
+136.2s 25 
+136.2s 26 test_27_prediction_roundtrip_preserves_threshold_boundary (test_stage10d.Stage10DResearchTests.test_27_prediction_roundtrip_preserves_threshold_boundary) ... ok
+136.2s 27 test_28_route_support_is_not_tripled_by_training_seeds (test_stage10d.Stage10DResearchTests.test_28_route_support_is_not_tripled_by_training_seeds) ... ok
+136.2s 28 test_29_fit_view_visits_every_locked_grid_combination (test_stage10d.Stage10DResearchTests.test_29_fit_view_visits_every_locked_grid_combination) ... ok
+136.2s 29 test_30_outer_assessment_labels_cannot_change_selected_route_or_parameters (test_stage10d.Stage10DResearchTests.test_30_outer_assessment_labels_cannot_change_selected_route_or_parameters) ... ok
+136.2s 30 test_31_inner_assessment_labels_change_counts_but_not_fit_parameters (test_stage10d.Stage10DResearchTests.test_31_inner_assessment_labels_change_counts_but_not_fit_parameters) ... ok
+136.2s 31 test_32_changed_selection_gt_rejects_stale_route_cache (test_stage10d.Stage10DResearchTests.test_32_changed_selection_gt_rejects_stale_route_cache) ... ok
+136.2s 32 test_33_nested_orchestration_and_interrupted_resume_are_identical (test_stage10d.Stage10DResearchTests.test_33_nested_orchestration_and_interrupted_resume_are_identical) ... ok
+136.2s 33 test_34_oof_aggregation_rejects_wrong_image_order (test_stage10d.Stage10DResearchTests.test_34_oof_aggregation_rejects_wrong_image_order) ... ok
+136.2s 34 test_35_ap_receives_predictions_before_f1_threshold (test_stage10d.Stage10DResearchTests.test_35_ap_receives_predictions_before_f1_threshold) ... ok
+136.2s 35 test_36_csv_expansion_is_verified_by_content_and_tampering_is_rejected (test_stage10d.Stage10DResearchTests.test_36_csv_expansion_is_verified_by_content_and_tampering_is_rejected) ... ok
+136.2s 36 test_37_loader_reads_only_registered_calibration_files_and_requires_nine_tasks (test_stage10d.Stage10DResearchTests.test_37_loader_reads_only_registered_calibration_files_and_requires_nine_tasks) ... ok
+136.2s 37 test_38_official_ap_uses_maxdets_300_instead_of_100 (test_stage10d.Stage10DResearchTests.test_38_official_ap_uses_maxdets_300_instead_of_100) ... ok
+136.2s 38 test_39_official_nested_pipeline_finds_good_roi_class_and_rejects_bad_roi_class (test_stage10d.Stage10DResearchTests.test_39_official_nested_pipeline_finds_good_roi_class_and_rejects_bad_roi_class) ... ok
+136.2s 39 test_40_approval_cannot_describe_a_different_implementation (test_stage10d.Stage10DResearchTests.test_40_approval_cannot_describe_a_different_implementation) ... ok
+136.2s 40 test_41_closed_cache_has_stable_checksum_and_can_be_closed_twice (test_stage10d.Stage10DResearchTests.test_41_closed_cache_has_stable_checksum_and_can_be_closed_twice) ... ok
+136.2s 41 test_42_kaggle_expanded_csv_directory_uses_verified_payload (test_stage10d.Stage10DResearchTests.test_42_kaggle_expanded_csv_directory_uses_verified_payload) ... ok
+136.2s 42 test_43_nested_expansion_rejects_modified_content (test_stage10d.Stage10DResearchTests.test_43_nested_expansion_rejects_modified_content) ... ok
+136.2s 43 test_44_expansion_does_not_search_other_tasks_or_non_csv_files (test_stage10d.Stage10DResearchTests.test_44_expansion_does_not_search_other_tasks_or_non_csv_files) ... ok
+136.2s 44 test_45_expansion_rejects_duplicate_matching_payloads (test_stage10d.Stage10DResearchTests.test_45_expansion_rejects_duplicate_matching_payloads) ... ok
+136.2s 45 test_46_expansion_rejects_member_resolving_outside_container (test_stage10d.Stage10DResearchTests.test_46_expansion_rejects_member_resolving_outside_container) ... ok
+136.2s 46 test_47_zip_with_nested_csv_expansion_matches_registered_task (test_stage10d.Stage10DResearchTests.test_47_zip_with_nested_csv_expansion_matches_registered_task) ... ok
+136.2s 47 test_48_invalid_gzip_hash_cannot_fall_back_to_valid_csv (test_stage10d.Stage10DResearchTests.test_48_invalid_gzip_hash_cannot_fall_back_to_valid_csv) ... ok
+136.2s 48 test_01_canonical_hash_ignores_dict_order (test_stage10d.Stage10DTests.test_01_canonical_hash_ignores_dict_order) ... ok
+136.2s 49 test_02_sorted_id_hash_ignores_input_order (test_stage10d.Stage10DTests.test_02_sorted_id_hash_ignores_input_order) ... ok
+136.2s 50 test_03_outer_folds_cover_each_id_once (test_stage10d.Stage10DTests.test_03_outer_folds_cover_each_id_once) ... ok
+136.2s 51 test_04_fold_assignments_do_not_depend_on_input_order (test_stage10d.Stage10DTests.test_04_fold_assignments_do_not_depend_on_input_order) ... ok
+136.2s 52 test_05_no_train_assessment_overlap (test_stage10d.Stage10DTests.test_05_no_train_assessment_overlap) ... ok
+136.2s 53 test_06_confidence_grid_is_locked_37_points_and_includes_half (test_stage10d.Stage10DTests.test_06_confidence_grid_is_locked_37_points_and_includes_half) ... ok
+136.2s 54 test_07_score_equal_threshold_is_kept (test_stage10d.Stage10DTests.test_07_score_equal_threshold_is_kept) ... ok
+136.2s 55 test_08_macro_and_micro_are_computed_differently (test_stage10d.Stage10DTests.test_08_macro_and_micro_are_computed_differently) ... ok
+136.2s 56 test_09_zero_support_convention_is_zero (test_stage10d.Stage10DTests.test_09_zero_support_convention_is_zero) ... ok
+136.2s 57 test_10_global_cap_keeps_high_scores_deterministically (test_stage10d.Stage10DTests.test_10_global_cap_keeps_high_scores_deterministically) ... ok
+136.2s 58 test_10b_global_cap_couples_classes_and_objective_sees_it (test_stage10d.Stage10DTests.test_10b_global_cap_couples_classes_and_objective_sees_it) ... ok
+136.2s 59 test_10c_three_seed_summary_uses_sample_sd (test_stage10d.Stage10DTests.test_10c_three_seed_summary_uses_sample_sd) ... ok
+136.2s 60 test_10d_cap_ties_use_stable_class_and_coordinate_order (test_stage10d.Stage10DTests.test_10d_cap_ties_use_stable_class_and_coordinate_order) ... ok
+136.2s 61 test_11_empty_predictions_return_empty_with_contract_columns (test_stage10d.Stage10DTests.test_11_empty_predictions_return_empty_with_contract_columns) ... ok
+136.2s 62 test_12_prediction_threshold_vector_requires_all_classes (test_stage10d.Stage10DTests.test_12_prediction_threshold_vector_requires_all_classes) ... ok
+136.2s 63 test_13_single_pass_no_positive_fallback_is_050 (test_stage10d.Stage10DTests.test_13_single_pass_no_positive_fallback_is_050) ... ok
+136.2s 64 test_14_geometry_cache_resumes_partial_id_sets (test_stage10d.Stage10DTests.test_14_geometry_cache_resumes_partial_id_sets) ... ok
+136.2s 65 test_14b_wbf_keeps_both_sources_when_one_is_empty (test_stage10d.Stage10DTests.test_14b_wbf_keeps_both_sources_when_one_is_empty) ... ok
+136.2s 66 test_15_wbf_cache_is_class_and_branch_specific (test_stage10d.Stage10DTests.test_15_wbf_cache_is_class_and_branch_specific) ... ok
+136.2s 67 test_16_route_requires_two_positive_seed_directions (test_stage10d.Stage10DTests.test_16_route_requires_two_positive_seed_directions) ... ok
+136.2s 68 test_17_route_with_two_positive_directions_and_positive_mean_uses_roi (test_stage10d.Stage10DTests.test_17_route_with_two_positive_directions_and_positive_mean_uses_roi) ... ok
+136.2s 69 test_18_route_extra_mean_rule_can_reject_parent_two_of_three_rule (test_stage10d.Stage10DTests.test_18_route_extra_mean_rule_can_reject_parent_two_of_three_rule) ... ok
+136.2s 70 test_19_fit_view_records_fit_id_hash_and_uses_only_no_positive_fallback (test_stage10d.Stage10DTests.test_19_fit_view_records_fit_id_hash_and_uses_only_no_positive_fallback) ... ok
+136.2s 71 test_20_classwise_composition_respects_one_branch_per_class (test_stage10d.Stage10DTests.test_20_classwise_composition_respects_one_branch_per_class) ... ok
+136.2s 72 test_21_all_original_route_composes_identically_to_e0 (test_stage10d.Stage10DTests.test_21_all_original_route_composes_identically_to_e0) ... ok
+136.2s 73 test_22_full_approval_rejects_pending_status (test_stage10d.Stage10DTests.test_22_full_approval_rejects_pending_status) ... ok
+136.2s 74 test_22b_pending_approval_is_not_misreported_as_input_failure (test_stage10d.Stage10DTests.test_22b_pending_approval_is_not_misreported_as_input_failure) ... ok
+136.2s 75 test_22c_complete_synthetic_approval_matches_gate_contract (test_stage10d.Stage10DTests.test_22c_complete_synthetic_approval_matches_gate_contract) ... ok
+136.2s 76 test_23_official_cocoeval_wrong_location_is_fp_and_fn (test_stage10d.Stage10DTests.test_23_official_cocoeval_wrong_location_is_fp_and_fn) ... ok
+136.2s 77 test_24_official_cocoeval_duplicate_boxes_count_one_tp_one_fp (test_stage10d.Stage10DTests.test_24_official_cocoeval_duplicate_boxes_count_one_tp_one_fp) ... ok
+136.2s 78 test_25_negative_image_fp_and_unpredicted_positive_fn_are_counted (test_stage10d.Stage10DTests.test_25_negative_image_fp_and_unpredicted_positive_fn_are_counted) ... ok
+136.2s 79 test_26_official_cocoeval_includes_score_at_threshold_and_iou_exactly_half (test_stage10d.Stage10DTests.test_26_official_cocoeval_includes_score_at_threshold_and_iou_exactly_half) ... ok
+136.2s 80 test_actual_outer_reader_resumes_six_saved_results_and_keeps_signature_guard (test_stage10d_resume.ResumeTests.test_actual_outer_reader_resumes_six_saved_results_and_keeps_signature_guard) ... ok
+136.2s 81 test_conflicting_metadata_alias_is_not_silently_corrected (test_stage10d_resume.ResumeTests.test_conflicting_metadata_alias_is_not_silently_corrected) ... ok
+136.2s 82 test_copy_and_counts_and_source_unchanged (test_stage10d_resume.ResumeTests.test_copy_and_counts_and_source_unchanged) ... ok
+136.2s 83 test_corrupt_cache_rejected (test_stage10d_resume.ResumeTests.test_corrupt_cache_rejected) ... ok
+136.2s 84 test_corrupt_saved_prediction_rejected (test_stage10d_resume.ResumeTests.test_corrupt_saved_prediction_rejected) ... ok
+136.2s 85 test_duplicate_sources_require_explicit_path (test_stage10d_resume.ResumeTests.test_duplicate_sources_require_explicit_path) ... ok
+136.2s 86 test_existing_newer_working_state_not_overwritten (test_stage10d_resume.ResumeTests.test_existing_newer_working_state_not_overwritten) ... ok
+136.2s 87 test_expanded_prediction_hash_checked_and_gzip_recovered (test_stage10d_resume.ResumeTests.test_expanded_prediction_hash_checked_and_gzip_recovered) ... ok
+136.2s 88 test_explicit_source_outside_input_rejected (test_stage10d_resume.ResumeTests.test_explicit_source_outside_input_rejected) ... ok
+136.2s 89 test_firewall_and_complete_source_rejected (test_stage10d_resume.ResumeTests.test_firewall_and_complete_source_rejected) ... ok
+136.2s 90 test_invalid_budget_rejected (test_stage10d_resume.ResumeTests.test_invalid_budget_rejected) ... ok
+136.2s 91 test_metadata_alias_preserves_original_and_is_idempotent (test_stage10d_resume.ResumeTests.test_metadata_alias_preserves_original_and_is_idempotent) ... ok
+136.2s 92 test_metadata_path_identity_mismatch_is_rejected (test_stage10d_resume.ResumeTests.test_metadata_path_identity_mismatch_is_rejected) ... ok
+136.2s 93 test_no_cache_rejected (test_stage10d_resume.ResumeTests.test_no_cache_rejected) ... ok
+136.2s 94 test_pause_then_resume_matches_uninterrupted_synthetic_work (test_stage10d_resume.ResumeTests.test_pause_then_resume_matches_uninterrupted_synthetic_work) ... ok
+136.2s 95 test_symlink_escape_rejected_without_os_symlink_privileges (test_stage10d_resume.ResumeTests.test_symlink_escape_rejected_without_os_symlink_privileges) ... ok
+136.2s 96 test_wal_commits_survive_restore (test_stage10d_resume.ResumeTests.test_wal_commits_survive_restore) ... ok
+136.2s 97 test_wrong_existing_working_state_rejected (test_stage10d_resume.ResumeTests.test_wrong_existing_working_state_rejected) ... ok
+136.2s 98 test_wrong_signature_never_restarts (test_stage10d_resume.ResumeTests.test_wrong_signature_never_restarts) ... ok
+136.2s 99 
+136.2s 100 ----------------------------------------------------------------------
+136.2s 101 Ran 73 tests in 117.528s
+136.2s 102 
+136.2s 103 OK
+136.2s 104 
+136.8s 105 RESUME SOURCE: /kaggle/input/notebooks/trnhongphchttt2023/stage10d-resume/stage10D_calibration_ensemble_v1_2
+180.9s 106 RESUME RESTORE: PASS | 15 route-fold records | 2732184 geometry rows | 28840 evaluation cubes
+190.8s 107 INPUT CONTRACT: PASS | 9/9 tasks | 1807 calibration images | 2522 GT boxes
+197.8s 108 outer_0: resumed completed inner fold 0
+197.8s 109 outer_0: resumed completed inner fold 1
+197.8s 110 outer_0: resumed completed inner fold 2
+197.8s 111 outer_0: resumed completed inner fold 3
+197.8s 112 OUTER 1/5 seed=520260751: fit fixed views and evaluate held-out images
+197.8s 113 outer0/C0 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.103912
+198.0s 114 outer0/C0 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.123754
+198.0s 115 outer0/C0 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.142523
+198.2s 116 outer0/C0 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.164202
+198.2s 117 outer0/C0 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.193036
+198.2s 118 outer0/C0 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.217019
+198.5s 119 outer0/C0 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.243088
+198.5s 120 outer0/C0 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.272089
+198.7s 121 outer0/C0 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.295149
+198.7s 122 outer0/C0 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.304166
+198.9s 123 outer0/C0 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.332775
+198.9s 124 outer0/C0 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.351303
+199.2s 125 outer0/C0 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.375113
+199.2s 126 outer0/C0 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.402259
+199.4s 127 outer0/C1 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.101151
+199.4s 128 outer0/C1 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.130563
+199.6s 129 outer0/C1 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.150476
+199.6s 130 outer0/C1 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.172508
+199.8s 131 outer0/C1 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.200422
+199.8s 132 outer0/C1 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.225324
+200.0s 133 outer0/C1 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.251023
+200.0s 134 outer0/C1 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.280079
+200.2s 135 outer0/C1 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.304273
+200.2s 136 outer0/C1 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.314842
+200.4s 137 outer0/C1 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.345945
+200.4s 138 outer0/C1 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.365303
+200.6s 139 outer0/C1 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.379589
+200.6s 140 outer0/C1 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.406859
+200.6s 141 outer0/E1_equal seed=520260751 branch=C1 class=1/14 selected_macroF1=0.098606
+200.6s 142 outer0/E1_equal seed=520260751 branch=C1 class=2/14 selected_macroF1=0.122416
+200.6s 143 outer0/E1_equal seed=520260751 branch=C1 class=3/14 selected_macroF1=0.140713
+200.6s 144 outer0/E1_equal seed=520260751 branch=C1 class=4/14 selected_macroF1=0.162062
+200.6s 145 outer0/E1_equal seed=520260751 branch=C1 class=5/14 selected_macroF1=0.187744
+200.9s 146 outer0/E1_equal seed=520260751 branch=C1 class=6/14 selected_macroF1=0.209634
+200.9s 147 outer0/E1_equal seed=520260751 branch=C1 class=7/14 selected_macroF1=0.232238
+200.9s 148 outer0/E1_equal seed=520260751 branch=C1 class=8/14 selected_macroF1=0.259533
+200.9s 149 outer0/E1_equal seed=520260751 branch=C1 class=9/14 selected_macroF1=0.282612
+200.9s 150 outer0/E1_equal seed=520260751 branch=C1 class=10/14 selected_macroF1=0.291563
+200.9s 151 outer0/E1_equal seed=520260751 branch=C1 class=11/14 selected_macroF1=0.321613
+200.9s 152 outer0/E1_equal seed=520260751 branch=C1 class=12/14 selected_macroF1=0.339951
+200.9s 153 outer0/E1_equal seed=520260751 branch=C1 class=13/14 selected_macroF1=0.354237
+200.9s 154 outer0/E1_equal seed=520260751 branch=C1 class=14/14 selected_macroF1=0.379375
+211.5s 155 OUTER 1/5 seed=520260752: fit fixed views and evaluate held-out images
+211.5s 156 outer0/C0 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.115470
+211.7s 157 outer0/C0 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.140147
+211.7s 158 outer0/C0 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.161240
+212.0s 159 outer0/C0 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.177150
+212.0s 160 outer0/C0 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.207507
+212.2s 161 outer0/C0 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.228197
+212.2s 162 outer0/C0 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.254003
+212.4s 163 outer0/C0 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.281476
+212.4s 164 outer0/C0 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.305542
+212.6s 165 outer0/C0 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.316047
+212.6s 166 outer0/C0 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.348224
+212.8s 167 outer0/C0 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.366316
+212.8s 168 outer0/C0 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.402031
+213.1s 169 outer0/C0 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.427591
+213.1s 170 outer0/C1 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.107802
+213.3s 171 outer0/C1 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.137023
+213.3s 172 outer0/C1 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.159375
+213.5s 173 outer0/C1 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.176069
+213.5s 174 outer0/C1 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.207125
+213.7s 175 outer0/C1 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.228447
+213.7s 176 outer0/C1 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.256616
+213.9s 177 outer0/C1 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.281826
+213.9s 178 outer0/C1 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.305286
+214.1s 179 outer0/C1 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.315857
+214.1s 180 outer0/C1 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.347185
+214.4s 181 outer0/C1 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.365881
+214.4s 182 outer0/C1 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.391855
+214.6s 183 outer0/C1 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.419306
+214.6s 184 outer0/E1_equal seed=520260752 branch=C1 class=1/14 selected_macroF1=0.101982
+214.6s 185 outer0/E1_equal seed=520260752 branch=C1 class=2/14 selected_macroF1=0.127192
+214.6s 186 outer0/E1_equal seed=520260752 branch=C1 class=3/14 selected_macroF1=0.147298
+214.6s 187 outer0/E1_equal seed=520260752 branch=C1 class=4/14 selected_macroF1=0.163818
+214.6s 188 outer0/E1_equal seed=520260752 branch=C1 class=5/14 selected_macroF1=0.192389
+214.6s 189 outer0/E1_equal seed=520260752 branch=C1 class=6/14 selected_macroF1=0.212660
+214.6s 190 outer0/E1_equal seed=520260752 branch=C1 class=7/14 selected_macroF1=0.237096
+214.6s 191 outer0/E1_equal seed=520260752 branch=C1 class=8/14 selected_macroF1=0.259694
+214.6s 192 outer0/E1_equal seed=520260752 branch=C1 class=9/14 selected_macroF1=0.282503
+214.6s 193 outer0/E1_equal seed=520260752 branch=C1 class=10/14 selected_macroF1=0.291122
+214.6s 194 outer0/E1_equal seed=520260752 branch=C1 class=11/14 selected_macroF1=0.322450
+214.9s 195 outer0/E1_equal seed=520260752 branch=C1 class=12/14 selected_macroF1=0.339511
+214.9s 196 outer0/E1_equal seed=520260752 branch=C1 class=13/14 selected_macroF1=0.365485
+214.9s 197 outer0/E1_equal seed=520260752 branch=C1 class=14/14 selected_macroF1=0.389770
+224.1s 198 OUTER 1/5 seed=520260753: fit fixed views and evaluate held-out images
+224.1s 199 outer0/C0 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.129720
+224.3s 200 outer0/C0 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.154036
+224.3s 201 outer0/C0 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.173838
+224.5s 202 outer0/C0 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.183699
+224.5s 203 outer0/C0 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.208544
+224.8s 204 outer0/C0 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.231743
+224.8s 205 outer0/C0 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.256233
+225.0s 206 outer0/C0 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.281139
+225.0s 207 outer0/C0 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.303425
+225.2s 208 outer0/C0 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.313434
+225.2s 209 outer0/C0 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.346568
+225.4s 210 outer0/C0 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.363868
+225.4s 211 outer0/C0 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.378154
+225.6s 212 outer0/C0 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.406072
+225.6s 213 outer0/C1 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.115776
+225.8s 214 outer0/C1 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.146079
+225.8s 215 outer0/C1 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.164970
+226.0s 216 outer0/C1 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.172044
+226.0s 217 outer0/C1 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.196825
+226.3s 218 outer0/C1 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.223460
+226.3s 219 outer0/C1 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.248911
+226.5s 220 outer0/C1 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.275379
+226.5s 221 outer0/C1 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.298959
+226.7s 222 outer0/C1 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.310417
+226.7s 223 outer0/C1 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.342295
+226.9s 224 outer0/C1 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.358938
+226.9s 225 outer0/C1 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.384912
+227.1s 226 outer0/C1 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.412657
+227.1s 227 outer0/E1_equal seed=520260753 branch=C1 class=1/14 selected_macroF1=0.106316
+227.1s 228 outer0/E1_equal seed=520260753 branch=C1 class=2/14 selected_macroF1=0.129482
+227.1s 229 outer0/E1_equal seed=520260753 branch=C1 class=3/14 selected_macroF1=0.147698
+227.1s 230 outer0/E1_equal seed=520260753 branch=C1 class=4/14 selected_macroF1=0.154431
+227.1s 231 outer0/E1_equal seed=520260753 branch=C1 class=5/14 selected_macroF1=0.175994
+227.1s 232 outer0/E1_equal seed=520260753 branch=C1 class=6/14 selected_macroF1=0.196115
+227.1s 233 outer0/E1_equal seed=520260753 branch=C1 class=7/14 selected_macroF1=0.221566
+227.1s 234 outer0/E1_equal seed=520260753 branch=C1 class=8/14 selected_macroF1=0.244822
+227.1s 235 outer0/E1_equal seed=520260753 branch=C1 class=9/14 selected_macroF1=0.263985
+227.1s 236 outer0/E1_equal seed=520260753 branch=C1 class=10/14 selected_macroF1=0.274005
+227.1s 237 outer0/E1_equal seed=520260753 branch=C1 class=11/14 selected_macroF1=0.305028
+227.4s 238 outer0/E1_equal seed=520260753 branch=C1 class=12/14 selected_macroF1=0.321014
+227.4s 239 outer0/E1_equal seed=520260753 branch=C1 class=13/14 selected_macroF1=0.346988
+227.4s 240 outer0/E1_equal seed=520260753 branch=C1 class=14/14 selected_macroF1=0.372080
+238.2s 241 outer_1: resumed completed inner fold 0
+238.2s 242 outer_1: resumed completed inner fold 1
+238.2s 243 outer_1: resumed completed inner fold 2
+238.2s 244 outer_1: resumed completed inner fold 3
+238.2s 245 OUTER 2/5 seed=520260751: fit fixed views and evaluate held-out images
+238.2s 246 outer1/C0 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.102175
+238.4s 247 outer1/C0 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.123914
+238.4s 248 outer1/C0 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.141655
+238.6s 249 outer1/C0 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.161319
+238.6s 250 outer1/C0 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.191539
+238.9s 251 outer1/C0 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.218811
+238.9s 252 outer1/C0 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.245353
+239.1s 253 outer1/C0 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.272675
+239.1s 254 outer1/C0 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.296562
+239.3s 255 outer1/C0 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.305880
+239.3s 256 outer1/C0 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.335265
+239.5s 257 outer1/C0 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.353624
+239.5s 258 outer1/C0 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.379598
+239.7s 259 outer1/C0 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.404118
+239.7s 260 outer1/C1 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.098965
+239.9s 261 outer1/C1 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.122774
+239.9s 262 outer1/C1 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.142864
+240.2s 263 outer1/C1 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.163372
+240.2s 264 outer1/C1 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.193553
+240.4s 265 outer1/C1 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.222125
+240.4s 266 outer1/C1 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.249231
+240.6s 267 outer1/C1 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.277966
+240.6s 268 outer1/C1 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.302050
+240.8s 269 outer1/C1 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.313210
+240.8s 270 outer1/C1 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.345309
+241.0s 271 outer1/C1 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.363825
+241.0s 272 outer1/C1 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.389799
+241.2s 273 outer1/C1 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.414458
+241.2s 274 outer1/E1_equal seed=520260751 branch=C1 class=1/14 selected_macroF1=0.096768
+241.2s 275 outer1/E1_equal seed=520260751 branch=C1 class=2/14 selected_macroF1=0.114625
+241.2s 276 outer1/E1_equal seed=520260751 branch=C1 class=3/14 selected_macroF1=0.132568
+241.2s 277 outer1/E1_equal seed=520260751 branch=C1 class=4/14 selected_macroF1=0.152773
+241.2s 278 outer1/E1_equal seed=520260751 branch=C1 class=5/14 selected_macroF1=0.181791
+241.2s 279 outer1/E1_equal seed=520260751 branch=C1 class=6/14 selected_macroF1=0.208493
+241.2s 280 outer1/E1_equal seed=520260751 branch=C1 class=7/14 selected_macroF1=0.231104
+241.2s 281 outer1/E1_equal seed=520260751 branch=C1 class=8/14 selected_macroF1=0.256696
+241.2s 282 outer1/E1_equal seed=520260751 branch=C1 class=9/14 selected_macroF1=0.279916
+241.2s 283 outer1/E1_equal seed=520260751 branch=C1 class=10/14 selected_macroF1=0.289514
+241.2s 284 outer1/E1_equal seed=520260751 branch=C1 class=11/14 selected_macroF1=0.319637
+241.5s 285 outer1/E1_equal seed=520260751 branch=C1 class=12/14 selected_macroF1=0.337187
+241.5s 286 outer1/E1_equal seed=520260751 branch=C1 class=13/14 selected_macroF1=0.363161
+241.5s 287 outer1/E1_equal seed=520260751 branch=C1 class=14/14 selected_macroF1=0.385520
+252.4s 288 OUTER 2/5 seed=520260752: fit fixed views and evaluate held-out images
+252.4s 289 outer1/C0 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.120943
+252.6s 290 outer1/C0 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.149515
+252.6s 291 outer1/C0 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.170063
+252.8s 292 outer1/C0 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.185963
+252.8s 293 outer1/C0 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.220657
+253.0s 294 outer1/C0 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.244017
+253.0s 295 outer1/C0 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.268897
+253.2s 296 outer1/C0 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.295734
+253.2s 297 outer1/C0 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.320027
+253.5s 298 outer1/C0 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.332467
+253.5s 299 outer1/C0 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.362829
+253.7s 300 outer1/C0 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.381990
+253.7s 301 outer1/C0 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.393679
+253.9s 302 outer1/C0 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.417699
+253.9s 303 outer1/C1 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.119558
+254.1s 304 outer1/C1 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.147432
+254.1s 305 outer1/C1 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.168596
+254.3s 306 outer1/C1 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.185286
+254.3s 307 outer1/C1 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.219823
+254.5s 308 outer1/C1 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.243125
+254.5s 309 outer1/C1 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.269365
+254.7s 310 outer1/C1 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.294150
+254.7s 311 outer1/C1 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.318651
+255.0s 312 outer1/C1 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.330851
+255.0s 313 outer1/C1 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.360862
+255.2s 314 outer1/C1 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.380167
+255.2s 315 outer1/C1 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.380167
+255.4s 316 outer1/C1 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.405800
+255.4s 317 outer1/E1_equal seed=520260752 branch=C1 class=1/14 selected_macroF1=0.114161
+255.4s 318 outer1/E1_equal seed=520260752 branch=C1 class=2/14 selected_macroF1=0.139558
+255.4s 319 outer1/E1_equal seed=520260752 branch=C1 class=3/14 selected_macroF1=0.159491
+255.4s 320 outer1/E1_equal seed=520260752 branch=C1 class=4/14 selected_macroF1=0.176181
+255.4s 321 outer1/E1_equal seed=520260752 branch=C1 class=5/14 selected_macroF1=0.207540
+255.4s 322 outer1/E1_equal seed=520260752 branch=C1 class=6/14 selected_macroF1=0.230288
+255.4s 323 outer1/E1_equal seed=520260752 branch=C1 class=7/14 selected_macroF1=0.253329
+255.4s 324 outer1/E1_equal seed=520260752 branch=C1 class=8/14 selected_macroF1=0.275520
+255.4s 325 outer1/E1_equal seed=520260752 branch=C1 class=9/14 selected_macroF1=0.297409
+255.4s 326 outer1/E1_equal seed=520260752 branch=C1 class=10/14 selected_macroF1=0.308604
+255.4s 327 outer1/E1_equal seed=520260752 branch=C1 class=11/14 selected_macroF1=0.338312
+256.0s 328 outer1/E1_equal seed=520260752 branch=C1 class=12/14 selected_macroF1=0.356727
+256.0s 329 outer1/E1_equal seed=520260752 branch=C1 class=13/14 selected_macroF1=0.356727
+256.0s 330 outer1/E1_equal seed=520260752 branch=C1 class=14/14 selected_macroF1=0.379621
+264.6s 331 OUTER 2/5 seed=520260753: fit fixed views and evaluate held-out images
+264.6s 332 outer1/C0 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.116619
+264.8s 333 outer1/C0 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.141463
+264.8s 334 outer1/C0 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.160511
+265.0s 335 outer1/C0 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.169212
+265.0s 336 outer1/C0 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.196750
+265.2s 337 outer1/C0 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.222391
+265.2s 338 outer1/C0 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.247902
+265.4s 339 outer1/C0 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.272132
+265.4s 340 outer1/C0 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.289896
+265.6s 341 outer1/C0 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.301203
+265.6s 342 outer1/C0 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.335774
+265.8s 343 outer1/C0 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.353352
+265.8s 344 outer1/C0 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.386319
+266.1s 345 outer1/C0 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.411773
+266.1s 346 outer1/C1 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.115714
+266.3s 347 outer1/C1 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.142500
+266.3s 348 outer1/C1 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.161928
+266.5s 349 outer1/C1 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.167212
+266.5s 350 outer1/C1 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.193879
+266.7s 351 outer1/C1 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.222701
+266.7s 352 outer1/C1 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.248611
+266.9s 353 outer1/C1 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.274585
+266.9s 354 outer1/C1 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.295610
+267.1s 355 outer1/C1 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.307973
+267.1s 356 outer1/C1 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.343182
+267.4s 357 outer1/C1 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.361012
+267.4s 358 outer1/C1 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.386986
+267.6s 359 outer1/C1 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.412439
+267.6s 360 outer1/E1_equal seed=520260753 branch=C1 class=1/14 selected_macroF1=0.107361
+267.6s 361 outer1/E1_equal seed=520260753 branch=C1 class=2/14 selected_macroF1=0.128098
+267.6s 362 outer1/E1_equal seed=520260753 branch=C1 class=3/14 selected_macroF1=0.145414
+267.6s 363 outer1/E1_equal seed=520260753 branch=C1 class=4/14 selected_macroF1=0.149618
+267.6s 364 outer1/E1_equal seed=520260753 branch=C1 class=5/14 selected_macroF1=0.172727
+267.6s 365 outer1/E1_equal seed=520260753 branch=C1 class=6/14 selected_macroF1=0.196872
+267.6s 366 outer1/E1_equal seed=520260753 branch=C1 class=7/14 selected_macroF1=0.219628
+267.6s 367 outer1/E1_equal seed=520260753 branch=C1 class=8/14 selected_macroF1=0.241523
+267.6s 368 outer1/E1_equal seed=520260753 branch=C1 class=9/14 selected_macroF1=0.258676
+267.6s 369 outer1/E1_equal seed=520260753 branch=C1 class=10/14 selected_macroF1=0.268900
+267.6s 370 outer1/E1_equal seed=520260753 branch=C1 class=11/14 selected_macroF1=0.302712
+267.8s 371 outer1/E1_equal seed=520260753 branch=C1 class=12/14 selected_macroF1=0.319119
+267.8s 372 outer1/E1_equal seed=520260753 branch=C1 class=13/14 selected_macroF1=0.345093
+267.8s 373 outer1/E1_equal seed=520260753 branch=C1 class=14/14 selected_macroF1=0.368768
+278.8s 374 outer_2: resumed completed inner fold 0
+278.8s 375 outer_2: resumed completed inner fold 1
+278.8s 376 outer_2: resumed completed inner fold 2
+278.8s 377 outer_2: resumed completed inner fold 3
+278.8s 378 OUTER 3/5 seed=520260751: fit fixed views and evaluate held-out images
+278.8s 379 outer2/C0 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.102632
+279.0s 380 outer2/C0 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.118123
+279.0s 381 outer2/C0 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.141754
+279.2s 382 outer2/C0 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.161512
+279.2s 383 outer2/C0 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.192823
+279.4s 384 outer2/C0 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.218333
+279.4s 385 outer2/C0 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.243679
+279.6s 386 outer2/C0 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.271759
+279.6s 387 outer2/C0 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.294841
+279.9s 388 outer2/C0 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.305650
+279.9s 389 outer2/C0 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.336962
+280.1s 390 outer2/C0 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.356089
+280.1s 391 outer2/C0 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.387145
+280.3s 392 outer2/C0 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.412731
+280.3s 393 outer2/C1 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.100594
+280.5s 394 outer2/C1 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.125225
+280.5s 395 outer2/C1 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.146984
+280.7s 396 outer2/C1 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.168174
+280.7s 397 outer2/C1 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.200367
+280.9s 398 outer2/C1 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.227522
+280.9s 399 outer2/C1 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.253496
+281.1s 400 outer2/C1 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.282690
+281.1s 401 outer2/C1 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.306762
+281.4s 402 outer2/C1 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.318431
+281.4s 403 outer2/C1 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.352492
+281.6s 404 outer2/C1 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.371997
+281.6s 405 outer2/C1 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.398783
+281.8s 406 outer2/C1 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.423828
+281.8s 407 outer2/E1_equal seed=520260751 branch=C1 class=1/14 selected_macroF1=0.098177
+281.8s 408 outer2/E1_equal seed=520260751 branch=C1 class=2/14 selected_macroF1=0.119822
+281.8s 409 outer2/E1_equal seed=520260751 branch=C1 class=3/14 selected_macroF1=0.141582
+281.8s 410 outer2/E1_equal seed=520260751 branch=C1 class=4/14 selected_macroF1=0.162608
+281.8s 411 outer2/E1_equal seed=520260751 branch=C1 class=5/14 selected_macroF1=0.190827
+281.8s 412 outer2/E1_equal seed=520260751 branch=C1 class=6/14 selected_macroF1=0.216101
+281.8s 413 outer2/E1_equal seed=520260751 branch=C1 class=7/14 selected_macroF1=0.237939
+281.8s 414 outer2/E1_equal seed=520260751 branch=C1 class=8/14 selected_macroF1=0.265250
+281.8s 415 outer2/E1_equal seed=520260751 branch=C1 class=9/14 selected_macroF1=0.287744
+281.8s 416 outer2/E1_equal seed=520260751 branch=C1 class=10/14 selected_macroF1=0.297751
+282.0s 417 outer2/E1_equal seed=520260751 branch=C1 class=11/14 selected_macroF1=0.330634
+282.0s 418 outer2/E1_equal seed=520260751 branch=C1 class=12/14 selected_macroF1=0.349145
+282.0s 419 outer2/E1_equal seed=520260751 branch=C1 class=13/14 selected_macroF1=0.375930
+282.0s 420 outer2/E1_equal seed=520260751 branch=C1 class=14/14 selected_macroF1=0.399391
+292.5s 421 OUTER 3/5 seed=520260752: fit fixed views and evaluate held-out images
+292.5s 422 outer2/C0 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.124433
+292.7s 423 outer2/C0 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.140672
+292.7s 424 outer2/C0 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.163495
+292.9s 425 outer2/C0 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.178597
+292.9s 426 outer2/C0 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.210580
+293.1s 427 outer2/C0 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.231960
+293.1s 428 outer2/C0 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.256422
+293.3s 429 outer2/C0 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.282052
+293.3s 430 outer2/C0 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.306024
+293.5s 431 outer2/C0 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.317202
+293.5s 432 outer2/C0 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.349754
+293.8s 433 outer2/C0 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.369152
+293.8s 434 outer2/C0 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.392562
+294.0s 435 outer2/C0 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.418418
+294.0s 436 outer2/C1 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.116894
+294.2s 437 outer2/C1 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.138872
+294.2s 438 outer2/C1 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.162264
+294.4s 439 outer2/C1 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.177375
+294.4s 440 outer2/C1 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.208936
+294.6s 441 outer2/C1 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.230696
+294.6s 442 outer2/C1 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.256311
+294.8s 443 outer2/C1 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.280928
+294.8s 444 outer2/C1 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.304924
+295.1s 445 outer2/C1 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.315917
+295.1s 446 outer2/C1 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.349280
+295.3s 447 outer2/C1 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.369098
+295.3s 448 outer2/C1 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.385680
+295.5s 449 outer2/C1 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.413356
+295.5s 450 outer2/E1_equal seed=520260752 branch=C1 class=1/14 selected_macroF1=0.110898
+295.5s 451 outer2/E1_equal seed=520260752 branch=C1 class=2/14 selected_macroF1=0.130379
+295.5s 452 outer2/E1_equal seed=520260752 branch=C1 class=3/14 selected_macroF1=0.152788
+295.5s 453 outer2/E1_equal seed=520260752 branch=C1 class=4/14 selected_macroF1=0.167899
+295.5s 454 outer2/E1_equal seed=520260752 branch=C1 class=5/14 selected_macroF1=0.196470
+295.5s 455 outer2/E1_equal seed=520260752 branch=C1 class=6/14 selected_macroF1=0.217356
+295.5s 456 outer2/E1_equal seed=520260752 branch=C1 class=7/14 selected_macroF1=0.239396
+295.5s 457 outer2/E1_equal seed=520260752 branch=C1 class=8/14 selected_macroF1=0.261689
+295.5s 458 outer2/E1_equal seed=520260752 branch=C1 class=9/14 selected_macroF1=0.284558
+295.5s 459 outer2/E1_equal seed=520260752 branch=C1 class=10/14 selected_macroF1=0.294211
+295.5s 460 outer2/E1_equal seed=520260752 branch=C1 class=11/14 selected_macroF1=0.326467
+295.8s 461 outer2/E1_equal seed=520260752 branch=C1 class=12/14 selected_macroF1=0.345110
+295.8s 462 outer2/E1_equal seed=520260752 branch=C1 class=13/14 selected_macroF1=0.361691
+295.8s 463 outer2/E1_equal seed=520260752 branch=C1 class=14/14 selected_macroF1=0.386260
+304.9s 464 OUTER 3/5 seed=520260753: fit fixed views and evaluate held-out images
+304.9s 465 outer2/C0 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.123482
+305.1s 466 outer2/C0 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.141915
+305.1s 467 outer2/C0 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.163277
+305.3s 468 outer2/C0 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.173450
+305.3s 469 outer2/C0 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.199132
+305.5s 470 outer2/C0 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.225710
+305.5s 471 outer2/C0 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.250224
+305.7s 472 outer2/C0 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.275089
+305.7s 473 outer2/C0 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.299112
+306.0s 474 outer2/C0 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.310500
+306.0s 475 outer2/C0 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.345110
+306.2s 476 outer2/C0 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.362967
+306.2s 477 outer2/C0 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.386777
+306.4s 478 outer2/C0 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.415877
+306.4s 479 outer2/C1 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.115030
+306.6s 480 outer2/C1 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.139660
+306.6s 481 outer2/C1 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.160398
+306.8s 482 outer2/C1 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.166864
+306.8s 483 outer2/C1 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.191442
+307.0s 484 outer2/C1 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.221576
+307.0s 485 outer2/C1 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.246301
+307.3s 486 outer2/C1 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.272421
+307.3s 487 outer2/C1 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.297806
+307.5s 488 outer2/C1 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.310424
+307.5s 489 outer2/C1 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.343227
+307.7s 490 outer2/C1 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.361384
+307.7s 491 outer2/C1 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.394997
+307.9s 492 outer2/C1 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.423393
+307.9s 493 outer2/E1_equal seed=520260753 branch=C1 class=1/14 selected_macroF1=0.106088
+307.9s 494 outer2/E1_equal seed=520260753 branch=C1 class=2/14 selected_macroF1=0.125458
+307.9s 495 outer2/E1_equal seed=520260753 branch=C1 class=3/14 selected_macroF1=0.145493
+307.9s 496 outer2/E1_equal seed=520260753 branch=C1 class=4/14 selected_macroF1=0.150769
+307.9s 497 outer2/E1_equal seed=520260753 branch=C1 class=5/14 selected_macroF1=0.173857
+307.9s 498 outer2/E1_equal seed=520260753 branch=C1 class=6/14 selected_macroF1=0.198954
+307.9s 499 outer2/E1_equal seed=520260753 branch=C1 class=7/14 selected_macroF1=0.219246
+307.9s 500 outer2/E1_equal seed=520260753 branch=C1 class=8/14 selected_macroF1=0.242090
+307.9s 501 outer2/E1_equal seed=520260753 branch=C1 class=9/14 selected_macroF1=0.263229
+307.9s 502 outer2/E1_equal seed=520260753 branch=C1 class=10/14 selected_macroF1=0.274388
+307.9s 503 outer2/E1_equal seed=520260753 branch=C1 class=11/14 selected_macroF1=0.306923
+308.1s 504 outer2/E1_equal seed=520260753 branch=C1 class=12/14 selected_macroF1=0.323812
+308.1s 505 outer2/E1_equal seed=520260753 branch=C1 class=13/14 selected_macroF1=0.355558
+308.1s 506 outer2/E1_equal seed=520260753 branch=C1 class=14/14 selected_macroF1=0.380533
+319.1s 507 outer_3: resumed completed inner fold 0
+319.1s 508 outer_3: resumed completed inner fold 1
+319.1s 509 outer_3: resumed completed inner fold 2
+319.1s 510 outer_3/inner3 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.100901
+319.3s 511 outer_3/inner3 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.124068
+319.3s 512 outer_3/inner3 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.150420
+319.3s 513 outer_3/inner3 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.170197
+319.6s 514 outer_3/inner3 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.200809
+319.6s 515 outer_3/inner3 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.229380
+319.6s 516 outer_3/inner3 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.256887
+319.9s 517 outer_3/inner3 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.284098
+319.9s 518 outer_3/inner3 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.306692
+320.2s 519 outer_3/inner3 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.318594
+320.2s 520 outer_3/inner3 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.349947
+320.2s 521 outer_3/inner3 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.370994
+320.5s 522 outer_3/inner3 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.411810
+320.5s 523 outer_3/inner3 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.438149
+320.7s 524 outer_3/inner3 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.100337
+320.7s 525 outer_3/inner3 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.131587
+320.9s 526 outer_3/inner3 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.158221
+320.9s 527 outer_3/inner3 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.178280
+320.9s 528 outer_3/inner3 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.209049
+321.2s 529 outer_3/inner3 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.239406
+321.2s 530 outer_3/inner3 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.267301
+321.2s 531 outer_3/inner3 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.295873
+321.5s 532 outer_3/inner3 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.319437
+321.5s 533 outer_3/inner3 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.333135
+321.5s 534 outer_3/inner3 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.365619
+321.8s 535 outer_3/inner3 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.385968
+321.8s 536 outer_3/inner3 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.424929
+322.1s 537 outer_3/inner3 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.450290
+324.0s 538 outer_3/inner3 seed=520260751 assessment swap class=1/14
+325.3s 539 outer_3/inner3 seed=520260751 assessment swap class=2/14
+326.4s 540 outer_3/inner3 seed=520260751 assessment swap class=3/14
+327.9s 541 outer_3/inner3 seed=520260751 assessment swap class=4/14
+329.1s 542 outer_3/inner3 seed=520260751 assessment swap class=5/14
+330.2s 543 outer_3/inner3 seed=520260751 assessment swap class=6/14
+331.8s 544 outer_3/inner3 seed=520260751 assessment swap class=7/14
+333.0s 545 outer_3/inner3 seed=520260751 assessment swap class=8/14
+334.1s 546 outer_3/inner3 seed=520260751 assessment swap class=9/14
+335.4s 547 outer_3/inner3 seed=520260751 assessment swap class=10/14
+336.4s 548 outer_3/inner3 seed=520260751 assessment swap class=11/14
+337.3s 549 outer_3/inner3 seed=520260751 assessment swap class=12/14
+338.6s 550 outer_3/inner3 seed=520260751 assessment swap class=13/14
+339.6s 551 outer_3/inner3 seed=520260751 assessment swap class=14/14
+339.6s 552 outer_3/inner3 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.131061
+339.9s 553 outer_3/inner3 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.156313
+339.9s 554 outer_3/inner3 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.183381
+340.1s 555 outer_3/inner3 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.196539
+340.1s 556 outer_3/inner3 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.228471
+340.4s 557 outer_3/inner3 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.253197
+340.4s 558 outer_3/inner3 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.279584
+340.7s 559 outer_3/inner3 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.304286
+340.7s 560 outer_3/inner3 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.327025
+340.9s 561 outer_3/inner3 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.338901
+340.9s 562 outer_3/inner3 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.372872
+341.2s 563 outer_3/inner3 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.394583
+341.2s 564 outer_3/inner3 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.417672
+341.4s 565 outer_3/inner3 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.444776
+341.4s 566 outer_3/inner3 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.122820
+341.7s 567 outer_3/inner3 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.151391
+341.7s 568 outer_3/inner3 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.178914
+342.0s 569 outer_3/inner3 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.193276
+342.0s 570 outer_3/inner3 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.228549
+342.4s 571 outer_3/inner3 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.254156
+342.4s 572 outer_3/inner3 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.282057
+342.6s 573 outer_3/inner3 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.305484
+342.6s 574 outer_3/inner3 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.328110
+342.8s 575 outer_3/inner3 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.339975
+342.8s 576 outer_3/inner3 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.373991
+343.0s 577 outer_3/inner3 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.395177
+343.0s 578 outer_3/inner3 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.418265
+343.2s 579 outer_3/inner3 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.446840
+344.7s 580 outer_3/inner3 seed=520260752 assessment swap class=1/14
+345.8s 581 outer_3/inner3 seed=520260752 assessment swap class=2/14
+346.6s 582 outer_3/inner3 seed=520260752 assessment swap class=3/14
+347.3s 583 outer_3/inner3 seed=520260752 assessment swap class=4/14
+348.0s 584 outer_3/inner3 seed=520260752 assessment swap class=5/14
+349.1s 585 outer_3/inner3 seed=520260752 assessment swap class=6/14
+349.8s 586 outer_3/inner3 seed=520260752 assessment swap class=7/14
+350.5s 587 outer_3/inner3 seed=520260752 assessment swap class=8/14
+351.3s 588 outer_3/inner3 seed=520260752 assessment swap class=9/14
+352.4s 589 outer_3/inner3 seed=520260752 assessment swap class=10/14
+353.1s 590 outer_3/inner3 seed=520260752 assessment swap class=11/14
+353.8s 591 outer_3/inner3 seed=520260752 assessment swap class=12/14
+354.5s 592 outer_3/inner3 seed=520260752 assessment swap class=13/14
+355.5s 593 outer_3/inner3 seed=520260752 assessment swap class=14/14
+355.5s 594 outer_3/inner3 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.131358
+355.8s 595 outer_3/inner3 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.156568
+355.8s 596 outer_3/inner3 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.178890
+355.8s 597 outer_3/inner3 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.188060
+356.1s 598 outer_3/inner3 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.215128
+356.1s 599 outer_3/inner3 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.241815
+356.1s 600 outer_3/inner3 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.269787
+356.4s 601 outer_3/inner3 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.292747
+416.6s 602 outer_3/inner3 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.316007
+477.7s 603 outer_3/inner3 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.328649
+540.7s 604 outer_3/inner3 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.365585
+602.8s 605 outer_3/inner3 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.384829
+666.0s 606 outer_3/inner3 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.407051
+728.7s 607 outer_3/inner3 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.436441
+790.9s 608 outer_3/inner3 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.114941
+849.0s 609 outer_3/inner3 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.144841
+907.0s 610 outer_3/inner3 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.166819
+964.5s 611 outer_3/inner3 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.174094
+1022.9s 612 outer_3/inner3 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.200068
+1080.8s 613 outer_3/inner3 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.228961
+1139.4s 614 outer_3/inner3 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.257696
+1197.5s 615 outer_3/inner3 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.283303
+1257.1s 616 outer_3/inner3 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.306826
+1317.7s 617 outer_3/inner3 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.322344
+1379.7s 618 outer_3/inner3 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.357463
+1441.6s 619 outer_3/inner3 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.376583
+1501.9s 620 outer_3/inner3 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.424202
+1561.8s 621 outer_3/inner3 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.454629
+1567.1s 622 outer_3/inner3 seed=520260753 assessment swap class=1/14
+1568.4s 623 outer_3/inner3 seed=520260753 assessment swap class=2/14
+1569.3s 624 outer_3/inner3 seed=520260753 assessment swap class=3/14
+1570.3s 625 outer_3/inner3 seed=520260753 assessment swap class=4/14
+1571.6s 626 outer_3/inner3 seed=520260753 assessment swap class=5/14
+1572.6s 627 outer_3/inner3 seed=520260753 assessment swap class=6/14
+1573.5s 628 outer_3/inner3 seed=520260753 assessment swap class=7/14
+1574.8s 629 outer_3/inner3 seed=520260753 assessment swap class=8/14
+1575.8s 630 outer_3/inner3 seed=520260753 assessment swap class=9/14
+1576.8s 631 outer_3/inner3 seed=520260753 assessment swap class=10/14
+1578.1s 632 outer_3/inner3 seed=520260753 assessment swap class=11/14
+1579.0s 633 outer_3/inner3 seed=520260753 assessment swap class=12/14
+1580.0s 634 outer_3/inner3 seed=520260753 assessment swap class=13/14
+1581.3s 635 outer_3/inner3 seed=520260753 assessment swap class=14/14
+1581.3s 636 outer_3: checkpointed inner fold 3/4
+1581.3s 637 OUTER 4/5 seed=520260751: fit fixed views and evaluate held-out images
+1668.0s 638 outer3/C0 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.102277
+1755.1s 639 outer3/C0 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.124255
+1842.6s 640 outer3/C0 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.147112
+1929.6s 641 outer3/C0 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.166162
+2015.6s 642 outer3/C0 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.195516
+2100.9s 643 outer3/C0 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.222679
+2186.5s 644 outer3/C0 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.249687
+2270.3s 645 outer3/C0 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.277436
+2354.3s 646 outer3/C0 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.299939
+2439.6s 647 outer3/C0 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.310319
+2524.6s 648 outer3/C0 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.341864
+2609.8s 649 outer3/C0 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.360733
+2696.6s 650 outer3/C0 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.394346
+2783.2s 651 outer3/C0 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.420642
+2884.2s 652 outer3/C1 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.100021
+2976.0s 653 outer3/C1 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.129432
+3067.1s 654 outer3/C1 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.152971
+3160.8s 655 outer3/C1 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.173580
+3254.6s 656 outer3/C1 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.202840
+3347.3s 657 outer3/C1 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.232984
+3441.9s 658 outer3/C1 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.260743
+3539.1s 659 outer3/C1 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.290246
+3631.7s 660 outer3/C1 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.314227
+3726.4s 661 outer3/C1 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.326220
+3821.6s 662 outer3/C1 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.358926
+3916.7s 663 outer3/C1 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.378200
+4014.0s 664 outer3/C1 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.408812
+4113.5s 665 outer3/C1 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.435026
+4119.1s 666 outer3/E1_equal seed=520260751 branch=C1 class=1/14 selected_macroF1=0.098456
+4134.6s 667 outer3/E1_equal seed=520260751 branch=C1 class=2/14 selected_macroF1=0.122266
+4149.9s 668 outer3/E1_equal seed=520260751 branch=C1 class=3/14 selected_macroF1=0.144244
+4165.6s 669 outer3/E1_equal seed=520260751 branch=C1 class=4/14 selected_macroF1=0.164688
+4180.8s 670 outer3/E1_equal seed=520260751 branch=C1 class=5/14 selected_macroF1=0.191831
+4196.2s 671 outer3/E1_equal seed=520260751 branch=C1 class=6/14 selected_macroF1=0.217930
+4211.4s 672 outer3/E1_equal seed=520260751 branch=C1 class=7/14 selected_macroF1=0.242847
+4226.6s 673 outer3/E1_equal seed=520260751 branch=C1 class=8/14 selected_macroF1=0.269327
+4242.1s 674 outer3/E1_equal seed=520260751 branch=C1 class=9/14 selected_macroF1=0.291898
+4257.5s 675 outer3/E1_equal seed=520260751 branch=C1 class=10/14 selected_macroF1=0.302250
+4273.1s 676 outer3/E1_equal seed=520260751 branch=C1 class=11/14 selected_macroF1=0.334186
+4289.1s 677 outer3/E1_equal seed=520260751 branch=C1 class=12/14 selected_macroF1=0.352626
+4305.3s 678 outer3/E1_equal seed=520260751 branch=C1 class=13/14 selected_macroF1=0.383238
+4321.5s 679 outer3/E1_equal seed=520260751 branch=C1 class=14/14 selected_macroF1=0.407816
+4348.9s 680 OUTER 4/5 seed=520260752: fit fixed views and evaluate held-out images
+4410.0s 681 outer3/C0 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.126260
+4471.2s 682 outer3/C0 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.150383
+4532.3s 683 outer3/C0 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.174193
+4592.8s 684 outer3/C0 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.187841
+4653.3s 685 outer3/C0 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.219134
+4713.6s 686 outer3/C0 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.241317
+4774.0s 687 outer3/C0 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.266353
+4835.0s 688 outer3/C0 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.291922
+4896.4s 689 outer3/C0 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.314498
+4958.4s 690 outer3/C0 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.325852
+5019.6s 691 outer3/C0 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.359872
+5081.8s 692 outer3/C0 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.379852
+5146.0s 693 outer3/C0 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.406042
+5210.7s 694 outer3/C0 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.432484
+5276.2s 695 outer3/C1 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.119082
+5337.5s 696 outer3/C1 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.145660
+5397.5s 697 outer3/C1 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.170617
+5457.4s 698 outer3/C1 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.185464
+5517.7s 699 outer3/C1 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.218321
+5578.0s 700 outer3/C1 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.240826
+5637.7s 701 outer3/C1 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.266867
+5698.1s 702 outer3/C1 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.291105
+5758.0s 703 outer3/C1 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.313435
+5818.3s 704 outer3/C1 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.324275
+5878.7s 705 outer3/C1 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.358336
+5939.4s 706 outer3/C1 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.378098
+6000.4s 707 outer3/C1 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.396805
+6061.4s 708 outer3/C1 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.424563
+6064.4s 709 outer3/E1_equal seed=520260752 branch=C1 class=1/14 selected_macroF1=0.113500
+6074.6s 710 outer3/E1_equal seed=520260752 branch=C1 class=2/14 selected_macroF1=0.136823
+6084.1s 711 outer3/E1_equal seed=520260752 branch=C1 class=3/14 selected_macroF1=0.160115
+6094.1s 712 outer3/E1_equal seed=520260752 branch=C1 class=4/14 selected_macroF1=0.174558
+6103.9s 713 outer3/E1_equal seed=520260752 branch=C1 class=5/14 selected_macroF1=0.204428
+6113.9s 714 outer3/E1_equal seed=520260752 branch=C1 class=6/14 selected_macroF1=0.226073
+6124.3s 715 outer3/E1_equal seed=520260752 branch=C1 class=7/14 selected_macroF1=0.249596
+6134.2s 716 outer3/E1_equal seed=520260752 branch=C1 class=8/14 selected_macroF1=0.271598
+6145.4s 717 outer3/E1_equal seed=520260752 branch=C1 class=9/14 selected_macroF1=0.293238
+6155.6s 718 outer3/E1_equal seed=520260752 branch=C1 class=10/14 selected_macroF1=0.302909
+6165.6s 719 outer3/E1_equal seed=520260752 branch=C1 class=11/14 selected_macroF1=0.336843
+6176.0s 720 outer3/E1_equal seed=520260752 branch=C1 class=12/14 selected_macroF1=0.355295
+6186.3s 721 outer3/E1_equal seed=520260752 branch=C1 class=13/14 selected_macroF1=0.374002
+6196.8s 722 outer3/E1_equal seed=520260752 branch=C1 class=14/14 selected_macroF1=0.399012
+6218.1s 723 OUTER 4/5 seed=520260753: fit fixed views and evaluate held-out images
+6300.9s 724 outer3/C0 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.128680
+6386.1s 725 outer3/C0 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.151936
+6473.1s 726 outer3/C0 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.171186
+6558.9s 727 outer3/C0 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.179579
+6646.8s 728 outer3/C0 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.205396
+6734.7s 729 outer3/C0 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.232777
+6823.2s 730 outer3/C0 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.259175
+6910.5s 731 outer3/C0 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.283735
+6993.9s 732 outer3/C0 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.305266
+7082.5s 733 outer3/C0 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.316285
+7168.7s 734 outer3/C0 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.351912
+7255.1s 735 outer3/C0 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.370511
+7344.5s 736 outer3/C0 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.396201
+7436.6s 737 outer3/C0 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.424483
+7526.7s 738 outer3/C1 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.116861
+7611.0s 739 outer3/C1 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.143647
+7695.9s 740 outer3/C1 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.162695
+7786.0s 741 outer3/C1 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.168653
+7873.0s 742 outer3/C1 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.195108
+7963.7s 743 outer3/C1 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.223920
+8052.0s 744 outer3/C1 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.250303
+8139.4s 745 outer3/C1 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.276798
+8223.3s 746 outer3/C1 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.299308
+8311.4s 747 outer3/C1 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.312058
+8401.4s 748 outer3/C1 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.346417
+8488.3s 749 outer3/C1 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.364462
+8578.4s 750 outer3/C1 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.402557
+8668.7s 751 outer3/C1 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.431071
+8673.9s 752 outer3/E1_equal seed=520260753 branch=C1 class=1/14 selected_macroF1=0.107711
+8687.6s 753 outer3/E1_equal seed=520260753 branch=C1 class=2/14 selected_macroF1=0.127832
+8701.2s 754 outer3/E1_equal seed=520260753 branch=C1 class=3/14 selected_macroF1=0.146506
+8714.8s 755 outer3/E1_equal seed=520260753 branch=C1 class=4/14 selected_macroF1=0.151726
+8729.2s 756 outer3/E1_equal seed=520260753 branch=C1 class=5/14 selected_macroF1=0.175920
+8742.6s 757 outer3/E1_equal seed=520260753 branch=C1 class=6/14 selected_macroF1=0.199565
+8756.5s 758 outer3/E1_equal seed=520260753 branch=C1 class=7/14 selected_macroF1=0.222653
+8770.3s 759 outer3/E1_equal seed=520260753 branch=C1 class=8/14 selected_macroF1=0.246358
+8785.3s 760 outer3/E1_equal seed=520260753 branch=C1 class=9/14 selected_macroF1=0.265436
+8800.1s 761 outer3/E1_equal seed=520260753 branch=C1 class=10/14 selected_macroF1=0.275888
+8814.7s 762 outer3/E1_equal seed=520260753 branch=C1 class=11/14 selected_macroF1=0.309408
+8830.1s 763 outer3/E1_equal seed=520260753 branch=C1 class=12/14 selected_macroF1=0.326014
+8846.5s 764 outer3/E1_equal seed=520260753 branch=C1 class=13/14 selected_macroF1=0.361728
+8862.2s 765 outer3/E1_equal seed=520260753 branch=C1 class=14/14 selected_macroF1=0.387413
+8958.2s 766 outer_4/inner0 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.103408
+9027.7s 767 outer_4/inner0 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.126265
+9097.1s 768 outer_4/inner0 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.151775
+9166.6s 769 outer_4/inner0 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.169522
+9239.3s 770 outer_4/inner0 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.198876
+9310.9s 771 outer_4/inner0 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.228230
+9380.6s 772 outer_4/inner0 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.260652
+9449.7s 773 outer_4/inner0 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.288088
+9517.6s 774 outer_4/inner0 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.314125
+9585.9s 775 outer_4/inner0 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.331349
+9656.2s 776 outer_4/inner0 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.365347
+9728.6s 777 outer_4/inner0 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.384695
+9801.8s 778 outer_4/inner0 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.408504
+9874.9s 779 outer_4/inner0 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.437909
+9954.9s 780 outer_4/inner0 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.101918
+10030.8s 781 outer_4/inner0 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.134885
+10106.3s 782 outer_4/inner0 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.159416
+10178.6s 783 outer_4/inner0 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.178579
+10250.7s 784 outer_4/inner0 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.207991
+10321.7s 785 outer_4/inner0 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.240372
+10392.1s 786 outer_4/inner0 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.272785
+10461.0s 787 outer_4/inner0 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.299903
+10530.5s 788 outer_4/inner0 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.327211
+10598.0s 789 outer_4/inner0 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.344464
+10666.6s 790 outer_4/inner0 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.377748
+10735.0s 791 outer_4/inner0 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.397068
+10803.9s 792 outer_4/inner0 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.412941
+10873.2s 793 outer_4/inner0 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.441526
+10879.5s 794 outer_4/inner0 seed=520260751 assessment swap class=1/14
+10880.9s 795 outer_4/inner0 seed=520260751 assessment swap class=2/14
+10881.9s 796 outer_4/inner0 seed=520260751 assessment swap class=3/14
+10883.0s 797 outer_4/inner0 seed=520260751 assessment swap class=4/14
+10884.4s 798 outer_4/inner0 seed=520260751 assessment swap class=5/14
+10885.5s 799 outer_4/inner0 seed=520260751 assessment swap class=6/14
+10886.5s 800 outer_4/inner0 seed=520260751 assessment swap class=7/14
+10887.8s 801 outer_4/inner0 seed=520260751 assessment swap class=8/14
+10888.9s 802 outer_4/inner0 seed=520260751 assessment swap class=9/14
+10890.3s 803 outer_4/inner0 seed=520260751 assessment swap class=10/14
+10891.3s 804 outer_4/inner0 seed=520260751 assessment swap class=11/14
+10892.4s 805 outer_4/inner0 seed=520260751 assessment swap class=12/14
+10893.8s 806 outer_4/inner0 seed=520260751 assessment swap class=13/14
+10894.8s 807 outer_4/inner0 seed=520260751 assessment swap class=14/14
+10939.8s 808 outer_4/inner0 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.122668
+10984.3s 809 outer_4/inner0 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.146011
+11034.0s 810 outer_4/inner0 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.171521
+11083.6s 811 outer_4/inner0 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.184232
+11130.2s 812 outer_4/inner0 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.220551
+11176.4s 813 outer_4/inner0 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.245992
+11225.2s 814 outer_4/inner0 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.273710
+11272.0s 815 outer_4/inner0 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.299083
+11318.0s 816 outer_4/inner0 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.322599
+11363.3s 817 outer_4/inner0 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.340423
+11408.9s 818 outer_4/inner0 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.374073
+11454.2s 819 outer_4/inner0 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.391501
+11500.7s 820 outer_4/inner0 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.420073
+11546.8s 821 outer_4/inner0 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.449333
+11592.7s 822 outer_4/inner0 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.112715
+11636.8s 823 outer_4/inner0 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.142271
+11680.9s 824 outer_4/inner0 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.167116
+11725.5s 825 outer_4/inner0 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.180502
+11769.5s 826 outer_4/inner0 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.218448
+11814.7s 827 outer_4/inner0 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.244242
+11859.6s 828 outer_4/inner0 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.272544
+11904.9s 829 outer_4/inner0 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.297064
+11950.0s 830 outer_4/inner0 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.321497
+11995.3s 831 outer_4/inner0 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.338866
+12040.0s 832 outer_4/inner0 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.372139
+12084.5s 833 outer_4/inner0 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.389335
+12128.1s 834 outer_4/inner0 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.417906
+12172.2s 835 outer_4/inner0 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.448614
+12176.2s 836 outer_4/inner0 seed=520260752 assessment swap class=1/14
+12176.8s 837 outer_4/inner0 seed=520260752 assessment swap class=2/14
+12177.5s 838 outer_4/inner0 seed=520260752 assessment swap class=3/14
+12178.5s 839 outer_4/inner0 seed=520260752 assessment swap class=4/14
+12179.1s 840 outer_4/inner0 seed=520260752 assessment swap class=5/14
+12179.8s 841 outer_4/inner0 seed=520260752 assessment swap class=6/14
+12180.4s 842 outer_4/inner0 seed=520260752 assessment swap class=7/14
+12181.1s 843 outer_4/inner0 seed=520260752 assessment swap class=8/14
+12182.1s 844 outer_4/inner0 seed=520260752 assessment swap class=9/14
+12182.8s 845 outer_4/inner0 seed=520260752 assessment swap class=10/14
+12183.4s 846 outer_4/inner0 seed=520260752 assessment swap class=11/14
+12184.1s 847 outer_4/inner0 seed=520260752 assessment swap class=12/14
+12184.7s 848 outer_4/inner0 seed=520260752 assessment swap class=13/14
+12185.4s 849 outer_4/inner0 seed=520260752 assessment swap class=14/14
+12245.9s 850 outer_4/inner0 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.137806
+12306.7s 851 outer_4/inner0 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.161130
+12366.7s 852 outer_4/inner0 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.183602
+12428.3s 853 outer_4/inner0 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.190794
+12489.1s 854 outer_4/inner0 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.217428
+12550.7s 855 outer_4/inner0 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.245647
+12611.8s 856 outer_4/inner0 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.275163
+12673.3s 857 outer_4/inner0 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.299773
+12736.1s 858 outer_4/inner0 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.321914
+12800.8s 859 outer_4/inner0 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.335919
+12867.3s 860 outer_4/inner0 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.370646
+12932.1s 861 outer_4/inner0 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.387627
+12998.3s 862 outer_4/inner0 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.393732
+13064.6s 863 outer_4/inner0 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.424283
+13127.7s 864 outer_4/inner0 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.124097
+13187.2s 865 outer_4/inner0 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.152668
+13247.3s 866 outer_4/inner0 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.175924
+13308.0s 867 outer_4/inner0 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.180338
+13373.0s 868 outer_4/inner0 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.207124
+13434.9s 869 outer_4/inner0 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.234953
+13496.6s 870 outer_4/inner0 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.263525
+13557.0s 871 outer_4/inner0 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.289111
+13618.3s 872 outer_4/inner0 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.314563
+13679.9s 873 outer_4/inner0 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.331823
+13742.4s 874 outer_4/inner0 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.365361
+13804.8s 875 outer_4/inner0 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.382876
+13868.9s 876 outer_4/inner0 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.411447
+13933.2s 877 outer_4/inner0 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.442087
+13938.9s 878 outer_4/inner0 seed=520260753 assessment swap class=1/14
+13940.0s 879 outer_4/inner0 seed=520260753 assessment swap class=2/14
+13941.0s 880 outer_4/inner0 seed=520260753 assessment swap class=3/14
+13942.4s 881 outer_4/inner0 seed=520260753 assessment swap class=4/14
+13943.4s 882 outer_4/inner0 seed=520260753 assessment swap class=5/14
+13944.4s 883 outer_4/inner0 seed=520260753 assessment swap class=6/14
+13945.7s 884 outer_4/inner0 seed=520260753 assessment swap class=7/14
+13946.7s 885 outer_4/inner0 seed=520260753 assessment swap class=8/14
+13947.7s 886 outer_4/inner0 seed=520260753 assessment swap class=9/14
+13949.0s 887 outer_4/inner0 seed=520260753 assessment swap class=10/14
+13950.0s 888 outer_4/inner0 seed=520260753 assessment swap class=11/14
+13951.0s 889 outer_4/inner0 seed=520260753 assessment swap class=12/14
+13952.4s 890 outer_4/inner0 seed=520260753 assessment swap class=13/14
+13953.4s 891 outer_4/inner0 seed=520260753 assessment swap class=14/14
+13953.4s 892 outer_4: checkpointed inner fold 0/4
+14018.4s 893 outer_4/inner1 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.106667
+14083.1s 894 outer_4/inner1 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.129776
+14148.2s 895 outer_4/inner1 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.154557
+14214.7s 896 outer_4/inner1 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.169169
+14286.7s 897 outer_4/inner1 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.198725
+14354.0s 898 outer_4/inner1 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.224699
+14419.7s 899 outer_4/inner1 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.251402
+14486.8s 900 outer_4/inner1 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.280872
+14553.2s 901 outer_4/inner1 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.307507
+14619.7s 902 outer_4/inner1 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.320667
+14686.2s 903 outer_4/inner1 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.353221
+14753.1s 904 outer_4/inner1 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.372799
+14822.5s 905 outer_4/inner1 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.413616
+14896.5s 906 outer_4/inner1 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.440948
+14974.2s 907 outer_4/inner1 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.103409
+15047.5s 908 outer_4/inner1 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.140446
+15120.0s 909 outer_4/inner1 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.164977
+15190.9s 910 outer_4/inner1 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.180979
+15260.8s 911 outer_4/inner1 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.211282
+15330.4s 912 outer_4/inner1 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.239478
+15399.5s 913 outer_4/inner1 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.267460
+15468.8s 914 outer_4/inner1 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.295310
+15538.4s 915 outer_4/inner1 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.323211
+15610.7s 916 outer_4/inner1 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.337651
+15685.2s 917 outer_4/inner1 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.371862
+15759.4s 918 outer_4/inner1 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.391134
+15833.0s 919 outer_4/inner1 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.426848
+15903.2s 920 outer_4/inner1 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.453724
+15909.2s 921 outer_4/inner1 seed=520260751 assessment swap class=1/14
+15910.6s 922 outer_4/inner1 seed=520260751 assessment swap class=2/14
+15911.7s 923 outer_4/inner1 seed=520260751 assessment swap class=3/14
+15912.8s 924 outer_4/inner1 seed=520260751 assessment swap class=4/14
+15914.2s 925 outer_4/inner1 seed=520260751 assessment swap class=5/14
+15915.3s 926 outer_4/inner1 seed=520260751 assessment swap class=6/14
+15916.7s 927 outer_4/inner1 seed=520260751 assessment swap class=7/14
+15917.8s 928 outer_4/inner1 seed=520260751 assessment swap class=8/14
+15918.8s 929 outer_4/inner1 seed=520260751 assessment swap class=9/14
+15920.3s 930 outer_4/inner1 seed=520260751 assessment swap class=10/14
+15921.3s 931 outer_4/inner1 seed=520260751 assessment swap class=11/14
+15923.2s 932 outer_4/inner1 seed=520260751 assessment swap class=12/14
+15924.3s 933 outer_4/inner1 seed=520260751 assessment swap class=13/14
+15925.4s 934 outer_4/inner1 seed=520260751 assessment swap class=14/14
+15968.1s 935 outer_4/inner1 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.124211
+16012.4s 936 outer_4/inner1 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.155957
+16056.8s 937 outer_4/inner1 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.183654
+16100.5s 938 outer_4/inner1 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.197258
+16145.0s 939 outer_4/inner1 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.232972
+16189.7s 940 outer_4/inner1 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.252906
+16233.3s 941 outer_4/inner1 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.279974
+16277.2s 942 outer_4/inner1 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.307159
+16322.1s 943 outer_4/inner1 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.332769
+16366.5s 944 outer_4/inner1 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.349191
+16410.0s 945 outer_4/inner1 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.383004
+16453.5s 946 outer_4/inner1 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.400275
+16497.0s 947 outer_4/inner1 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.421703
+16540.7s 948 outer_4/inner1 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.449732
+16585.0s 949 outer_4/inner1 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.123311
+16627.5s 950 outer_4/inner1 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.157325
+16670.1s 951 outer_4/inner1 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.184742
+16712.7s 952 outer_4/inner1 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.197760
+16755.4s 953 outer_4/inner1 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.235123
+16798.2s 954 outer_4/inner1 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.255827
+16841.1s 955 outer_4/inner1 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.282282
+16883.8s 956 outer_4/inner1 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.306265
+16926.5s 957 outer_4/inner1 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.333439
+16969.3s 958 outer_4/inner1 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.349348
+17010.8s 959 outer_4/inner1 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.383634
+17053.1s 960 outer_4/inner1 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.401599
+17094.3s 961 outer_4/inner1 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.423028
+17135.9s 962 outer_4/inner1 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.452389
+17139.8s 963 outer_4/inner1 seed=520260752 assessment swap class=1/14
+17140.5s 964 outer_4/inner1 seed=520260752 assessment swap class=2/14
+17141.2s 965 outer_4/inner1 seed=520260752 assessment swap class=3/14
+17141.9s 966 outer_4/inner1 seed=520260752 assessment swap class=4/14
+17142.6s 967 outer_4/inner1 seed=520260752 assessment swap class=5/14
+17143.7s 968 outer_4/inner1 seed=520260752 assessment swap class=6/14
+17144.4s 969 outer_4/inner1 seed=520260752 assessment swap class=7/14
+17145.1s 970 outer_4/inner1 seed=520260752 assessment swap class=8/14
+17145.8s 971 outer_4/inner1 seed=520260752 assessment swap class=9/14
+17146.5s 972 outer_4/inner1 seed=520260752 assessment swap class=10/14
+17147.5s 973 outer_4/inner1 seed=520260752 assessment swap class=11/14
+17148.2s 974 outer_4/inner1 seed=520260752 assessment swap class=12/14
+17148.9s 975 outer_4/inner1 seed=520260752 assessment swap class=13/14
+17149.6s 976 outer_4/inner1 seed=520260752 assessment swap class=14/14
+17209.6s 977 outer_4/inner1 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.130481
+17269.6s 978 outer_4/inner1 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.154970
+17329.5s 979 outer_4/inner1 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.176187
+17390.2s 980 outer_4/inner1 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.184648
+17449.9s 981 outer_4/inner1 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.212426
+17510.2s 982 outer_4/inner1 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.238881
+17571.2s 983 outer_4/inner1 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.267452
+17632.9s 984 outer_4/inner1 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.290829
+17694.8s 985 outer_4/inner1 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.314933
+17758.4s 986 outer_4/inner1 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.326766
+17826.3s 987 outer_4/inner1 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.362480
+17891.0s 988 outer_4/inner1 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.379402
+17956.5s 989 outer_4/inner1 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.398729
+18023.6s 990 outer_4/inner1 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.428683
+18087.3s 991 outer_4/inner1 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.117244
+18149.5s 992 outer_4/inner1 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.145815
+18210.4s 993 outer_4/inner1 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.167793
+18271.8s 994 outer_4/inner1 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.172133
+18334.2s 995 outer_4/inner1 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.199530
+18398.1s 996 outer_4/inner1 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.225504
+18463.4s 997 outer_4/inner1 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.250447
+18527.6s 998 outer_4/inner1 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.275793
+18593.4s 999 outer_4/inner1 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.302683
+18658.2s 1000 outer_4/inner1 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.316625
+18723.9s 1001 outer_4/inner1 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.351639
+18790.7s 1002 outer_4/inner1 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.368431
+18863.1s 1003 outer_4/inner1 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.412387
+18933.3s 1004 outer_4/inner1 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.442739
+18939.4s 1005 outer_4/inner1 seed=520260753 assessment swap class=1/14
+18940.7s 1006 outer_4/inner1 seed=520260753 assessment swap class=2/14
+18941.9s 1007 outer_4/inner1 seed=520260753 assessment swap class=3/14
+18943.0s 1008 outer_4/inner1 seed=520260753 assessment swap class=4/14
+18944.5s 1009 outer_4/inner1 seed=520260753 assessment swap class=5/14
+18945.6s 1010 outer_4/inner1 seed=520260753 assessment swap class=6/14
+18946.7s 1011 outer_4/inner1 seed=520260753 assessment swap class=7/14
+18948.1s 1012 outer_4/inner1 seed=520260753 assessment swap class=8/14
+18949.2s 1013 outer_4/inner1 seed=520260753 assessment swap class=9/14
+18950.2s 1014 outer_4/inner1 seed=520260753 assessment swap class=10/14
+18951.6s 1015 outer_4/inner1 seed=520260753 assessment swap class=11/14
+18952.7s 1016 outer_4/inner1 seed=520260753 assessment swap class=12/14
+18954.1s 1017 outer_4/inner1 seed=520260753 assessment swap class=13/14
+18955.2s 1018 outer_4/inner1 seed=520260753 assessment swap class=14/14
+18955.2s 1019 outer_4: checkpointed inner fold 1/4
+19025.0s 1020 outer_4/inner2 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.107747
+19090.2s 1021 outer_4/inner2 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.131003
+19157.5s 1022 outer_4/inner2 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.158291
+19224.2s 1023 outer_4/inner2 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.173977
+19289.9s 1024 outer_4/inner2 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.204280
+19355.9s 1025 outer_4/inner2 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.234234
+19423.3s 1026 outer_4/inner2 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.268180
+19488.2s 1027 outer_4/inner2 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.296222
+19553.0s 1028 outer_4/inner2 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.319490
+19619.8s 1029 outer_4/inner2 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.334830
+19686.8s 1030 outer_4/inner2 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.367017
+19757.1s 1031 outer_4/inner2 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.387388
+19828.0s 1032 outer_4/inner2 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.423103
+19897.8s 1033 outer_4/inner2 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.448917
+19972.8s 1034 outer_4/inner2 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.103940
+20044.7s 1035 outer_4/inner2 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.138422
+20115.0s 1036 outer_4/inner2 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.164396
+20187.0s 1037 outer_4/inner2 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.182989
+20258.4s 1038 outer_4/inner2 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.211561
+20329.2s 1039 outer_4/inner2 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.240132
+20399.8s 1040 outer_4/inner2 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.271129
+20469.4s 1041 outer_4/inner2 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.297811
+20539.6s 1042 outer_4/inner2 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.321270
+20612.6s 1043 outer_4/inner2 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.334428
+20687.4s 1044 outer_4/inner2 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.368719
+20758.9s 1045 outer_4/inner2 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.389388
+20833.6s 1046 outer_4/inner2 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.428349
+20909.4s 1047 outer_4/inner2 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.452457
+20916.1s 1048 outer_4/inner2 seed=520260751 assessment swap class=1/14
+20917.2s 1049 outer_4/inner2 seed=520260751 assessment swap class=2/14
+20918.7s 1050 outer_4/inner2 seed=520260751 assessment swap class=3/14
+20919.8s 1051 outer_4/inner2 seed=520260751 assessment swap class=4/14
+20920.8s 1052 outer_4/inner2 seed=520260751 assessment swap class=5/14
+20922.3s 1053 outer_4/inner2 seed=520260751 assessment swap class=6/14
+20923.4s 1054 outer_4/inner2 seed=520260751 assessment swap class=7/14
+20924.7s 1055 outer_4/inner2 seed=520260751 assessment swap class=8/14
+20925.9s 1056 outer_4/inner2 seed=520260751 assessment swap class=9/14
+20927.0s 1057 outer_4/inner2 seed=520260751 assessment swap class=10/14
+20928.4s 1058 outer_4/inner2 seed=520260751 assessment swap class=11/14
+20929.5s 1059 outer_4/inner2 seed=520260751 assessment swap class=12/14
+20930.6s 1060 outer_4/inner2 seed=520260751 assessment swap class=13/14
+20932.0s 1061 outer_4/inner2 seed=520260751 assessment swap class=14/14
+20976.7s 1062 outer_4/inner2 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.134581
+21021.1s 1063 outer_4/inner2 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.158688
+21066.4s 1064 outer_4/inner2 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.186517
+21111.3s 1065 outer_4/inner2 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.199552
+21156.1s 1066 outer_4/inner2 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.233944
+21201.0s 1067 outer_4/inner2 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.260730
+21246.2s 1068 outer_4/inner2 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.292749
+21291.7s 1069 outer_4/inner2 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.318573
+21336.9s 1070 outer_4/inner2 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.339247
+21381.0s 1071 outer_4/inner2 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.355731
+21427.1s 1072 outer_4/inner2 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.389711
+21473.3s 1073 outer_4/inner2 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.408033
+21518.1s 1074 outer_4/inner2 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.420731
+21562.6s 1075 outer_4/inner2 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.446330
+21608.1s 1076 outer_4/inner2 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.126623
+21651.9s 1077 outer_4/inner2 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.157679
+21696.0s 1078 outer_4/inner2 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.183836
+21739.8s 1079 outer_4/inner2 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.196897
+21783.9s 1080 outer_4/inner2 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.233763
+21828.5s 1081 outer_4/inner2 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.259350
+21872.3s 1082 outer_4/inner2 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.291096
+21915.6s 1083 outer_4/inner2 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.315355
+21959.5s 1084 outer_4/inner2 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.336710
+22003.9s 1085 outer_4/inner2 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.352839
+22050.8s 1086 outer_4/inner2 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.386634
+22096.0s 1087 outer_4/inner2 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.405326
+22139.7s 1088 outer_4/inner2 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.418024
+22183.4s 1089 outer_4/inner2 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.444835
+22187.4s 1090 outer_4/inner2 seed=520260752 assessment swap class=1/14
+22188.0s 1091 outer_4/inner2 seed=520260752 assessment swap class=2/14
+22188.8s 1092 outer_4/inner2 seed=520260752 assessment swap class=3/14
+22189.4s 1093 outer_4/inner2 seed=520260752 assessment swap class=4/14
+22190.1s 1094 outer_4/inner2 seed=520260752 assessment swap class=5/14
+22191.2s 1095 outer_4/inner2 seed=520260752 assessment swap class=6/14
+22191.9s 1096 outer_4/inner2 seed=520260752 assessment swap class=7/14
+22192.6s 1097 outer_4/inner2 seed=520260752 assessment swap class=8/14
+22193.3s 1098 outer_4/inner2 seed=520260752 assessment swap class=9/14
+22193.9s 1099 outer_4/inner2 seed=520260752 assessment swap class=10/14
+22195.0s 1100 outer_4/inner2 seed=520260752 assessment swap class=11/14
+22195.7s 1101 outer_4/inner2 seed=520260752 assessment swap class=12/14
+22196.4s 1102 outer_4/inner2 seed=520260752 assessment swap class=13/14
+22197.1s 1103 outer_4/inner2 seed=520260752 assessment swap class=14/14
+22258.5s 1104 outer_4/inner2 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.133662
+22320.1s 1105 outer_4/inner2 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.158662
+22382.5s 1106 outer_4/inner2 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.182170
+22445.6s 1107 outer_4/inner2 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.191369
+22507.9s 1108 outer_4/inner2 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.216809
+22570.2s 1109 outer_4/inner2 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.244120
+22633.8s 1110 outer_4/inner2 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.273532
+22695.8s 1111 outer_4/inner2 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.298823
+22758.9s 1112 outer_4/inner2 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.319380
+22823.1s 1113 outer_4/inner2 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.332907
+22888.5s 1114 outer_4/inner2 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.369354
+22953.1s 1115 outer_4/inner2 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.387392
+23019.1s 1116 outer_4/inner2 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.410480
+23085.4s 1117 outer_4/inner2 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.438375
+23149.0s 1118 outer_4/inner2 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.121909
+23210.0s 1119 outer_4/inner2 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.153268
+23273.1s 1120 outer_4/inner2 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.177658
+23338.1s 1121 outer_4/inner2 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.181076
+23401.4s 1122 outer_4/inner2 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.207392
+23464.1s 1123 outer_4/inner2 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.235963
+23526.2s 1124 outer_4/inner2 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.266334
+23590.4s 1125 outer_4/inner2 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.293120
+23654.1s 1126 outer_4/inner2 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.316237
+23717.7s 1127 outer_4/inner2 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.331599
+23780.8s 1128 outer_4/inner2 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.365961
+23845.3s 1129 outer_4/inner2 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.383863
+23912.0s 1130 outer_4/inner2 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.422824
+23977.0s 1131 outer_4/inner2 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.449329
+23982.6s 1132 outer_4/inner2 seed=520260753 assessment swap class=1/14
+23984.0s 1133 outer_4/inner2 seed=520260753 assessment swap class=2/14
+23985.1s 1134 outer_4/inner2 seed=520260753 assessment swap class=3/14
+23986.1s 1135 outer_4/inner2 seed=520260753 assessment swap class=4/14
+23987.5s 1136 outer_4/inner2 seed=520260753 assessment swap class=5/14
+23988.5s 1137 outer_4/inner2 seed=520260753 assessment swap class=6/14
+23989.5s 1138 outer_4/inner2 seed=520260753 assessment swap class=7/14
+23990.9s 1139 outer_4/inner2 seed=520260753 assessment swap class=8/14
+23991.9s 1140 outer_4/inner2 seed=520260753 assessment swap class=9/14
+23993.0s 1141 outer_4/inner2 seed=520260753 assessment swap class=10/14
+23994.3s 1142 outer_4/inner2 seed=520260753 assessment swap class=11/14
+23995.3s 1143 outer_4/inner2 seed=520260753 assessment swap class=12/14
+23996.7s 1144 outer_4/inner2 seed=520260753 assessment swap class=13/14
+23997.7s 1145 outer_4/inner2 seed=520260753 assessment swap class=14/14
+23997.7s 1146 outer_4: checkpointed inner fold 2/4
+24063.7s 1147 outer_4/inner3 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.101651
+24129.8s 1148 outer_4/inner3 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.120448
+24195.9s 1149 outer_4/inner3 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.145658
+24262.4s 1150 outer_4/inner3 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.165439
+24329.1s 1151 outer_4/inner3 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.205121
+24397.3s 1152 outer_4/inner3 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.235734
+24468.3s 1153 outer_4/inner3 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.264626
+24537.2s 1154 outer_4/inner3 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.291669
+24604.5s 1155 outer_4/inner3 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.323196
+24672.1s 1156 outer_4/inner3 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.335308
+24742.9s 1157 outer_4/inner3 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.369978
+24810.9s 1158 outer_4/inner3 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.391142
+24880.5s 1159 outer_4/inner3 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.438761
+24950.2s 1160 outer_4/inner3 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.466169
+25024.7s 1161 outer_4/inner3 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.098138
+25097.0s 1162 outer_4/inner3 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.135732
+25167.3s 1163 outer_4/inner3 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.159809
+25237.8s 1164 outer_4/inner3 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.181644
+25307.9s 1165 outer_4/inner3 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.220254
+25378.9s 1166 outer_4/inner3 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.253764
+25449.4s 1167 outer_4/inner3 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.282038
+25518.1s 1168 outer_4/inner3 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.309851
+25587.1s 1169 outer_4/inner3 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.340539
+25656.5s 1170 outer_4/inner3 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.353172
+25727.6s 1171 outer_4/inner3 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.388693
+25798.8s 1172 outer_4/inner3 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.409857
+25870.6s 1173 outer_4/inner3 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.450674
+25946.2s 1174 outer_4/inner3 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.476601
+25953.2s 1175 outer_4/inner3 seed=520260751 assessment swap class=1/14
+25954.4s 1176 outer_4/inner3 seed=520260751 assessment swap class=2/14
+25955.5s 1177 outer_4/inner3 seed=520260751 assessment swap class=3/14
+25957.2s 1178 outer_4/inner3 seed=520260751 assessment swap class=4/14
+25958.3s 1179 outer_4/inner3 seed=520260751 assessment swap class=5/14
+25959.4s 1180 outer_4/inner3 seed=520260751 assessment swap class=6/14
+25960.8s 1181 outer_4/inner3 seed=520260751 assessment swap class=7/14
+25961.9s 1182 outer_4/inner3 seed=520260751 assessment swap class=8/14
+25963.4s 1183 outer_4/inner3 seed=520260751 assessment swap class=9/14
+25964.5s 1184 outer_4/inner3 seed=520260751 assessment swap class=10/14
+25965.7s 1185 outer_4/inner3 seed=520260751 assessment swap class=11/14
+25967.1s 1186 outer_4/inner3 seed=520260751 assessment swap class=12/14
+25968.3s 1187 outer_4/inner3 seed=520260751 assessment swap class=13/14
+25969.8s 1188 outer_4/inner3 seed=520260751 assessment swap class=14/14
+26014.9s 1189 outer_4/inner3 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.148865
+26059.7s 1190 outer_4/inner3 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.171087
+26104.2s 1191 outer_4/inner3 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.194897
+26148.1s 1192 outer_4/inner3 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.207919
+26191.9s 1193 outer_4/inner3 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.241532
+26235.6s 1194 outer_4/inner3 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.271607
+26279.9s 1195 outer_4/inner3 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.299896
+26324.5s 1196 outer_4/inner3 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.325014
+26369.5s 1197 outer_4/inner3 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.350550
+26414.5s 1198 outer_4/inner3 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.363525
+26458.9s 1199 outer_4/inner3 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.396123
+26503.2s 1200 outer_4/inner3 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.414556
+26546.9s 1201 outer_4/inner3 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.431563
+26590.8s 1202 outer_4/inner3 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.460867
+26636.0s 1203 outer_4/inner3 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.137752
+26679.7s 1204 outer_4/inner3 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.168364
+26723.0s 1205 outer_4/inner3 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.191872
+26766.1s 1206 outer_4/inner3 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.205446
+26810.8s 1207 outer_4/inner3 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.241160
+26854.1s 1208 outer_4/inner3 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.271517
+26897.3s 1209 outer_4/inner3 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.303450
+26940.7s 1210 outer_4/inner3 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.326998
+26984.3s 1211 outer_4/inner3 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.353697
+27028.6s 1212 outer_4/inner3 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.366725
+27071.7s 1213 outer_4/inner3 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.399500
+27116.0s 1214 outer_4/inner3 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.418208
+27160.0s 1215 outer_4/inner3 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.435215
+27203.9s 1216 outer_4/inner3 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.465621
+27208.0s 1217 outer_4/inner3 seed=520260752 assessment swap class=1/14
+27208.7s 1218 outer_4/inner3 seed=520260752 assessment swap class=2/14
+27209.5s 1219 outer_4/inner3 seed=520260752 assessment swap class=3/14
+27210.3s 1220 outer_4/inner3 seed=520260752 assessment swap class=4/14
+27211.2s 1221 outer_4/inner3 seed=520260752 assessment swap class=5/14
+27212.1s 1222 outer_4/inner3 seed=520260752 assessment swap class=6/14
+27212.9s 1223 outer_4/inner3 seed=520260752 assessment swap class=7/14
+27213.7s 1224 outer_4/inner3 seed=520260752 assessment swap class=8/14
+27214.4s 1225 outer_4/inner3 seed=520260752 assessment swap class=9/14
+27215.5s 1226 outer_4/inner3 seed=520260752 assessment swap class=10/14
+27216.3s 1227 outer_4/inner3 seed=520260752 assessment swap class=11/14
+27217.0s 1228 outer_4/inner3 seed=520260752 assessment swap class=12/14
+27217.8s 1229 outer_4/inner3 seed=520260752 assessment swap class=13/14
+27218.9s 1230 outer_4/inner3 seed=520260752 assessment swap class=14/14
+27280.7s 1231 outer_4/inner3 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.118348
+27342.3s 1232 outer_4/inner3 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.139776
+27404.5s 1233 outer_4/inner3 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.161885
+27469.9s 1234 outer_4/inner3 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.172584
+27534.3s 1235 outer_4/inner3 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.203943
+27597.3s 1236 outer_4/inner3 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.235876
+27660.8s 1237 outer_4/inner3 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.263474
+27724.3s 1238 outer_4/inner3 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.288027
+27788.8s 1239 outer_4/inner3 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.312766
+27853.1s 1240 outer_4/inner3 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.325025
+27918.8s 1241 outer_4/inner3 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.363159
+27985.3s 1242 outer_4/inner3 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.381620
+28052.5s 1243 outer_4/inner3 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.424477
+28123.8s 1244 outer_4/inner3 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.455976
+28192.1s 1245 outer_4/inner3 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.120641
+28254.8s 1246 outer_4/inner3 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.151697
+28317.9s 1247 outer_4/inner3 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.173563
+28382.3s 1248 outer_4/inner3 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.179751
+28444.9s 1249 outer_4/inner3 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.213585
+28509.0s 1250 outer_4/inner3 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.244944
+28573.2s 1251 outer_4/inner3 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.272038
+28643.8s 1252 outer_4/inner3 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.298448
+28711.6s 1253 outer_4/inner3 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.324578
+28778.0s 1254 outer_4/inner3 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.338502
+28845.2s 1255 outer_4/inner3 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.374790
+28914.0s 1256 outer_4/inner3 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.393171
+28980.4s 1257 outer_4/inner3 seed=520260753 branch=C1 class=13/14 selected_macroF1=0.446742
+29048.0s 1258 outer_4/inner3 seed=520260753 branch=C1 class=14/14 selected_macroF1=0.478929
+29053.6s 1259 outer_4/inner3 seed=520260753 assessment swap class=1/14
+29054.7s 1260 outer_4/inner3 seed=520260753 assessment swap class=2/14
+29056.1s 1261 outer_4/inner3 seed=520260753 assessment swap class=3/14
+29057.2s 1262 outer_4/inner3 seed=520260753 assessment swap class=4/14
+29058.7s 1263 outer_4/inner3 seed=520260753 assessment swap class=5/14
+29059.7s 1264 outer_4/inner3 seed=520260753 assessment swap class=6/14
+29060.8s 1265 outer_4/inner3 seed=520260753 assessment swap class=7/14
+29062.4s 1266 outer_4/inner3 seed=520260753 assessment swap class=8/14
+29063.4s 1267 outer_4/inner3 seed=520260753 assessment swap class=9/14
+29064.5s 1268 outer_4/inner3 seed=520260753 assessment swap class=10/14
+29065.9s 1269 outer_4/inner3 seed=520260753 assessment swap class=11/14
+29066.9s 1270 outer_4/inner3 seed=520260753 assessment swap class=12/14
+29068.0s 1271 outer_4/inner3 seed=520260753 assessment swap class=13/14
+29069.4s 1272 outer_4/inner3 seed=520260753 assessment swap class=14/14
+29069.4s 1273 outer_4: checkpointed inner fold 3/4
+29069.4s 1274 OUTER 5/5 seed=520260751: fit fixed views and evaluate held-out images
+29160.3s 1275 outer4/C0 seed=520260751 branch=C0 class=1/14 selected_macroF1=0.104773
+29252.4s 1276 outer4/C0 seed=520260751 branch=C0 class=2/14 selected_macroF1=0.125679
+29343.8s 1277 outer4/C0 seed=520260751 branch=C0 class=3/14 selected_macroF1=0.151231
+29434.4s 1278 outer4/C0 seed=520260751 branch=C0 class=4/14 selected_macroF1=0.167915
+29526.5s 1279 outer4/C0 seed=520260751 branch=C0 class=5/14 selected_macroF1=0.197815
+29621.2s 1280 outer4/C0 seed=520260751 branch=C0 class=6/14 selected_macroF1=0.226386
+29715.8s 1281 outer4/C0 seed=520260751 branch=C0 class=7/14 selected_macroF1=0.256520
+29810.2s 1282 outer4/C0 seed=520260751 branch=C0 class=8/14 selected_macroF1=0.284547
+29902.7s 1283 outer4/C0 seed=520260751 branch=C0 class=9/14 selected_macroF1=0.310252
+29992.0s 1284 outer4/C0 seed=520260751 branch=C0 class=10/14 selected_macroF1=0.324505
+30082.6s 1285 outer4/C0 seed=520260751 branch=C0 class=11/14 selected_macroF1=0.357256
+30177.4s 1286 outer4/C0 seed=520260751 branch=C0 class=12/14 selected_macroF1=0.377234
+30271.2s 1287 outer4/C0 seed=520260751 branch=C0 class=13/14 selected_macroF1=0.412948
+30361.5s 1288 outer4/C0 seed=520260751 branch=C0 class=14/14 selected_macroF1=0.440395
+30463.3s 1289 outer4/C1 seed=520260751 branch=C1 class=1/14 selected_macroF1=0.101557
+30557.3s 1290 outer4/C1 seed=520260751 branch=C1 class=2/14 selected_macroF1=0.136189
+30652.4s 1291 outer4/C1 seed=520260751 branch=C1 class=3/14 selected_macroF1=0.160552
+30747.6s 1292 outer4/C1 seed=520260751 branch=C1 class=4/14 selected_macroF1=0.179230
+30845.0s 1293 outer4/C1 seed=520260751 branch=C1 class=5/14 selected_macroF1=0.209080
+30941.4s 1294 outer4/C1 seed=520260751 branch=C1 class=6/14 selected_macroF1=0.239693
+31036.2s 1295 outer4/C1 seed=520260751 branch=C1 class=7/14 selected_macroF1=0.269713
+31129.4s 1296 outer4/C1 seed=520260751 branch=C1 class=8/14 selected_macroF1=0.296865
+31222.3s 1297 outer4/C1 seed=520260751 branch=C1 class=9/14 selected_macroF1=0.324018
+31316.6s 1298 outer4/C1 seed=520260751 branch=C1 class=10/14 selected_macroF1=0.338015
+31413.2s 1299 outer4/C1 seed=520260751 branch=C1 class=11/14 selected_macroF1=0.372069
+31507.7s 1300 outer4/C1 seed=520260751 branch=C1 class=12/14 selected_macroF1=0.392023
+31604.6s 1301 outer4/C1 seed=520260751 branch=C1 class=13/14 selected_macroF1=0.424990
+31701.0s 1302 outer4/C1 seed=520260751 branch=C1 class=14/14 selected_macroF1=0.451240
+31706.1s 1303 outer4/E1_equal seed=520260751 branch=C1 class=1/14 selected_macroF1=0.100625
+31721.7s 1304 outer4/E1_equal seed=520260751 branch=C1 class=2/14 selected_macroF1=0.126941
+31737.0s 1305 outer4/E1_equal seed=520260751 branch=C1 class=3/14 selected_macroF1=0.151304
+31751.9s 1306 outer4/E1_equal seed=520260751 branch=C1 class=4/14 selected_macroF1=0.169641
+31767.5s 1307 outer4/E1_equal seed=520260751 branch=C1 class=5/14 selected_macroF1=0.197516
+31783.3s 1308 outer4/E1_equal seed=520260751 branch=C1 class=6/14 selected_macroF1=0.224584
+31798.5s 1309 outer4/E1_equal seed=520260751 branch=C1 class=7/14 selected_macroF1=0.251795
+31814.2s 1310 outer4/E1_equal seed=520260751 branch=C1 class=8/14 selected_macroF1=0.277524
+31830.5s 1311 outer4/E1_equal seed=520260751 branch=C1 class=9/14 selected_macroF1=0.302746
+31845.9s 1312 outer4/E1_equal seed=520260751 branch=C1 class=10/14 selected_macroF1=0.314718
+31862.0s 1313 outer4/E1_equal seed=520260751 branch=C1 class=11/14 selected_macroF1=0.347950
+31877.9s 1314 outer4/E1_equal seed=520260751 branch=C1 class=12/14 selected_macroF1=0.367356
+31895.8s 1315 outer4/E1_equal seed=520260751 branch=C1 class=13/14 selected_macroF1=0.400323
+31913.1s 1316 outer4/E1_equal seed=520260751 branch=C1 class=14/14 selected_macroF1=0.424948
+31942.3s 1317 OUTER 5/5 seed=520260752: fit fixed views and evaluate held-out images
+32003.0s 1318 outer4/C0 seed=520260752 branch=C0 class=1/14 selected_macroF1=0.131786
+32062.6s 1319 outer4/C0 seed=520260752 branch=C0 class=2/14 selected_macroF1=0.155650
+32124.1s 1320 outer4/C0 seed=520260752 branch=C0 class=3/14 selected_macroF1=0.181624
+32185.0s 1321 outer4/C0 seed=520260752 branch=C0 class=4/14 selected_macroF1=0.194200
+32247.9s 1322 outer4/C0 seed=520260752 branch=C0 class=5/14 selected_macroF1=0.228894
+32314.5s 1323 outer4/C0 seed=520260752 branch=C0 class=6/14 selected_macroF1=0.253738
+32378.5s 1324 outer4/C0 seed=520260752 branch=C0 class=7/14 selected_macroF1=0.282121
+32441.2s 1325 outer4/C0 seed=520260752 branch=C0 class=8/14 selected_macroF1=0.307719
+32503.7s 1326 outer4/C0 seed=520260752 branch=C0 class=9/14 selected_macroF1=0.331340
+32569.4s 1327 outer4/C0 seed=520260752 branch=C0 class=10/14 selected_macroF1=0.347272
+32635.9s 1328 outer4/C0 seed=520260752 branch=C0 class=11/14 selected_macroF1=0.380778
+32702.7s 1329 outer4/C0 seed=520260752 branch=C0 class=12/14 selected_macroF1=0.398485
+32767.9s 1330 outer4/C0 seed=520260752 branch=C0 class=13/14 selected_macroF1=0.418465
+32829.0s 1331 outer4/C0 seed=520260752 branch=C0 class=14/14 selected_macroF1=0.446081
+32891.7s 1332 outer4/C1 seed=520260752 branch=C1 class=1/14 selected_macroF1=0.124504
+32951.2s 1333 outer4/C1 seed=520260752 branch=C1 class=2/14 selected_macroF1=0.154724
+33012.0s 1334 outer4/C1 seed=520260752 branch=C1 class=3/14 selected_macroF1=0.179428
+33072.5s 1335 outer4/C1 seed=520260752 branch=C1 class=4/14 selected_macroF1=0.192299
+33135.0s 1336 outer4/C1 seed=520260752 branch=C1 class=5/14 selected_macroF1=0.228465
+33195.3s 1337 outer4/C1 seed=520260752 branch=C1 class=6/14 selected_macroF1=0.253502
+33255.2s 1338 outer4/C1 seed=520260752 branch=C1 class=7/14 selected_macroF1=0.282980
+33314.8s 1339 outer4/C1 seed=520260752 branch=C1 class=8/14 selected_macroF1=0.306935
+33374.5s 1340 outer4/C1 seed=520260752 branch=C1 class=9/14 selected_macroF1=0.331660
+33437.2s 1341 outer4/C1 seed=520260752 branch=C1 class=10/14 selected_macroF1=0.346956
+33497.0s 1342 outer4/C1 seed=520260752 branch=C1 class=11/14 selected_macroF1=0.380208
+33556.9s 1343 outer4/C1 seed=520260752 branch=C1 class=12/14 selected_macroF1=0.398242
+33615.8s 1344 outer4/C1 seed=520260752 branch=C1 class=13/14 selected_macroF1=0.418222
+33675.1s 1345 outer4/C1 seed=520260752 branch=C1 class=14/14 selected_macroF1=0.447542
+33678.4s 1346 outer4/E1_equal seed=520260752 branch=C1 class=1/14 selected_macroF1=0.118271
+33688.5s 1347 outer4/E1_equal seed=520260752 branch=C1 class=2/14 selected_macroF1=0.144245
+33698.5s 1348 outer4/E1_equal seed=520260752 branch=C1 class=3/14 selected_macroF1=0.168277
+33708.5s 1349 outer4/E1_equal seed=520260752 branch=C1 class=4/14 selected_macroF1=0.180824
+33718.6s 1350 outer4/E1_equal seed=520260752 branch=C1 class=5/14 selected_macroF1=0.212222
+33728.6s 1351 outer4/E1_equal seed=520260752 branch=C1 class=6/14 selected_macroF1=0.237187
+33738.9s 1352 outer4/E1_equal seed=520260752 branch=C1 class=7/14 selected_macroF1=0.262773
+33749.8s 1353 outer4/E1_equal seed=520260752 branch=C1 class=8/14 selected_macroF1=0.284941
+33760.0s 1354 outer4/E1_equal seed=520260752 branch=C1 class=9/14 selected_macroF1=0.308881
+33770.2s 1355 outer4/E1_equal seed=520260752 branch=C1 class=10/14 selected_macroF1=0.322852
+33780.5s 1356 outer4/E1_equal seed=520260752 branch=C1 class=11/14 selected_macroF1=0.356104
+33790.7s 1357 outer4/E1_equal seed=520260752 branch=C1 class=12/14 selected_macroF1=0.373504
+33800.3s 1358 outer4/E1_equal seed=520260752 branch=C1 class=13/14 selected_macroF1=0.393484
+33810.6s 1359 outer4/E1_equal seed=520260752 branch=C1 class=14/14 selected_macroF1=0.419864
+33832.7s 1360 OUTER 5/5 seed=520260753: fit fixed views and evaluate held-out images
+33918.0s 1361 outer4/C0 seed=520260753 branch=C0 class=1/14 selected_macroF1=0.131345
+34003.1s 1362 outer4/C0 seed=520260753 branch=C0 class=2/14 selected_macroF1=0.154073
+34092.1s 1363 outer4/C0 seed=520260753 branch=C0 class=3/14 selected_macroF1=0.175952
+34174.7s 1364 outer4/C0 seed=520260753 branch=C0 class=4/14 selected_macroF1=0.184590
+34257.6s 1365 outer4/C0 seed=520260753 branch=C0 class=5/14 selected_macroF1=0.210988
+34340.7s 1366 outer4/C0 seed=520260753 branch=C0 class=6/14 selected_macroF1=0.239559
+34429.1s 1367 outer4/C0 seed=520260753 branch=C0 class=7/14 selected_macroF1=0.268131
+34512.5s 1368 outer4/C0 seed=520260753 branch=C0 class=8/14 selected_macroF1=0.292521
+34595.9s 1369 outer4/C0 seed=520260753 branch=C0 class=9/14 selected_macroF1=0.315235
+34681.2s 1370 outer4/C0 seed=520260753 branch=C0 class=10/14 selected_macroF1=0.327871
+34770.6s 1371 outer4/C0 seed=520260753 branch=C0 class=11/14 selected_macroF1=0.363834
+34857.9s 1372 outer4/C0 seed=520260753 branch=C0 class=12/14 selected_macroF1=0.381235
+34947.2s 1373 outer4/C0 seed=520260753 branch=C0 class=13/14 selected_macroF1=0.399994
+35037.2s 1374 outer4/C0 seed=520260753 branch=C0 class=14/14 selected_macroF1=0.429910
+35123.4s 1375 outer4/C1 seed=520260753 branch=C1 class=1/14 selected_macroF1=0.120768
+35204.7s 1376 outer4/C1 seed=520260753 branch=C1 class=2/14 selected_macroF1=0.149340
+35286.5s 1377 outer4/C1 seed=520260753 branch=C1 class=3/14 selected_macroF1=0.171418
+35367.9s 1378 outer4/C1 seed=520260753 branch=C1 class=4/14 selected_macroF1=0.175837
+35448.9s 1379 outer4/C1 seed=520260753 branch=C1 class=5/14 selected_macroF1=0.202864
+35530.8s 1380 outer4/C1 seed=520260753 branch=C1 class=6/14 selected_macroF1=0.231153
+35613.3s 1381 outer4/C1 seed=520260753 branch=C1 class=7/14 selected_macroF1=0.258594
+35694.8s 1382 outer4/C1 seed=520260753 branch=C1 class=8/14 selected_macroF1=0.284528
+35777.4s 1383 outer4/C1 seed=520260753 branch=C1 class=9/14 selected_macroF1=0.309957
+35860.6s 1384 outer4/C1 seed=520260753 branch=C1 class=10/14 selected_macroF1=0.325058
+35945.8s 1385 outer4/C1 seed=520260753 branch=C1 class=11/14 selected_macroF1=0.359404
+36032.4s 1386 outer4/C1 seed=520260753 branch=C1 class=12/14 selected_macroF1=0.376892
+36039.0s 1387 PAUSED_SESSION_BUDGET_NOT_COMPLETE | Save Version output for the next resume; do not run Stage 10E
+36039.0s 1388 PARTIAL_RESUMABLE_NOT_LOCKED
+36039.0s 1389 PARTIAL ONLY: attach the newest saved output notebook to resume again
+36043.8s 1390 /usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+36043.8s 1391 cells[i][c] = re.sub('\\\\\|', '|', cell)
+36044.1s 1392 /usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+36044.1s 1393 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+36045.1s 1394 [NbConvertApp] Converting notebook __notebook__.ipynb to notebook
+36045.7s 1395 [NbConvertApp] Writing 386606 bytes to __notebook__.ipynb
+36050.9s 1396 [NbConvertApp] Converting notebook __notebook__.ipynb to html
+36051.9s 1397 [NbConvertApp] Writing 1088461 bytes to __results__.html

@@ -40,10 +40,22 @@ class DesktopCompositor(
         Files.createDirectories(outputDir)
 
         val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
+        val is15x10 = !isStrip && (
+            layout.printSizeLabel.contains("15x10", ignoreCase = true) ||
+                layout.printSizeLabel.contains("15 x 10", ignoreCase = true)
+            )
 
         val renderScale = 2 // Render ở 600 DPI thay vì 300 DPI để ảnh cực nét
-        val width = (if (isStrip) 592 else 1184) * renderScale
-        val height = 1790 * renderScale // Tỷ lệ cứng chuẩn theo kích thước người dùng đo được
+        val width = when {
+            isStrip -> 592 * renderScale
+            is15x10 -> 1790 * renderScale
+            else -> 1184 * renderScale
+        }
+        val height = when {
+            isStrip -> 1790 * renderScale
+            is15x10 -> 1184 * renderScale
+            else -> 1790 * renderScale
+        }
         val canvas = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
         val graphics = canvas.createGraphics()
         
@@ -122,6 +134,30 @@ class DesktopCompositor(
             
             val printFileName = "print_$fileName"
             val pPath = outputDir.resolve(printFileName)
+            ImageIO.write(compositeCanvas, "png", pPath.toFile())
+            pPath
+        } else if (is15x10) {
+            val printFileName = "print_$fileName"
+            val pPath = outputDir.resolve(printFileName)
+
+            val paperWidth = 1829 * renderScale
+            val paperHeight = 1226 * renderScale
+
+            val compositeCanvas = BufferedImage(paperWidth, paperHeight, BufferedImage.TYPE_INT_RGB)
+            val g2 = compositeCanvas.createGraphics()
+            g2.configure()
+            g2.color = Color.WHITE
+            g2.fillRect(0, 0, paperWidth, paperHeight)
+
+            val paddingLeft = 27 * renderScale
+            val paddingTop = 14 * renderScale
+
+            val scaledWidth = 1790 * renderScale
+            val scaledHeight = 1184 * renderScale
+
+            g2.drawImage(canvas, paddingLeft, paddingTop, scaledWidth, scaledHeight, null)
+            g2.dispose()
+
             ImageIO.write(compositeCanvas, "png", pPath.toFile())
             pPath
         } else {

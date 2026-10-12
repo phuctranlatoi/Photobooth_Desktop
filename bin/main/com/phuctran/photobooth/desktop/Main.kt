@@ -61,7 +61,6 @@ fun main() = application {
         val isAppReady by controller.isAppReady.collectAsState()
         val availableLayouts by controller.availableLayouts.collectAsState()
         val currentConfig by controller.activeConfig.collectAsState()
-        val inactivityTimeLeft by controller.inactivityTimeLeft.collectAsState()
 
         PhotoboothTheme {
             AppShell(
@@ -69,8 +68,6 @@ fun main() = application {
                 albumEnabled = currentConfig.canUploadAlbum,
                 printerEnabled = currentConfig.enableSystemPrint,
                 paymentConfigured = controller.isPaymentConfigured,
-                inactivityTimeLeft = inactivityTimeLeft,
-                inactivityTimeout = currentConfig.postCaptureTimeoutSeconds
             ) {
                 if (!isAppReady) {
                     var loadingTimeout by remember { mutableStateOf(false) }
@@ -203,6 +200,7 @@ fun main() = application {
                         )
                     }
                     SessionState.SELECTING_PHOTOS -> SelectPhotosScreen(
+                        controller = controller,
                         layout = layout,
                         capturedMoments = capturedMoments,
                         selectedMoments = selectedMoments,
@@ -211,6 +209,7 @@ fun main() = application {
                         onBack = { controller.goBack() }
                     )
                     SessionState.EDITING -> FrameScreen(
+                        controller = controller,
                         frames = availableFrames,
                         layout = layout,
                         selectedMoments = selectedMoments,
@@ -271,8 +270,8 @@ fun main() = application {
                             onDeleteLayout = { layoutId ->
                                 controller.deleteLayout(layoutId)
                             },
-                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds ->
-                                controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds)
+                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds ->
+                                controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds)
                             },
                             onSaveEffects = { effects ->
                                 controller.saveEffects(effects)

@@ -30,11 +30,22 @@ fun PrintPreview(
     modifier: Modifier = Modifier
 ) {
     val accent = Color(frame.accentColor)
+    val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
+    val is15x10 = !isStrip && (
+        layout.printSizeLabel.contains("15x10", ignoreCase = true) ||
+            layout.printSizeLabel.contains("15 x 10", ignoreCase = true)
+    )
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxHeight()
-                .aspectRatio(layout.printAspectRatio, matchHeightConstraintsFirst = false)
+            modifier = (if (is15x10) {
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(layout.printAspectRatio, matchHeightConstraintsFirst = false)
+            } else {
+                Modifier
+                    .fillMaxHeight()
+                    .aspectRatio(layout.printAspectRatio, matchHeightConstraintsFirst = false)
+            })
                 .clip(RoundedCornerShape(8.dp))
                 .background(NeutralPanel)
                 .border(width = 1.dp, color = NeutralBorder, shape = RoundedCornerShape(8.dp))
@@ -147,11 +158,22 @@ fun PrintPreview(
 @Composable
 fun MiniLayoutPreview(layout: LayoutMode, modifier: Modifier) {
     val accent = Color(layout.accentColor)
+    val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
+    val is15x10 = !isStrip && (
+        layout.printSizeLabel.contains("15x10", ignoreCase = true) ||
+            layout.printSizeLabel.contains("15 x 10", ignoreCase = true)
+    )
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         BoxWithConstraints(
-            Modifier
-                .fillMaxHeight()
-                .aspectRatio(layout.printAspectRatio, matchHeightConstraintsFirst = false)
+            (if (is15x10) {
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(layout.printAspectRatio, matchHeightConstraintsFirst = false)
+            } else {
+                Modifier
+                    .fillMaxHeight()
+                    .aspectRatio(layout.printAspectRatio, matchHeightConstraintsFirst = false)
+            })
                 .clip(RoundedCornerShape(5.dp))
                 .background(NeutralPanel.copy(alpha = 0.9f))
                 .border(width = 1.dp, color = NeutralBorder, shape = RoundedCornerShape(5.dp))

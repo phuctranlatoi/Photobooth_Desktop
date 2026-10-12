@@ -1,7 +1,7 @@
 ---
 description: Architecture, safety, and performance specialist for the LE SOUVENIR PhotoboothDesktop application.
 mode: subagent
-model: 9router/ag/gemini-pro-agent
+model: 9router/ag/claude-opus-4-6-thinking
 permissions:
   - action: edit
     resource: "*"
@@ -48,7 +48,7 @@ SAFE TO CHANGE
 
 or
 
-PROTECTED — DO NOT TOUCH
+PROTECTED Ã¢â‚¬â€ DO NOT TOUCH
 
 ==================================================
 PROTECTED BEHAVIOR

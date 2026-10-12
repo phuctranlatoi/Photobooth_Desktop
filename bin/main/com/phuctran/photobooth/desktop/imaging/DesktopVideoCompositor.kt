@@ -26,8 +26,20 @@ class DesktopVideoCompositor(private val projectDir: Path) {
         }
 
         val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
-        val canvasWidth = if (isStrip) 592 else 1184
-        val canvasHeight = 1790
+        val is15x10 = !isStrip && (
+            layout.printSizeLabel.contains("15x10", ignoreCase = true) ||
+                layout.printSizeLabel.contains("15 x 10", ignoreCase = true)
+            )
+        val canvasWidth = when {
+            isStrip -> 592
+            is15x10 -> 1790
+            else -> 1184
+        }
+        val canvasHeight = when {
+            isStrip -> 1790
+            is15x10 -> 1184
+            else -> 1790
+        }
 
         val slots = computeSlots(layout, canvasWidth, canvasHeight)
         

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.domain.SessionState
+import com.phuctran.photobooth.desktop.controller.DesktopBoothController
 import com.phuctran.photobooth.desktop.model.*
 import com.phuctran.photobooth.desktop.ui.components.*
 import com.phuctran.photobooth.desktop.ui.theme.*
@@ -26,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
 @Composable
 fun FrameScreen(
+    controller: DesktopBoothController,
     frames: List<FramePack>,
     layout: LayoutMode,
     selectedMoments: List<CapturedMoment>,
@@ -35,8 +37,10 @@ fun FrameScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        CompactLocalHeader("Bước 7", "Chọn khung trang trí")
+    val timeLeft by controller.inactivityTimeLeft.collectAsState()
+    Box(Modifier.fillMaxSize()) {
+    PremiumPageShell(title = "Chọn khung trang trí", onBack = onBack) {
+      Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
             Column(Modifier.weight(0.85f).fillMaxHeight()) {
                 SectionHeader("", "Bản in xem trước", "${selectedFrame.title} · ${layout.printSizeLabel}")
@@ -69,5 +73,8 @@ fun FrameScreen(
             }
         }
         BottomActionBar("Xem bản in", onConfirm, "Quay lại", onBack)
+      }
+    }
+    DecisionTimerBadge(timeLeft, Modifier.align(Alignment.TopEnd))
     }
 }

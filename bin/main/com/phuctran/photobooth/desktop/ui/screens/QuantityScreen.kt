@@ -40,14 +40,20 @@ fun QuantityScreen(
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
                 Text("Bạn muốn in bao nhiêu bản?", style = MaterialTheme.typography.h5, color = NeutralText)
                 Spacer(Modifier.height(28.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     QuantityStepButton("−", enabled = selectedIndex > 0) {
                         quantity = quantityOptions[selectedIndex - 1]
                     }
+                    Spacer(Modifier.width(24.dp))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("$quantity", style = MaterialTheme.typography.h1.copy(fontSize = 72.sp), color = NeutralText)
                         Text("bản in", style = MaterialTheme.typography.body1, color = NeutralSecondary)
                     }
+                    Spacer(Modifier.width(24.dp))
                     QuantityStepButton("+", enabled = selectedIndex >= 0 && selectedIndex < quantityOptions.lastIndex) {
                         quantity = quantityOptions[selectedIndex + 1]
                     }
