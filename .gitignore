@@ -31,3 +31,5 @@ serviceAccountKey.json
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 # impeccable-ignore-end
+frame/po/basic-miktex-25.12-x64.exe
+frame/po/strawberry-perl-5.42.3.1-64bit.msi

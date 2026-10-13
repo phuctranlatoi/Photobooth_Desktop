@@ -1,7 +1,7 @@
 ---
 description: Architecture, safety, and performance specialist for the LE SOUVENIR PhotoboothDesktop application.
 mode: subagent
-model: 9router/ag/claude-opus-4-6-thinking
+model: 9router/cx/gpt-6.1-sol
 permissions:
   - action: edit
     resource: "*"
@@ -48,7 +48,7 @@ SAFE TO CHANGE
 
 or
 
-PROTECTED ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â DO NOT TOUCH
+PROTECTED ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â DO NOT TOUCH
 
 ==================================================
 PROTECTED BEHAVIOR
