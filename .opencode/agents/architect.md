@@ -48,7 +48,7 @@ SAFE TO CHANGE
 
 or
 
-PROTECTED Ã¢â‚¬â€ DO NOT TOUCH
+PROTECTED ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â DO NOT TOUCH
 
 ==================================================
 PROTECTED BEHAVIOR

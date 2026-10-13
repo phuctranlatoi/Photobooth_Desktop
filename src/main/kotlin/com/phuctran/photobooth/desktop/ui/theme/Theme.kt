@@ -9,23 +9,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 
-val NeutralBg = Color(0xFFFBFBFC)
+val NeutralBg = Color(0xFFFBF9F6)
 val NeutralPanel = Color.White
-val NeutralPanelAlt = Color(0xFFF3F4F6)
+val NeutralPanelAlt = Color(0xFFF4EFEA)
 val NeutralText = Color(0xFF242424)
-val NeutralSecondary = Color(0xFF596271)
-val NeutralMuted = Color(0xFF858D99)
-val NeutralBorder = Color(0xFFDCE2EA)
+val NeutralSecondary = Color(0xFF5C5854)
+val NeutralMuted = Color(0xFF8C8680)
+val NeutralBorder = Color(0xFFE8E2DC)
 
-val AccentNude = Color(0xFFB95C3F)
-val AccentNudeDark = Color(0xFF9C5D46)
-val AccentNudeLight = Color(0xFFFFF0E8)
-val AccentMint = Color(0xFF2A9D8F)
-val AccentBlue = Color(0xFF2563EB)
+val AccentNude = Color(0xFFC27357)
+val AccentNudeDark = Color(0xFFA65D43)
+val AccentNudeLight = Color(0xFFFCEEE8)
+val AccentMint = Color(0xFF2E8B57)
+val AccentBlue = Color(0xFF3B82F6)
 val AccentAmber = Color(0xFFD97706)
-val AccentRed = Color(0xFFDC2626)
+val AccentRed = Color(0xFFD32F2F)
 val CameraBlack = Color(0xFF050507)
 val InkSoft = Color(0xFF252228)
+val NeutralSurface = Color(0xFFFAF8F6)
+val AdminGroupLabelColor = Color(0xFF7A6257)
 
 val KioskColors = androidx.compose.material.lightColors(
     primary = AccentNude,

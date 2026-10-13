@@ -78,7 +78,7 @@ Validate:
 - transparent-frame rendering where testable
 - scrolling when frame count exceeds viewport
 - back action
-- Xem bản in / equivalent next action
+- Xem báº£n in / equivalent next action
 
 ==================================================
 CAMERA

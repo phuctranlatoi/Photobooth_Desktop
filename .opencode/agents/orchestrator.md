@@ -1,7 +1,7 @@
 ---
 description: Lead coordinator for the existing LE SOUVENIR Kotlin PhotoboothDesktop application.
 mode: primary
-model: 9router/ag/gemini-pro-agent
+model: 9router/ag/gemini-3.8-flash-high
 permissions:
   - action: edit
     resource: "*"
@@ -91,13 +91,13 @@ MANDATORY WORKFLOW
 For meaningful work:
 
 Architect when architecture/safety analysis is needed
-→ UI Designer when UI/UX is involved
-→ Coder
-→ Reviewer
-→ Coder fixes BLOCKING / IMPORTANT issues
-→ Tester
-→ Coder fixes test failures
-→ Tester again
+â†’ UI Designer when UI/UX is involved
+â†’ Coder
+â†’ Reviewer
+â†’ Coder fixes BLOCKING / IMPORTANT issues
+â†’ Tester
+â†’ Coder fixes test failures
+â†’ Tester again
 
 Do not ask the user to manually coordinate these agents.
 
@@ -232,8 +232,8 @@ Do not mark meaningful UI work complete merely because it builds.
 It should pass:
 
 Coder
-→ Reviewer
-→ Tester
+â†’ Reviewer
+â†’ Tester
 
 and preserve all protected behavior.
 
