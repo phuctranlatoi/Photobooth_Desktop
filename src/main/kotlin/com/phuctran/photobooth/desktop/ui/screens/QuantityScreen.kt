@@ -23,11 +23,8 @@ fun QuantityScreen(
     onQuantitySelected: (Int) -> Unit,
     onBack: () -> Unit
 ) {
-    var quantity by remember(layout.id) { mutableStateOf(1) }
-    val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) ||
-        layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
-    // Preserve the existing allowed quantities, including the two-copy minimum.
-    val quantityOptions = if (isStrip) listOf(2, 4, 6, 8) else listOf(2, 3, 4, 5)
+    var quantity by remember(layout.id) { mutableStateOf(2) }
+    val quantityOptions = remember(layout.printSizeLabel) { PricingCalculator.allowedOptions(layout.printSizeLabel) }
     LaunchedEffect(quantityOptions) {
         if (quantity !in quantityOptions) quantity = quantityOptions.first()
     }
@@ -61,7 +58,7 @@ fun QuantityScreen(
                 Spacer(Modifier.height(32.dp))
                 OutputRow("Màu ảnh", effect.title)
                 Spacer(Modifier.height(10.dp))
-                OutputRow("Tổng thanh toán", formatVnd(layout.basePrice * quantity))
+                OutputRow("Tổng thanh toán", formatVnd(PricingCalculator.calculatePrice(layout.printSizeLabel, quantity).totalAmount))
             }
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 Text("Bản in dự kiến", style = MaterialTheme.typography.h5, color = NeutralText)
@@ -76,7 +73,7 @@ fun QuantityScreen(
             }
         }
         Spacer(Modifier.height(20.dp))
-        BottomActionBar("Tiếp tục · ${formatVnd(layout.basePrice * quantity)}", { onQuantitySelected(quantity) }, "Quay lại", onBack)
+        BottomActionBar("Tiếp tục · ${formatVnd(PricingCalculator.calculatePrice(layout.printSizeLabel, quantity).totalAmount)}", { onQuantitySelected(quantity) }, "Quay lại", onBack)
     }
 }
 

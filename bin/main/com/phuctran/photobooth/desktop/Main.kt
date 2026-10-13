@@ -41,7 +41,8 @@ fun main() = application {
         state = rememberWindowState(placement = WindowPlacement.Fullscreen)
     ) {
         val config = remember { DesktopConfigLoader.load(DesktopAppPaths.appDataDir()) }
-        val controller = remember { DesktopBoothController(projectDir = DesktopAppPaths.appDataDir(), config = config) }
+        val salesRepository = remember { com.phuctran.photobooth.desktop.data.SalesRepository(DesktopAppPaths.appDataDir()) }
+        val controller = remember { DesktopBoothController(projectDir = DesktopAppPaths.appDataDir(), config = config, salesRepository = salesRepository) }
 
         val state by controller.sessionState.collectAsState()
         val layout by controller.selectedLayout.collectAsState()
@@ -253,6 +254,7 @@ fun main() = application {
                             effects = availableEffects,
                             config = currentConfig,
                             nativeCamera = controller.nativeCamera,
+                            salesRepository = salesRepository,
                             onAddFrame = { layoutId ->
                                 val chooser = javax.swing.JFileChooser().apply { 
                                     fileFilter = javax.swing.filechooser.FileNameExtensionFilter("PNG Frame", "png")

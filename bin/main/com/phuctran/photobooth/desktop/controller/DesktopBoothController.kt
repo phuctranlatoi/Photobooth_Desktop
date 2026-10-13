@@ -1,6 +1,9 @@
 package com.phuctran.photobooth.desktop.controller
 
 import com.phuctran.photobooth.desktop.config.DesktopAppPaths
+import com.phuctran.photobooth.desktop.data.SalesRepository
+import com.phuctran.photobooth.desktop.data.SaleTransaction
+import com.phuctran.photobooth.desktop.model.PricingCalculator
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.domain.SessionState
 import com.phuctran.photobooth.desktop.domain.SessionStateMachine
@@ -59,7 +62,8 @@ class DesktopBoothController(
     },
     private val paymentService: PaymentService = PaymentService(config),
     private val webAlbumClient: com.phuctran.photobooth.desktop.remote.DesktopWebAlbumClient = com.phuctran.photobooth.desktop.remote.DesktopWebAlbumClient(),
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val salesRepository: SalesRepository = SalesRepository(projectDir)
 ) {
     val nativeCamera: com.phuctran.photobooth.desktop.services.NativeEosCaptureService?
         get() = cameraService as? com.phuctran.photobooth.desktop.services.NativeEosCaptureService
@@ -139,6 +143,7 @@ class DesktopBoothController(
     private var deliveryJob: Job? = null
     private var paymentPollingJob: Job? = null
     private var currentSessionId: String? = null
+    private var paymentMethod: String = "Tiền mặt"
 
     private val _paymentQrData = MutableStateFlow<String?>(null)
     val paymentQrData = _paymentQrData.asStateFlow()
@@ -313,15 +318,17 @@ class DesktopBoothController(
     }
 
     fun confirmStudioSetup() {
-        _printCopies.value = 1
-        _totalPrice.value = _selectedLayout.value.basePrice
+        _printCopies.value = 2
+        _totalPrice.value = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, 2).totalAmount
         transitionTo(SessionState.SELECTING_QUANTITY)
     }
 
     fun setQuantityAndStartPayment(quantity: Int) {
-        val safeQuantity = quantity.coerceIn(1, 10)
+        val safeQuantity = PricingCalculator.sanitizeQuantity(_selectedLayout.value.printSizeLabel, quantity)
+        val pricing = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, safeQuantity)
         _printCopies.value = safeQuantity
-        _totalPrice.value = _selectedLayout.value.basePrice * safeQuantity
+        _totalPrice.value = pricing.totalAmount
+        paymentMethod = "Tiền mặt"
         transitionTo(SessionState.PAYMENT_PENDING)
         
         paymentPollingJob?.cancel()
@@ -336,7 +343,7 @@ class DesktopBoothController(
                     paymentPollingJob = scope.launch(Dispatchers.IO) {
                         while (isActive) {
                             if (paymentService.checkPaymentStatus(orderCode)) {
-                                completePayment()
+                                completePayment("QR PayOS")
                                 break
                             }
                             delay(3000)
@@ -347,7 +354,8 @@ class DesktopBoothController(
         }
     }
 
-    fun completePayment() {
+    fun completePayment(method: String = "Tiền mặt") {
+        paymentMethod = method
         paymentPollingJob?.cancel()
         paymentPollingJob = null
         scope.launch {
@@ -747,6 +755,21 @@ class DesktopBoothController(
                 _statusMessage.value = "Hoàn tất! Mời quét mã QR. Máy đang in và tạo video..."
             } else {
                 _statusMessage.value = "Đang in ảnh và xử lý nền..."
+            }
+            val saleLayout = _selectedLayout.value
+            val salePricing = PricingCalculator.calculatePrice(saleLayout.printSizeLabel, _printCopies.value)
+            val sale = SaleTransaction(
+                sessionId = sessionId, boothId = config.boothId, layoutId = saleLayout.id,
+                layoutTitle = saleLayout.title, printSize = salePricing.printSize,
+                quantity = salePricing.quantity, includedQuantity = salePricing.includedQuantity,
+                extraQuantity = salePricing.extraQuantity, basePrice = salePricing.basePrice,
+                extraUnitPrice = salePricing.extraUnitPrice, extraAmount = salePricing.extraAmount,
+                totalAmount = salePricing.totalAmount, paymentMethod = paymentMethod,
+                createdAt = System.currentTimeMillis()
+            )
+            withContext(Dispatchers.IO) {
+                runCatching { salesRepository.recordSale(sale) }
+                    .onFailure { println("Could not save local sale for $sessionId: ${it.message}") }
             }
             transitionTo(SessionState.DELIVERY)
 

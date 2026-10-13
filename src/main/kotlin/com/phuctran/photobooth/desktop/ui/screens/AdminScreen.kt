@@ -34,6 +34,7 @@ import com.phuctran.photobooth.desktop.model.DefaultLayoutModes
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.model.FramePack
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
+import com.phuctran.photobooth.desktop.data.SalesRepository
 import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.withContext
@@ -45,6 +46,7 @@ fun AdminScreen(
     effects: List<com.phuctran.photobooth.desktop.model.EffectMode>,
     config: DesktopBoothConfig,
     nativeCamera: NativeEosCaptureService?,
+    salesRepository: SalesRepository,
     onAddFrame: (String) -> Unit,
     onSaveLayoutConfig: (String, Long, Int, Int) -> Unit = { _, _, _, _ -> },
     onDeleteLayout: (String) -> Unit,
@@ -120,10 +122,13 @@ fun AdminScreen(
             Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) { Text("Cài đặt", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
             Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) { Text("Công cụ", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
             Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }) { Text("Màu ảnh", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 5, onClick = { selectedTab = 5 }) { Text("Doanh thu", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
         }
 
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            if (selectedTab == 0) {
+            if (selectedTab == 5) {
+                RevenueScreen(salesRepository, projectDir)
+            } else if (selectedTab == 0) {
                 // Frames
                 Column(Modifier.fillMaxSize()) {
                     SectionHeader("Admin", "Quản lý khung ảnh", "Xem, lọc và xóa các khung ảnh đã lưu trên hệ thống.")

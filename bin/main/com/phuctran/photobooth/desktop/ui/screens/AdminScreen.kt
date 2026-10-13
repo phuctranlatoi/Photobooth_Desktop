@@ -1,5 +1,8 @@
 package com.phuctran.photobooth.desktop.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,8 +34,10 @@ import com.phuctran.photobooth.desktop.model.DefaultLayoutModes
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.model.FramePack
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
+import com.phuctran.photobooth.desktop.data.SalesRepository
 import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AdminScreen(
@@ -41,6 +46,7 @@ fun AdminScreen(
     effects: List<com.phuctran.photobooth.desktop.model.EffectMode>,
     config: DesktopBoothConfig,
     nativeCamera: NativeEosCaptureService?,
+    salesRepository: SalesRepository,
     onAddFrame: (String) -> Unit,
     onSaveLayoutConfig: (String, Long, Int, Int) -> Unit = { _, _, _, _ -> },
     onDeleteLayout: (String) -> Unit,
@@ -83,19 +89,19 @@ fun AdminScreen(
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                KioskSecondaryButton("Thoát admin", {
+                KioskSecondaryButton("← Thoát Admin", {
                 saveSettings()
                 onBack() 
-                }, modifier = Modifier.width(150.dp))
+                }, modifier = Modifier.width(170.dp))
                 Column {
-                    Text("Quản trị Le Souvenir", style = MaterialTheme.typography.h4, fontWeight = FontWeight.Black, color = NeutralText)
-                    Text("Kiểm tra nội dung, thiết bị và công cụ vận hành trước sự kiện.", color = NeutralSecondary, style = MaterialTheme.typography.body2)
+                    Text("Quản trị Le Souvenir", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold, color = NeutralText)
+                    Text("Kiểm tra nội dung, thiết bị và cấu hình vận hành.", color = NeutralSecondary, style = MaterialTheme.typography.body2.copy(fontSize = 13.sp))
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 StatusChip("Camera", if (useHotFolder) "Hot folder" else "Webcam", AccentBlue)
-                StatusChip("In", if (enablePrint) "Bật" else "Tắt", if (enablePrint) AccentMint else NeutralMuted)
-                StatusChip("Album", if (config.canUploadAlbum) "Cloud" else "Local", if (config.canUploadAlbum) AccentMint else AccentAmber)
+                StatusChip("Print", if (enablePrint) "Bật" else "Tắt", if (enablePrint) AccentMint else NeutralMuted)
+                StatusChip("Cloud Sync", if (config.canUploadAlbum) "Sẵn sàng" else "Local", if (config.canUploadAlbum) AccentMint else AccentAmber)
             }
         }
 
@@ -116,10 +122,13 @@ fun AdminScreen(
             Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) { Text("Cài đặt", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
             Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) { Text("Công cụ", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
             Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }) { Text("Màu ảnh", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            Tab(selected = selectedTab == 5, onClick = { selectedTab = 5 }) { Text("Doanh thu", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
         }
 
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            if (selectedTab == 0) {
+            if (selectedTab == 5) {
+                RevenueScreen(salesRepository, projectDir)
+            } else if (selectedTab == 0) {
                 // Frames
                 Column(Modifier.fillMaxSize()) {
                     SectionHeader("Admin", "Quản lý khung ảnh", "Xem, lọc và xóa các khung ảnh đã lưu trên hệ thống.")
@@ -129,7 +138,7 @@ fun AdminScreen(
                         val specialFrames = adminFrames.filter { it.isSpecial }
                         
                         if (standardFrames.isNotEmpty()) {
-                            Text("Khung Thường", style = MaterialTheme.typography.h5, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+             Text("Khung Thường", style = MaterialTheme.typography.h5, color = NeutralText, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                             val groupedBySize = standardFrames.groupBy { it.targetPrintSize ?: "Kích thước Khác" }
                             groupedBySize.forEach { (size, framesBySize) ->
                                 Text("Khổ in: $size", style = MaterialTheme.typography.h6, color = AccentNudeDark, fontWeight = FontWeight.Bold)
@@ -154,7 +163,7 @@ fun AdminScreen(
                         }
                         
                         if (specialFrames.isNotEmpty()) {
-                            Text("Khung Sự Kiện Đặc Biệt", style = MaterialTheme.typography.h5, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp, top = 16.dp))
+                             Text("Khung Sự Kiện Đặc Biệt", style = MaterialTheme.typography.h5, color = NeutralText, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp, top = 16.dp))
                             val groupedByEvent = specialFrames.groupBy { it.specialEventName ?: "Sự Kiện Khác" }
                             groupedByEvent.forEach { (eventName, framesByEvent) ->
                                 EventAdminCard(
@@ -206,58 +215,37 @@ fun AdminScreen(
             } else if (selectedTab == 2) {
 
                 // Settings
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AdminTokens.sectionGap)) {
                     SectionHeader("Admin", "Cài đặt thiết bị", "Bạn cần khởi động lại ứng dụng sau khi lưu để áp dụng.")
-                    
-                    // Print Settings
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Máy in Windows", fontWeight = FontWeight.Bold, color = NeutralText)
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                    SettingsGroup("IN ẢNH") {
+                        SettingsRow("Máy in Windows", "Gửi ảnh tới hộp thoại in Windows khi bật.") {
                             Switch(
                                 checked = enablePrint,
                                 onCheckedChange = { enablePrint = it },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colors.primary)
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = AccentNude, checkedTrackAlpha = 1f)
                             )
-                            Text(if (enablePrint) "Bật (Gửi ảnh tới hộp thoại in Windows)" else "Tắt", color = NeutralMuted)
                         }
                     }
-                    
-                    Divider(color = NeutralBorder)
-                    
-                    // Camera Settings
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text("Nguồn Camera", fontWeight = FontWeight.Bold, color = NeutralText)
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(
-                                    selected = !useHotFolder,
-                                    onClick = { useHotFolder = false },
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colors.primary)
-                                )
-                                Text("Webcam / DroidCam", Modifier.clickable { useHotFolder = false })
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(
-                                    selected = useHotFolder,
-                                    onClick = { useHotFolder = true },
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colors.primary)
-                                )
-                                Text("Thư mục ảnh (Hot Folder)", Modifier.clickable { useHotFolder = true })
-                            }
-                        }
-                        
-                        if (useHotFolder) {
+
+                    SettingsGroup("NGUỒN CAMERA") {
+                        ChoiceRow("Webcam / DroidCam", "Dùng camera kết nối trực tiếp.", !useHotFolder, AccentNude, { useHotFolder = false })
+                        Spacer(Modifier.height(10.dp))
+                        ChoiceRow("Thư mục ảnh (Hot Folder)", "Lấy ảnh từ thư mục do phần mềm camera xuất ra.", useHotFolder, AccentNude, { useHotFolder = true })
+                        AnimatedVisibility(visible = useHotFolder, enter = expandVertically(), exit = shrinkVertically()) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Đường dẫn Hot Folder:", color = NeutralMuted)
+                                Spacer(Modifier.height(14.dp))
+                                Text("Đường dẫn Hot Folder", style = MaterialTheme.typography.body2, color = NeutralSecondary)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     OutlinedTextField(
                                         value = hotFolderPath,
                                         onValueChange = { hotFolderPath = it },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
+                                        placeholder = { Text("Chọn thư mục ảnh") },
                                         colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
                                     )
-                                    OutlinedButton(onClick = {
+                                    KioskSecondaryButton("Chọn thư mục", onClick = {
                                         val chooser = javax.swing.JFileChooser().apply {
                                             fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
                                             dialogTitle = "Chọn Hot Folder"
@@ -265,18 +253,16 @@ fun AdminScreen(
                                         if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
                                             hotFolderPath = chooser.selectedFile.absolutePath
                                         }
-                                    }) {
-                                        Text("Chọn thư mục")
-                                    }
+                                    })
                                 }
                                 Text("Mẹo: Dùng digiCamControl chụp để ảnh rớt vào đây.", color = NeutralMuted, style = MaterialTheme.typography.caption)
                             }
                         }
-                        
-                        if (nativeCamera != null) {
-                            Divider(color = NeutralBorder)
+                    }
+
+                    if (nativeCamera != null) {
+                        SettingsGroup("THÔNG SỐ CANON EDSDK") {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("Bảng điều khiển Camera Native (Canon EDSDK)", fontWeight = FontWeight.Bold, color = NeutralText)
                                 Text("Ghi chú: Nếu thông số hiện N/A, hãy đảm bảo máy ảnh đang ở chế độ M (Manual) và không bị kẹt báo bận.", color = NeutralMuted, style = MaterialTheme.typography.caption)
                                 
                                 // Phơi sáng (Exposure)
@@ -337,39 +323,24 @@ fun AdminScreen(
                             }
                         }
                     }
-                    
-                    Divider(color = NeutralBorder)
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text("Thời gian chờ", style = MaterialTheme.typography.h6, color = NeutralText)
+
+                    SettingsGroup("THỜI GIAN LỰA CHỌN") {
                         Text("Điều chỉnh thời gian để khách chọn ảnh và khung. 0 giây sẽ tự động tiếp tục.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
-                        NumberStepper("Chọn ảnh", photoSelectionTimeoutSeconds, { photoSelectionTimeoutSeconds = it })
-                        NumberStepper("Chọn khung", frameSelectionTimeoutSeconds, { frameSelectionTimeoutSeconds = it })
-                        NumberStepper("Sau khi chụp (dự phòng)", postCaptureTimeoutSeconds, { postCaptureTimeoutSeconds = it })
+                        NumberStepper("Chọn ảnh", photoSelectionTimeoutSeconds, { photoSelectionTimeoutSeconds = it }, "Thời gian khách chọn ảnh")
+                        SettingsDivider()
+                        NumberStepper("Chọn khung", frameSelectionTimeoutSeconds, { frameSelectionTimeoutSeconds = it }, "Thời gian khách chọn khung")
+                        SettingsDivider()
+                        NumberStepper("Sau khi chụp (dự phòng)", postCaptureTimeoutSeconds, { postCaptureTimeoutSeconds = it }, "Thời gian chờ sau lượt chụp")
                     }
 
-                    Spacer(Modifier.height(16.dp))
-                    KioskPrimaryButton(
-                        text = "Lưu cài đặt",
-                        onClick = { saveSettings() },
-                        modifier = Modifier.width(180.dp)
-                    )
+                    SettingsGroup("LƯU CẤU HÌNH") {
+                        KioskPrimaryButton("Lưu cài đặt", onClick = { saveSettings() }, modifier = Modifier.width(180.dp))
+                    }
+                    Spacer(Modifier.height(8.dp))
                 }
             } else if (selectedTab == 3) {
                 // Calculator App (Firebase Tool)
-                androidx.compose.material.MaterialTheme(
-                    colors = androidx.compose.material.darkColors(
-                        primary = androidx.compose.ui.graphics.Color(0xFF6366F1),
-                        background = androidx.compose.ui.graphics.Color(0xFF1E1E2E),
-                        surface = androidx.compose.ui.graphics.Color(0xFF27273A)
-                    )
-                ) {
-                    androidx.compose.material.Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = androidx.compose.material.MaterialTheme.colors.background
-                    ) {
-                        com.phuctran.photobooth.desktop.engine.CalculatorApp(config, layouts)
-                    }
-                }
+                com.phuctran.photobooth.desktop.engine.CalculatorApp(config, layouts)
             } else if (selectedTab == 4) {
                 FilterAdminView(effects = effects, onSaveEffects = onSaveEffects)
             }
@@ -378,28 +349,67 @@ fun AdminScreen(
 }
 
 @Composable
-private fun NumberStepper(label: String, value: Int, onValueChange: (Int) -> Unit) {
+private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = NeutralPanel,
+        shape = RoundedCornerShape(AdminTokens.groupCornerRadius),
+        border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder.copy(alpha = AdminTokens.dividerAlpha)),
+        elevation = 0.dp
+    ) {
+        Column(Modifier.padding(AdminTokens.groupPadding)) {
+            Text(title, style = MaterialTheme.typography.overline, color = AdminGroupLabelColor)
+            Spacer(Modifier.height(AdminTokens.groupHeaderBottomGap))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun SettingsDivider() {
+    Divider(color = NeutralBorder.copy(alpha = AdminTokens.dividerAlpha))
+}
+
+@Composable
+private fun SettingsRow(label: String, description: String, control: @Composable () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = AdminTokens.rowMinHeight)
+            .padding(horizontal = AdminTokens.rowHorizontalPadding, vertical = AdminTokens.rowVerticalPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, style = MaterialTheme.typography.body1, color = NeutralText, modifier = Modifier.weight(1f))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = { onValueChange((value - 10).coerceAtLeast(0)) },
-                enabled = value > 0,
-                modifier = Modifier.size(48.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) { Text("−", style = MaterialTheme.typography.h6) }
-            Text("$value giây", style = MaterialTheme.typography.subtitle1, color = NeutralText, textAlign = TextAlign.Center, modifier = Modifier.width(88.dp))
-            OutlinedButton(
-                onClick = { onValueChange((value + 10).coerceAtMost(3600)) },
-                enabled = value < 3600,
-                modifier = Modifier.size(48.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) { Text("+", style = MaterialTheme.typography.h6) }
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.body1, color = NeutralText, fontWeight = FontWeight.SemiBold)
+            Text(description, style = MaterialTheme.typography.body2, color = NeutralSecondary)
         }
+        Spacer(Modifier.width(16.dp))
+        control()
+    }
+}
+
+@Composable
+private fun NumberStepper(label: String, value: Int, onValueChange: (Int) -> Unit, description: String = "") {
+    SettingsRow(label, description) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StepperButton("−", value > 0) { onValueChange((value - 10).coerceAtLeast(0)) }
+            Text("$value giây", style = MaterialTheme.typography.subtitle1, color = NeutralText, textAlign = TextAlign.Center, modifier = Modifier.width(88.dp))
+            StepperButton("+", value < 3600) { onValueChange((value + 10).coerceAtMost(3600)) }
+        }
+    }
+}
+
+@Composable
+private fun StepperButton(symbol: String, enabled: Boolean, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(48.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.outlinedButtonColors(backgroundColor = AccentNudeLight, contentColor = AccentNudeDark, disabledContentColor = NeutralMuted),
+        border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Text(symbol, style = MaterialTheme.typography.h6)
     }
 }
 
@@ -531,30 +541,18 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
                 var imageBitmap by remember(frame.customImagePath) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
                 
                 LaunchedEffect(frame.customImagePath) {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        try {
-                            if (java.nio.file.Files.exists(frame.customImagePath)) {
-                                val stream = java.nio.file.Files.newInputStream(frame.customImagePath)
-                                val img = javax.imageio.ImageIO.read(stream)
-                                if (img != null) {
-                                    val bitmap = img.toComposeImageBitmap()
-                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                        imageBitmap = bitmap
-                                    }
-                                }
-                            }
-                        } catch(e: Exception) { e.printStackTrace() }
-                    }
+                    imageBitmap = withContext(Dispatchers.IO) { loadFrameThumbnail(frame.customImagePath) }
                 }
                 
                 if (imageBitmap != null) {
                     androidx.compose.foundation.Image(
                         bitmap = imageBitmap!!,
                         contentDescription = frame.title,
-                        modifier = Modifier.height(100.dp).widthIn(min = 72.dp).clip(RoundedCornerShape(10.dp)).background(NeutralPanelAlt),
+                        modifier = Modifier.size(80.dp, 100.dp).clip(RoundedCornerShape(10.dp)).background(NeutralPanelAlt),
+                        contentScale = ContentScale.Fit,
                     )
                 } else {
-                    Box(modifier = Modifier.height(100.dp).width(72.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.height(100.dp).width(80.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = AccentNude, modifier = Modifier.size(24.dp))
                     }
                 }
@@ -565,6 +563,7 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoPill(frame.targetPrintSize ?: "Khổ khác", bgColor = NeutralPanelAlt, textColor = NeutralSecondary)
                     InfoPill(frame.targetLayoutId ?: "Layout khác", bgColor = AccentNudeLight, textColor = AccentNudeDark)
+                    if (frame.isSpecial) InfoPill("Sự kiện", bgColor = AccentNudeLight, textColor = AccentNudeDark)
                 }
                 if (frame.customImagePath != null) {
                     Spacer(Modifier.height(6.dp))
@@ -593,31 +592,34 @@ fun LayoutEditDialog(layout: LayoutMode, onDismiss: () -> Unit, onSave: (Long, I
     AlertDialog(
         onDismissRequest = onDismiss,
         backgroundColor = NeutralPanel,
-        title = { Text("Cài đặt Bố cục", fontWeight = FontWeight.Bold, color = NeutralText) },
+        title = { Text("Cài đặt Bố cục", style = MaterialTheme.typography.h5, color = NeutralText) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = priceStr,
                     onValueChange = { priceStr = it },
                     label = { Text("Giá tiền (VNĐ)") },
-                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText, focusedBorderColor = AccentNude)
                 )
                 OutlinedTextField(
                     value = shotCountStr,
                     onValueChange = { shotCountStr = it },
                     label = { Text("Số ảnh chụp") },
-                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText, focusedBorderColor = AccentNude)
                 )
                 OutlinedTextField(
                     value = countdownStr,
                     onValueChange = { countdownStr = it },
                     label = { Text("Thời gian đếm ngược (giây)") },
-                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText, focusedBorderColor = AccentNude)
                 )
             }
         },
         confirmButton = {
-            Button(onClick = {
+            Button(colors = ButtonDefaults.buttonColors(backgroundColor = AccentNude, contentColor = Color.White), onClick = {
                 val p = priceStr.toLongOrNull() ?: layout.basePrice
                 val s = shotCountStr.toIntOrNull() ?: layout.shotCount
                 val c = countdownStr.toIntOrNull() ?: layout.countdownSeconds
@@ -651,12 +653,18 @@ fun LayoutAdminCard(layout: LayoutMode, onEdit: () -> Unit, onDelete: () -> Unit
                 Text(layout.title, color = NeutralText, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("Layout ID: ${layout.id}", color = NeutralSecondary, fontSize = 12.sp)
-                Text("Khổ in: ${layout.printSizeLabel} | Chụp ${layout.shotCount} ảnh | Chọn ${layout.selectCount} ảnh", color = NeutralSecondary, fontSize = 12.sp)
+                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                      InfoPill("Khổ ${layout.printSizeLabel}")
+                     InfoPill("Chụp ${layout.shotCount}")
+                     InfoPill("Chọn ${layout.selectCount}")
+                     InfoPill("Đếm ${layout.countdownSeconds}s")
+                      InfoPill("Giá ${layout.basePrice}đ", bgColor = AccentNudeLight, textColor = AccentNudeDark)
+                 }
                 Text(layout.description, color = NeutralMuted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (showConfirm) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Xóa layout?", color = AccentRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Xác nhận xóa bố cục này?", color = AccentRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     androidx.compose.material.OutlinedButton(
                         onClick = { showConfirm = false },
                         colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralSecondary)

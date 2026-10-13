@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import com.phuctran.photobooth.desktop.ui.theme.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
@@ -43,13 +44,7 @@ fun main() = application {
         title = "Photobooth Layout Calculator",
         state = rememberWindowState(width = 1200.dp, height = 800.dp)
     ) {
-        MaterialTheme(
-            colors = darkColors(
-                primary = Color(0xFF6366F1),
-                background = Color(0xFF1E1E2E),
-                surface = Color(0xFF27273A)
-            )
-        ) {
+        PhotoboothTheme {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
                 CalculatorApp()
             }
@@ -365,11 +360,11 @@ fun CalculatorApp(
         }
     }
 
-    Row(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(modifier = Modifier.fillMaxSize().background(NeutralBg).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         // Left Column (Controls & Preview)
         Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Layout Calculator Tool", style = MaterialTheme.typography.h5, color = Color.White)
-            Text("Công cụ tự động đo đạc tỷ lệ và khoảng cách cho khung ảnh", color = Color.Gray)
+            Text("Công cụ bố cục", style = MaterialTheme.typography.h5, color = NeutralText)
+            Text("Đo đạc tỷ lệ và khoảng cách cho khung ảnh", color = NeutralSecondary)
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
@@ -382,20 +377,20 @@ fun CalculatorApp(
                 Button(
                     onClick = { openFileChooserDirect() },
                     modifier = Modifier.weight(1f).height(48.dp),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF4DB6AC))
+                    colors = ButtonDefaults.buttonColors(backgroundColor = AccentNudeDark)
                 ) {
                     Text("Thêm Khung Đã Đục Lỗ Trực Tiếp", color = Color.White, fontSize = 13.sp)
                 }
             }
 
             if (selectedFile != null) {
-                Text("Đang chọn: ${selectedFile?.name}", color = Color.LightGray, fontSize = 12.sp)
+                Text("Đang chọn: ${selectedFile?.name}", color = NeutralSecondary, fontSize = 12.sp)
             }
 
             Surface(
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                color = MaterialTheme.colors.surface,
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFF2B2B30),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(8.dp)) {
                     if (isProcessing) {
@@ -532,7 +527,7 @@ fun CalculatorApp(
                             }
                         }
                     } else {
-                        Text("Chưa có ảnh xem trước", color = Color.Gray)
+                        Text("Chưa có ảnh xem trước", color = NeutralText)
                     }
                 }
             }
@@ -543,11 +538,11 @@ fun CalculatorApp(
             // Firebase Actions
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colors.surface,
-                shape = RoundedCornerShape(8.dp)
+                color = NeutralPanel,
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Xuất Dữ Liệu Firebase", color = Color.White, style = MaterialTheme.typography.subtitle1)
+                    Text("1 · Thông tin bố cục & Khổ in", color = NeutralText, style = MaterialTheme.typography.subtitle1)
                     
                     OutlinedTextField(
                         value = detectedSizeInput,
@@ -555,7 +550,7 @@ fun CalculatorApp(
                         label = { Text("Kích thước in & Số lượng ảnh") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                        colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
                     )
                     
                     var layoutDropdownExpanded by remember { mutableStateOf(false) }
@@ -566,7 +561,7 @@ fun CalculatorApp(
                             label = { Text("Mã Bố cục MỚI (VD: strip_4_doc)") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText),
                             trailingIcon = {
                                 androidx.compose.material.IconButton(onClick = { isAddingNewLayout = false; layoutIdInput = "" }) {
                                     Text("Hủy", color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
@@ -614,23 +609,28 @@ fun CalculatorApp(
                             }
                         }
                     }
-                    
+                }
+            }
+
+            Surface(modifier = Modifier.fillMaxWidth(), color = NeutralPanel, shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("2 · Cấu hình Khung & QR Code", color = NeutralText, style = MaterialTheme.typography.subtitle1)
                     OutlinedTextField(
                         value = frameIdInput,
                         onValueChange = { frameIdInput = it },
                         label = { Text("Mã Khung (Frame ID)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                        colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
                     )
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.material.Checkbox(
                             checked = isSpecialFrame,
                             onCheckedChange = { isSpecialFrame = it },
-                            colors = androidx.compose.material.CheckboxDefaults.colors(checkmarkColor = Color.Black, checkedColor = Color.White, uncheckedColor = Color.Gray)
+                            colors = androidx.compose.material.CheckboxDefaults.colors(checkmarkColor = Color.Black, checkedColor = AccentNude, uncheckedColor = NeutralMuted)
                         )
-                        Text("Khung sự kiện đặc biệt (Special)", color = Color.White)
+                        Text("Khung sự kiện đặc biệt (Special)", color = NeutralText)
                     }
                     
                     if (isSpecialFrame) {
@@ -641,7 +641,7 @@ fun CalculatorApp(
                                 label = { Text("Tên sự kiện mới (VD: Quoc_khanh_2_9)") },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText),
                                 trailingIcon = {
                                     if (existingSpecialEvents.isNotEmpty()) {
                                         androidx.compose.material.IconButton(onClick = { isAddingNewSpecialEvent = false; specialEventName = "" }) {
@@ -706,7 +706,7 @@ fun CalculatorApp(
                             label = { Text("QR X (px)") },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
                         )
                         OutlinedTextField(
                             value = qrYInput,
@@ -714,7 +714,7 @@ fun CalculatorApp(
                             label = { Text("QR Y (px)") },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
                         )
                         OutlinedTextField(
                             value = qrSizeInput,
@@ -722,10 +722,10 @@ fun CalculatorApp(
                             label = { Text("QR Size (px)") },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+                            colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
                         )
                     }
-                    Text("Bỏ trống để dùng cấu hình mặc định (Góc phải dưới, 10%)", color = Color.Gray, fontSize = 11.sp)
+                    Text("Bỏ trống để dùng cấu hình mặc định (Góc phải dưới, 10%)", color = NeutralSecondary, fontSize = 11.sp)
                     
                     val pathPreview = if (detectedSizeInput.isNotBlank() && layoutIdInput.isNotBlank()) {
                         val evt = if (isSpecialFrame) "Special/" + specialEventName.trim().replace(Regex("[^a-zA-Z0-9_]+"), "_").ifEmpty { "Event" } else "Standard"
@@ -733,7 +733,7 @@ fun CalculatorApp(
                     } else {
                         "..."
                     }
-                    Text("Thư mục lưu: data/frames/$pathPreview", color = Color(0xFF64B5F6), fontSize = 12.sp)
+                    Text("Thư mục lưu: data/frames/$pathPreview", color = AccentBlue, fontSize = 12.sp)
                     
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
@@ -752,12 +752,12 @@ fun CalculatorApp(
                             Text("2. LƯU KHUNG (Local)")
                         }
                     }
-                    Text("Quy trình: Nếu chưa có layout, bấm lưu Bố cục trước. Nếu layout đã tồn tại, chỉ cần lưu Khung trỏ tới Layout ID đó.", color = Color.Gray, fontSize = 12.sp)
+                    Text("Quy trình: Nếu chưa có layout, bấm lưu Bố cục trước. Nếu layout đã tồn tại, chỉ cần lưu Khung trỏ tới Layout ID đó.", color = NeutralSecondary, fontSize = 12.sp)
                 }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Kết quả Code (Legacy)", style = MaterialTheme.typography.h6, color = Color.White)
+                Text("3 · Mã nguồn sinh tự động", style = MaterialTheme.typography.h6, color = NeutralText)
                 Button(onClick = { copyToClipboard() }, enabled = previewBitmap != null) {
                     Text("Copy Code")
                 }
@@ -765,13 +765,13 @@ fun CalculatorApp(
 
             Surface(
                 modifier = Modifier.fillMaxWidth().height(250.dp),
-                color = MaterialTheme.colors.surface,
-                shape = RoundedCornerShape(8.dp)
+                color = NeutralPanel,
+                shape = RoundedCornerShape(16.dp)
             ) {
                 SelectionContainer {
                     Text(
                         text = generatedCode,
-                        color = Color(0xFFA6E22E), // Greenish tech color
+                        color = NeutralText,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(16.dp)

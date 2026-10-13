@@ -2,6 +2,7 @@ package com.phuctran.photobooth.desktop.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.phuctran.photobooth.desktop.model.EffectMode
 import com.phuctran.photobooth.desktop.ui.components.InfoPill
 import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
@@ -29,7 +31,7 @@ fun FilterAdminView(
     var selectedEffectId by remember(effects) { mutableStateOf(effects.firstOrNull()?.id) }
     val selectedEffect = mutableEffects.find { it.id == selectedEffectId }
 
-    Row(modifier = Modifier.fillMaxSize().padding(top = 16.dp)) {
+    Row(modifier = Modifier.fillMaxSize().background(NeutralBg).padding(top = 16.dp)) {
         // Left Column: List of Filters
         Column(
             modifier = Modifier
@@ -41,7 +43,7 @@ fun FilterAdminView(
             SectionHeader("Admin", "Bộ lọc màu", "Danh sách các bộ lọc hiện có.")
             
             KioskPrimaryButton(
-                text = "Thêm bộ lọc mới",
+                text = "+ Thêm bộ lọc mới",
                 onClick = {
                     val newId = "filter_${System.currentTimeMillis()}"
                     val newEffect = EffectMode(
@@ -71,9 +73,9 @@ fun FilterAdminView(
                 mutableEffects.forEach { effect ->
                     val isSelected = effect.id == selectedEffectId
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().border(1.dp, if (isSelected) AccentNude else NeutralBorder, RoundedCornerShape(12.dp)),
                         backgroundColor = if (isSelected) AccentNudeLight else NeutralPanel,
-                        elevation = if (isSelected) 6.dp else 0.dp,
+                        elevation = 0.dp,
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                     ) {
                         Row(
@@ -117,7 +119,7 @@ fun FilterAdminView(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (selectedEffect != null) {
-                SectionHeader("Chỉnh sửa", selectedEffect.title, "Thay đổi thông số màu và lưu để áp dụng cho kiosk.")
+                SectionHeader("Chỉnh sửa bộ lọc", selectedEffect.title, "Thay đổi thông số màu và lưu để áp dụng cho kiosk.")
                 
                 var title by remember(selectedEffect) { mutableStateOf(selectedEffect.title) }
                 var description by remember(selectedEffect) { mutableStateOf(selectedEffect.description) }
@@ -140,18 +142,30 @@ fun FilterAdminView(
                     mutableEffects = mutableEffects.map { if (it.id == updated.id) updated else it }.toMutableList()
                 }
 
+                Surface(color = NeutralPanel, shape = RoundedCornerShape(16.dp), elevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Box(Modifier.size(76.dp).background(Color(selectedEffect.accentColor), RoundedCornerShape(14.dp)))
+                        Column {
+                            Text(selectedEffect.title, color = NeutralText, style = MaterialTheme.typography.h5)
+                            Text(selectedEffect.description, color = NeutralSecondary, style = MaterialTheme.typography.body2)
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it; updateCurrentEffect() },
                     label = { Text("Tên bộ lọc") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText, focusedBorderColor = AccentNude)
                 )
 
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it; updateCurrentEffect() },
                     label = { Text("Mô tả") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText, focusedBorderColor = AccentNude)
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -182,7 +196,7 @@ fun FilterAdminView(
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     KioskSecondaryButton(
-                        text = "Xóa bộ lọc này",
+                        text = "Xóa bộ lọc",
                         onClick = {
                             mutableEffects = mutableEffects.filter { it.id != selectedEffectId }.toMutableList()
                             selectedEffectId = mutableEffects.firstOrNull()?.id
