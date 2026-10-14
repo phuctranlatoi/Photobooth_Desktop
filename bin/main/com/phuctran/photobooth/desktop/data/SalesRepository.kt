@@ -4,10 +4,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.Connection
 import java.sql.DriverManager
+import com.phuctran.photobooth.desktop.remote.DesktopRevenueClient
+import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 
 /** Local, snapshot-only ledger. Each query opens its own connection; writes are serialized by SQLite. */
 class SalesRepository(projectDir: Path) {
     private val url: String
+    private val syncLock = Any()
 
     init {
         val directory = projectDir.resolve("data")
@@ -22,6 +25,16 @@ class SalesRepository(projectDir: Path) {
                 extra_amount INTEGER NOT NULL, total_amount INTEGER NOT NULL, payment_method TEXT NOT NULL,
                 created_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'completed')""") }
             db.createStatement().use { it.execute("CREATE INDEX IF NOT EXISTS sales_created_at ON sales(created_at)") }
+            val hasSyncColumn = db.createStatement().use { stmt ->
+                stmt.executeQuery("PRAGMA table_info(sales)").use { rows ->
+                    var found = false
+                    while (rows.next()) if (rows.getString("name") == "sync_status") found = true
+                    found
+                }
+            }
+            if (!hasSyncColumn) db.createStatement().use {
+                it.execute("ALTER TABLE sales ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'PENDING'")
+            }
         }
     }
 
@@ -42,6 +55,31 @@ class SalesRepository(projectDir: Path) {
                     transaction.paymentMethod, transaction.createdAt, transaction.status).forEachIndexed { i, value -> stmt.setObject(i + 1, value) }
                 stmt.executeUpdate()
             }
+        }
+    }
+
+    fun syncPendingSales(client: DesktopRevenueClient, config: DesktopBoothConfig) {
+        if (config.neonDatabaseUrl.isBlank() && config.boothApiKey.isBlank()) return
+        synchronized(syncLock) {
+        connection().use { db ->
+            val pending = db.prepareStatement("SELECT * FROM sales WHERE sync_status='PENDING' ORDER BY id").use { stmt ->
+                stmt.executeQuery().use { r -> buildList {
+                    while (r.next()) add(SaleTransaction(r.getLong("id"), r.getString("session_id"),
+                        r.getString("booth_id"), r.getString("layout_id"), r.getString("layout_title"),
+                        r.getString("print_size"), r.getInt("quantity"), r.getInt("included_quantity"),
+                        r.getInt("extra_quantity"), r.getLong("base_price"), r.getLong("extra_unit_price"),
+                        r.getLong("extra_amount"), r.getLong("total_amount"), r.getString("payment_method"),
+                        r.getLong("created_at"), r.getString("status")))
+                } }
+            }
+            for (sale in pending) {
+                if (!client.recordTransaction(config, sale)) break
+                db.prepareStatement("UPDATE sales SET sync_status='SYNCED' WHERE id=? AND sync_status='PENDING'").use {
+                    it.setLong(1, sale.id)
+                    it.executeUpdate()
+                }
+            }
+        }
         }
     }
 

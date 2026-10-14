@@ -6,6 +6,8 @@ import java.nio.file.Path
 data class DesktopBoothConfig(
     val boothId: String = "booth_1",
     val boothApiKey: String = "",
+    val neonDatabaseUrl: String = "",
+    val neonRevenueBoothId: String = "",
     val webAlbumBaseUrl: String = "https://web-photobooth-pink.vercel.app/",
     val cloudinaryCloudName: String = "",
     val cloudinaryUploadPreset: String = "",
@@ -54,6 +56,8 @@ object DesktopConfigLoader {
         return DesktopBoothConfig(
             boothId = env["BOOTH_ID"].orDefault("booth_1"),
             boothApiKey = env["BOOTH_API_KEY"].orEmpty(),
+            neonDatabaseUrl = env["NEON_DATABASE_URL"]?.takeIf { it.isNotBlank() } ?: env["DATABASE_URL"].orEmpty(),
+            neonRevenueBoothId = env["NEON_REVENUE_BOOTH_ID"].orEmpty(),
             webAlbumBaseUrl = webAlbumBaseUrl,
             cloudinaryCloudName = env["CLOUDINARY_CLOUD_NAME"].orEmpty(),
             cloudinaryUploadPreset = env["CLOUDINARY_UPLOAD_PRESET"].orEmpty(),

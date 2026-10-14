@@ -75,6 +75,9 @@ fun FrameScreen(
         BottomActionBar("Xem bản in", onConfirm, "Quay lại", onBack)
       }
     }
-    DecisionTimerBadge(timeLeft, Modifier.align(Alignment.TopEnd))
+    Row(Modifier.align(Alignment.TopEnd), verticalAlignment = Alignment.CenterVertically) {
+        DecisionTimerBadge(timeLeft)
+        SessionCancellationMenu(onCancel = { controller.cancelSession() })
+    }
     }
 }

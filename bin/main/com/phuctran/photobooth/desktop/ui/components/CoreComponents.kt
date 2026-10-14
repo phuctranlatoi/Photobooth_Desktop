@@ -17,6 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +58,37 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
 import kotlin.math.max
+
+@Composable
+fun SessionCancellationMenu(onCancel: () -> Unit, modifier: Modifier = Modifier) {
+    var expanded by remember { mutableStateOf(false) }
+    var confirming by remember { mutableStateOf(false) }
+    Box(modifier) {
+        TextButton(onClick = { expanded = true }, modifier = Modifier.size(48.dp)) {
+            Text("⋮", style = MaterialTheme.typography.h5, color = NeutralSecondary)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(onClick = { expanded = false; confirming = true }) {
+                Text("Hủy phiên chụp", color = AccentRed)
+            }
+        }
+    }
+    if (confirming) CancelSessionConfirmationDialog(
+        onConfirm = { confirming = false; onCancel() },
+        onDismiss = { confirming = false }
+    )
+}
+
+@Composable
+fun CancelSessionConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Hủy phiên chụp?", style = MaterialTheme.typography.h6) },
+        text = { Text("Ảnh tạm của phiên này sẽ bị xóa. Thao tác này không thể hoàn tác.") },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Hủy phiên", color = AccentRed) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Tiếp tục chọn ảnh") } }
+    )
+}
 
 
 

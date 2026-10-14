@@ -3,7 +3,9 @@ package com.phuctran.photobooth.desktop.controller
 import com.phuctran.photobooth.desktop.config.DesktopAppPaths
 import com.phuctran.photobooth.desktop.data.SalesRepository
 import com.phuctran.photobooth.desktop.data.SaleTransaction
+import com.phuctran.photobooth.desktop.remote.DesktopRevenueClient
 import com.phuctran.photobooth.desktop.model.PricingCalculator
+import com.phuctran.photobooth.desktop.model.PricingSnapshot
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.domain.SessionState
 import com.phuctran.photobooth.desktop.domain.SessionStateMachine
@@ -63,7 +65,8 @@ class DesktopBoothController(
     private val paymentService: PaymentService = PaymentService(config),
     private val webAlbumClient: com.phuctran.photobooth.desktop.remote.DesktopWebAlbumClient = com.phuctran.photobooth.desktop.remote.DesktopWebAlbumClient(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-    private val salesRepository: SalesRepository = SalesRepository(projectDir)
+    private val salesRepository: SalesRepository = SalesRepository(projectDir),
+    private val revenueClient: DesktopRevenueClient = DesktopRevenueClient()
 ) {
     val nativeCamera: com.phuctran.photobooth.desktop.services.NativeEosCaptureService?
         get() = cameraService as? com.phuctran.photobooth.desktop.services.NativeEosCaptureService
@@ -144,6 +147,7 @@ class DesktopBoothController(
     private var paymentPollingJob: Job? = null
     private var currentSessionId: String? = null
     private var paymentMethod: String = "Tiền mặt"
+    private var frozenPricingSnapshot: PricingSnapshot? = null
 
     private val _paymentQrData = MutableStateFlow<String?>(null)
     val paymentQrData = _paymentQrData.asStateFlow()
@@ -156,6 +160,9 @@ class DesktopBoothController(
     }
 
     init {
+        scope.launch(Dispatchers.IO) {
+            runCatching { salesRepository.syncPendingSales(revenueClient, activeConfig.value) }
+        }
         scope.launch {
             try {
                 try {
@@ -278,7 +285,7 @@ class DesktopBoothController(
         }
 
         // Auto print
-        startPrinting()
+        startPrinting(userConfirmed = false)
     }
 
     fun chooseLayout(layoutId: String) {
@@ -319,13 +326,15 @@ class DesktopBoothController(
 
     fun confirmStudioSetup() {
         _printCopies.value = 2
-        _totalPrice.value = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, 2).totalAmount
+        frozenPricingSnapshot = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, 2)
+        _totalPrice.value = frozenPricingSnapshot!!.totalAmount
         transitionTo(SessionState.SELECTING_QUANTITY)
     }
 
     fun setQuantityAndStartPayment(quantity: Int) {
         val safeQuantity = PricingCalculator.sanitizeQuantity(_selectedLayout.value.printSizeLabel, quantity)
         val pricing = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, safeQuantity)
+        frozenPricingSnapshot = pricing
         _printCopies.value = safeQuantity
         _totalPrice.value = pricing.totalAmount
         paymentMethod = "Tiền mặt"
@@ -647,7 +656,7 @@ class DesktopBoothController(
         transitionTo(SessionState.PRINT_PENDING)
     }
 
-    fun startPrinting() {
+    fun startPrinting(userConfirmed: Boolean = true) {
         deliveryJob?.cancel()
         deliveryJob = scope.launch {
             transitionTo(SessionState.PRINTING)
@@ -690,7 +699,8 @@ class DesktopBoothController(
 
             // 3. Khởi chạy tác vụ IN ẢNH SONG SONG NGAY LẬP TỨC (để không phải đợi Upload xong mới in)
             var printStatusMessage = "Đang in ảnh và xử lý nền..."
-            val printJob = scope.launch(Dispatchers.IO) {
+            val printJob = scope.async(Dispatchers.IO) {
+                var accepted = false
                 val printStatus = if (printFile != null && activeConfig.value.enableSystemPrint) {
                     val layout = _selectedLayout.value
                     val isStrip = layout.printSizeLabel.contains("5x15", ignoreCase = true) || layout.printSizeLabel.contains("5 x 15", ignoreCase = true)
@@ -704,9 +714,11 @@ class DesktopBoothController(
                     }
                     
                     printerService.printImage(printFile, actualSheets, targetPrinterName)
+                        .onSuccess { accepted = true }
                         .getOrElse { error -> "Không gửi được sang Windows Print: ${error.message}" }
                 } else if (printFile != null) {
-                    "Đã render file in local. Bật ENABLE_SYSTEM_PRINT=true để in."
+                    accepted = false
+                    "Đã render file in local (chế độ không in). Bật ENABLE_SYSTEM_PRINT=true để in."
                 } else {
                     "Chưa render được file in."
                 }
@@ -717,6 +729,7 @@ class DesktopBoothController(
                 if (sessionState.value == SessionState.DELIVERY) {
                     _exportSummary.value = _exportSummary.value.copy(printStatus = printStatusMessage)
                 }
+                accepted
             }
 
             // 4. Upload Ảnh (Network IO)
@@ -757,7 +770,8 @@ class DesktopBoothController(
                 _statusMessage.value = "Đang in ảnh và xử lý nền..."
             }
             val saleLayout = _selectedLayout.value
-            val salePricing = PricingCalculator.calculatePrice(saleLayout.printSizeLabel, _printCopies.value)
+            val salePricing = frozenPricingSnapshot ?: PricingCalculator.calculatePrice(saleLayout.printSizeLabel, _printCopies.value)
+                .also { frozenPricingSnapshot = it }
             val sale = SaleTransaction(
                 sessionId = sessionId, boothId = config.boothId, layoutId = saleLayout.id,
                 layoutTitle = saleLayout.title, printSize = salePricing.printSize,
@@ -767,9 +781,16 @@ class DesktopBoothController(
                 totalAmount = salePricing.totalAmount, paymentMethod = paymentMethod,
                 createdAt = System.currentTimeMillis()
             )
-            withContext(Dispatchers.IO) {
-                runCatching { salesRepository.recordSale(sale) }
-                    .onFailure { println("Could not save local sale for $sessionId: ${it.message}") }
+            if (userConfirmed && printJob.await() && currentSessionId == sessionId) {
+                withContext(Dispatchers.IO) {
+                    runCatching { salesRepository.recordSale(sale) }
+                        .onSuccess {
+                            scope.launch(Dispatchers.IO) {
+                                runCatching { salesRepository.syncPendingSales(revenueClient, activeConfig.value) }
+                            }
+                        }
+                        .onFailure { println("Could not save local sale for $sessionId: ${it.message}") }
+                }
             }
             transitionTo(SessionState.DELIVERY)
 
@@ -844,6 +865,29 @@ class DesktopBoothController(
         resetSession()
     }
 
+    fun cancelSession(): Boolean {
+        if (sessionState.value != SessionState.SELECTING_PHOTOS && sessionState.value != SessionState.EDITING) return false
+        frozenPricingSnapshot = null
+        val sessionId = currentSessionId
+        captureJob?.cancel()
+        inactivityJob?.cancel()
+        val encodingJobs = _videoEncodingJobs.toList()
+        encodingJobs.forEach { it.cancel() }
+        _videoEncodingJobs.clear()
+        resetSession()
+        if (sessionId != null) scope.launch(Dispatchers.IO) {
+            encodingJobs.forEach { it.join() }
+            val sessionsRoot = projectDir.resolve("data").resolve("sessions").toAbsolutePath().normalize()
+            val target = sessionsRoot.resolve(sessionId).normalize()
+            if (target.parent == sessionsRoot && Files.isDirectory(target)) {
+                runCatching { Files.walk(target).use { paths ->
+                    paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+                } }.onFailure { println("Could not clean cancelled session: ${it.message}") }
+            }
+        }
+        return true
+    }
+
     fun goBack() {
         when (sessionState.value) {
             SessionState.SELECTING_QUANTITY -> transitionTo(SessionState.SELECTING)
@@ -859,6 +903,7 @@ class DesktopBoothController(
     }
 
     fun resetSession() {
+        frozenPricingSnapshot = null
         captureJob?.cancel()
         deliveryJob?.cancel()
         paymentPollingJob?.cancel()

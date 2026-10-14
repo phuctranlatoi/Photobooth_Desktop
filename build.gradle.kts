@@ -23,6 +23,7 @@ dependencies {
     implementation("com.google.firebase:firebase-admin:9.3.0")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.xerial:sqlite-jdbc:3.45.3.0")
+    implementation("org.postgresql:postgresql:42.7.2")
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
 }

@@ -234,7 +234,7 @@ fun main() = application {
                         selectedMoments = selectedMoments,
                         printCopies = printCopies,
                         exportSummary = exportSummary,
-                        onPrint = { controller.startPrinting() },
+                        onPrint = { controller.startPrinting(userConfirmed = true) },
                         onBack = { controller.goBack() }
                     )
                     SessionState.PRINTING -> PrintingScreen(layout, frame, statusMessage)

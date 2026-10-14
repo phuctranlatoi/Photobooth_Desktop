@@ -127,7 +127,7 @@ fun AdminScreen(
 
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             if (selectedTab == 5) {
-                RevenueScreen(salesRepository, projectDir)
+                RevenueScreen(salesRepository, remember { com.phuctran.photobooth.desktop.remote.DesktopRevenueClient() }, config)
             } else if (selectedTab == 0) {
                 // Frames
                 Column(Modifier.fillMaxSize()) {

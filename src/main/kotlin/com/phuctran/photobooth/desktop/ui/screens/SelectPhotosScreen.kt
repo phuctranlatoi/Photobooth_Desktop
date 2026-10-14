@@ -98,7 +98,10 @@ fun SelectPhotosScreen(
             primaryEnabled = selectedMoments.size == layout.selectCount
         )
         }
-        DecisionTimerBadge(timeLeft, Modifier.align(Alignment.TopEnd))
+        Row(Modifier.align(Alignment.TopEnd), verticalAlignment = Alignment.CenterVertically) {
+            DecisionTimerBadge(timeLeft)
+            SessionCancellationMenu(onCancel = { controller.cancelSession() })
+        }
         AnimatedVisibility(
             visible = previewingMoment != null,
             modifier = Modifier.fillMaxSize(),
