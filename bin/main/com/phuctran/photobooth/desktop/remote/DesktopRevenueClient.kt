@@ -39,6 +39,19 @@ class DesktopRevenueClient(private val http: HttpClient = HttpClient.newBuilder(
         return request(config, "transactions", body) != null
     }
 
+    fun adjustTransaction(config: DesktopBoothConfig, sessionId: String, actualQuantity: Int, reason: String?): Boolean {
+        require(actualQuantity >= 2)
+        if (config.neonDatabaseUrl.isNotBlank()) return neon.adjustTransaction(config, sessionId, actualQuantity, reason)
+        return request(config, "transactions/${java.net.URLEncoder.encode(sessionId, Charsets.UTF_8)}/adjust",
+            SimpleJson.obj("actualQuantity" to actualQuantity, "reason" to reason)) != null
+    }
+
+    fun voidTransaction(config: DesktopBoothConfig, sessionId: String, reason: String?): Boolean {
+        if (config.neonDatabaseUrl.isNotBlank()) return neon.voidTransaction(config, sessionId, reason)
+        return request(config, "transactions/${java.net.URLEncoder.encode(sessionId, Charsets.UTF_8)}/void",
+            SimpleJson.obj("reason" to reason)) != null
+    }
+
     private fun range(startTime: Long, endTime: Long) = "startTime=$startTime&endTime=$endTime"
     private fun summaryJson(config: DesktopBoothConfig, startTime: Long, endTime: Long) =
         request(config, "summary?${range(startTime, endTime)}&timeZone=${java.net.URLEncoder.encode(java.time.ZoneId.systemDefault().id, Charsets.UTF_8)}")
@@ -85,7 +98,13 @@ class DesktopRevenueClient(private val http: HttpClient = HttpClient.newBuilder(
                     basePrice = s.money("basePrice"), extraUnitPrice = s.money("extraUnitPrice"),
                     extraAmount = s.money("extraAmount"), totalAmount = s.money("totalAmount"),
                     paymentMethod = s.get("paymentMethod").asString, createdAt = s.money("createdAt"),
-                    status = s.get("status").asString)
+                    status = s.get("status").asString,
+                    originalQuantity = s.get("originalQuantity")?.takeUnless { it.isJsonNull }?.asInt,
+                    originalTotalAmount = s.get("originalTotalAmount")?.takeUnless { it.isJsonNull }?.asString?.toLong(),
+                    adjustReason = s.get("adjustReason")?.takeUnless { it.isJsonNull }?.asString,
+                    adjustedAt = s.get("adjustedAt")?.takeUnless { it.isJsonNull }?.asString?.let { value ->
+                        value.toLongOrNull() ?: java.time.Instant.parse(value).toEpochMilli()
+                    })
             } } }.getOrNull()
 
     private fun JsonObject.money(key: String): Long = get(key).asString.toLong()

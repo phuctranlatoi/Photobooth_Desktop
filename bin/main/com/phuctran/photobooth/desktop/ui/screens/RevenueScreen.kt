@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
@@ -23,6 +24,7 @@ import com.phuctran.photobooth.desktop.data.*
 import com.phuctran.photobooth.desktop.remote.DesktopRevenueClient
 import com.phuctran.photobooth.desktop.ui.theme.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.*
 import java.time.format.DateTimeFormatter
@@ -52,6 +54,22 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
     var data by remember { mutableStateOf<RevenueData?>(null) }
     var loading by remember { mutableStateOf(true) }
     var failure by remember { mutableStateOf<String?>(null) }
+    var editing by remember { mutableStateOf<SaleTransaction?>(null) }
+    var voiding by remember { mutableStateOf<SaleTransaction?>(null) }
+    var actionError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    fun applyChange(sale: SaleTransaction, quantity: Int?, reason: String?) {
+        scope.launch {
+            val success = runCatching { withContext(Dispatchers.IO) {
+                val local = if (quantity == null) salesRepository.voidTransaction(sale.sessionId, reason)
+                    else salesRepository.adjustTransaction(sale.sessionId, quantity, reason)
+                if (local) salesRepository.syncPendingSales(revenueClient, config)
+                local
+            } }.getOrDefault(false)
+            if (success) { editing = null; voiding = null; actionError = null; refresh++ }
+            else actionError = "Không thể cập nhật giao dịch. Vui lòng thử lại."
+        }
+    }
     LaunchedEffect(salesRepository, revenueClient, config, startTime, endTime, refresh) {
         loading = true
         data = null
@@ -185,23 +203,112 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
                     Text("${summary.extraPrints} tấm thêm · ${vnd(summary.extraRevenue)} · ${if (summary.revenue == 0L) 0 else summary.extraRevenue * 100 / summary.revenue}% doanh thu",
                         color = AccentNudeDark)
                 }
-                Panel {
-                    Text("Giao dịch gần đây", style = MaterialTheme.typography.h6)
-                    result.recent.forEach { sale ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
-                                Text("${sale.layoutTitle} · ${sale.printSize}", fontWeight = FontWeight.SemiBold)
-                                Text("${Instant.ofEpochMilli(sale.createdAt).atZone(zone).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))} · ${sale.quantity} tấm · ${sale.paymentMethod}",
-                                    style = MaterialTheme.typography.body2, color = NeutralSecondary)
+
+            }
+            Panel(Modifier.fillMaxWidth()) {
+                Text("Giao dịch gần đây", style = MaterialTheme.typography.h6)
+                if (result.recent.isEmpty()) Text("Chưa có giao dịch trong khoảng thời gian này", color = NeutralSecondary)
+                result.recent.forEach { sale ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(sale.printSize.replace("x", "×"), color = AccentNudeDark)
+                                Text(sale.layoutTitle, fontWeight = FontWeight.SemiBold)
                             }
-                            Text(vnd(sale.totalAmount), fontWeight = FontWeight.Bold)
+                            Text("${Instant.ofEpochMilli(sale.createdAt).atZone(zone).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))} · ${sale.sessionId}",
+                                style = MaterialTheme.typography.caption, color = NeutralSecondary)
+                            Text("${sale.quantity} tấm · ${sale.paymentMethod}", style = MaterialTheme.typography.body2, color = NeutralSecondary)
+                            if (sale.isAdjusted && !sale.isVoided) Text("Đã điều chỉnh · ${sale.originalQuantity ?: sale.quantity} → ${sale.quantity} tấm", color = AccentMint, style = MaterialTheme.typography.caption)
+                            if (sale.isVoided) Text("Đã xóa khỏi doanh thu", color = AccentRed, style = MaterialTheme.typography.caption)
                         }
-                        Divider(color = NeutralBorder)
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(vnd(sale.totalAmount), color = if (sale.isVoided) NeutralSecondary else NeutralText,
+                                textDecoration = if (sale.isVoided) TextDecoration.LineThrough else TextDecoration.None,
+                                fontWeight = FontWeight.Bold)
+                            if (!sale.isVoided) Row {
+                                TextButton(onClick = { editing = sale }) { Text("Sửa") }
+                                TextButton(onClick = { voiding = sale }) { Text("Xóa", color = AccentRed) }
+                            }
+                        }
                     }
+                    Divider(color = NeutralBorder)
                 }
             }
         }
     }
+    editing?.let { sale -> AdjustTransactionDialog(sale, zone, actionError, { editing = null; actionError = null }) { quantity, reason ->
+        applyChange(sale, quantity, reason)
+    } }
+    voiding?.let { sale -> VoidTransactionDialog(sale, actionError, { voiding = null; actionError = null }) { reason ->
+        applyChange(sale, null, reason)
+    } }
+}
+
+private val correctionReasons = listOf("Khách giảm số lượng", "Khách mua thêm", "Nhập sai số lượng", "Điều chỉnh thực tế", "Khác")
+
+@Composable
+private fun ReasonPicker(reasons: List<String>, selected: String?, onSelect: (String) -> Unit, note: String, onNote: (String) -> Unit) {
+    Text("Lý do", style = MaterialTheme.typography.subtitle1)
+    reasons.chunked(2).forEach { row ->
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            row.forEach { reason ->
+                OutlinedButton(onClick = { onSelect(reason) }, colors = ButtonDefaults.outlinedButtonColors(
+                    backgroundColor = if (selected == reason) AccentNude.copy(alpha = .2f) else NeutralPanel)) {
+                    Text(reason, style = MaterialTheme.typography.caption)
+                }
+            }
+        }
+    }
+    OutlinedTextField(note, onNote, label = { Text("Ghi chú (không bắt buộc)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+}
+
+@Composable
+private fun AdjustTransactionDialog(sale: SaleTransaction, zone: ZoneId, error: String?, onDismiss: () -> Unit, onConfirm: (Int, String?) -> Unit) {
+    var quantity by remember(sale.sessionId) { mutableIntStateOf(sale.quantity) }
+    var reason by remember(sale.sessionId) { mutableStateOf<String?>(null) }
+    var note by remember(sale.sessionId) { mutableStateOf("") }
+    val extra = maxOf(0, quantity - sale.includedQuantity.coerceAtLeast(2))
+    val total = sale.basePrice + extra * sale.extraUnitPrice
+    val delta = total - sale.totalAmount
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Điều chỉnh giao dịch", style = MaterialTheme.typography.h6) },
+        text = {
+            Column(Modifier.widthIn(min = 420.dp, max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("${sale.printSize.replace("x", "×")} · ${Instant.ofEpochMilli(sale.createdAt).atZone(zone).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}", color = AccentNudeDark)
+                Text("Phiên: ${sale.sessionId}", style = MaterialTheme.typography.caption, color = NeutralSecondary)
+                Panel(Modifier.fillMaxWidth()) { Text("DỮ LIỆU BAN ĐẦU: ${sale.originalQuantity ?: sale.quantity} tấm · ${vnd(sale.originalTotalAmount ?: sale.totalAmount)}") }
+                Text("Số lượng thực tế", style = MaterialTheme.typography.subtitle1)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    OutlinedButton(onClick = { quantity-- }, enabled = quantity > 2) { Text("−") }
+                    Text("$quantity", style = MaterialTheme.typography.h5)
+                    OutlinedButton(onClick = { quantity++ }) { Text("+") }
+                }
+                Panel(Modifier.fillMaxWidth()) {
+                    Text("Doanh thu sau điều chỉnh: ${vnd(total)}", style = MaterialTheme.typography.h6)
+                    Text("${if (delta > 0) "+" else ""}${vnd(delta)}", color = if (delta < 0) AccentRed else AccentMint)
+                    Text("Giá gốc ${vnd(sale.basePrice)} + $extra tấm thêm × ${vnd(sale.extraUnitPrice)}", style = MaterialTheme.typography.caption)
+                }
+                ReasonPicker(correctionReasons, reason, { reason = it }, note, { note = it })
+                if (error != null) Text(error, color = AccentRed)
+            }
+        }, confirmButton = { Button(onClick = { onConfirm(quantity, listOfNotNull(reason, note.trim().takeIf { it.isNotEmpty() }).joinToString(" · ").ifBlank { null }) },
+            enabled = quantity != sale.quantity) { Text("Lưu thay đổi") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } })
+}
+
+@Composable
+private fun VoidTransactionDialog(sale: SaleTransaction, error: String?, onDismiss: () -> Unit, onConfirm: (String?) -> Unit) {
+    var reason by remember(sale.sessionId) { mutableStateOf<String?>(null) }
+    var note by remember(sale.sessionId) { mutableStateOf("") }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Xóa khỏi doanh thu", style = MaterialTheme.typography.h6) },
+        text = { Column(Modifier.widthIn(min = 420.dp, max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Giao dịch sẽ không còn được tính vào doanh thu. Dữ liệu gốc và ảnh khách hàng vẫn được giữ nguyên để đối soát.")
+            Panel(Modifier.fillMaxWidth()) { Text("${sale.layoutTitle} · ${sale.printSize} · ${sale.quantity} tấm"); Text("${vnd(sale.totalAmount)} · ${sale.sessionId}") }
+            ReasonPicker(listOf("Kẹt giấy / lỗi in", "Khách hủy / hoàn tiền", "Chụp thử nghiệm", "Khác"), reason, { reason = it }, note, { note = it })
+            if (error != null) Text(error, color = AccentRed)
+        } }, confirmButton = { Button(onClick = { onConfirm(listOfNotNull(reason, note.trim().takeIf { it.isNotEmpty() }).joinToString(" · ").ifBlank { null }) },
+            colors = ButtonDefaults.buttonColors(backgroundColor = AccentRed)) { Text("Xóa khỏi doanh thu", color = Color.White) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } })
 }
 
 @Composable

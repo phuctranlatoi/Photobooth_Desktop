@@ -47,7 +47,7 @@ class SalesRepositoryTest {
         val stored = repository.getRecentTransactions()
         assertEquals(1, stored.size)
         assertTrue(stored.single().id > 0)
-        assertEquals(original.copy(id = stored.single().id), stored.single())
+        assertEquals(original.copy(id = stored.single().id, originalQuantity = original.quantity, originalTotalAmount = original.totalAmount), stored.single())
     }
 
     @Test
@@ -102,4 +102,39 @@ class SalesRepositoryTest {
         assertEquals(0, repository.getRecentTransactions(start, end, 0).size)
         assertEquals(SalesSummary(0, 0, 0, 0, 0), repository.getSummary(end + 1, end + 2))
     }
+    @Test
+    fun correctionsUseStoredPriceSnapshotAndRetainOriginalValues() {
+        val repository = SalesRepository(folder)
+        val start = timestamp(dayOne, 0)
+        val end = timestamp(dayTwo, 0)
+        repository.recordSale(sale("strip", "5x15", 4, timestamp(dayOne, 10)))
+        assertTrue(repository.adjustTransaction("strip", 3, "Kh?ch gi?m s? l??ng"))
+        assertEquals(SalesSummary(90_000, 1, 3, 20_000, 1), repository.getSummary(start, end))
+        assertEquals(4, repository.getRecentTransactions().single().originalQuantity)
+        assertEquals(110_000, repository.getRecentTransactions().single().originalTotalAmount)
+        assertTrue(repository.adjustTransaction("strip", 5, "Kh?ch mua th?m"))
+        assertEquals(SalesSummary(130_000, 1, 5, 60_000, 3), repository.getSummary(start, end))
+        assertEquals(110_000, repository.getRecentTransactions().single().originalTotalAmount)
+        // No pricing lookup: stored base and unit price alone determine future corrections.
+        assertEquals(70_000, repository.getRecentTransactions().single().basePrice)
+        assertEquals(20_000, repository.getRecentTransactions().single().extraUnitPrice)
+    }
+
+    @Test
+    fun postcardCorrectionAndVoidExcludeAllAccountingButRetainHistory() {
+        val repository = SalesRepository(folder)
+        val start = timestamp(dayOne, 0)
+        val end = timestamp(dayTwo, 0)
+        repository.recordSale(sale("postcard", "10x15", 4, timestamp(dayOne, 10)))
+        assertTrue(repository.adjustTransaction("postcard", 3, null))
+        assertEquals(SalesSummary(120_000, 1, 3, 30_000, 1), repository.getSummary(start, end))
+        assertEquals(150_000, repository.getRecentTransactions().single().originalTotalAmount)
+        assertTrue(repository.voidTransaction("postcard", "Ho?n ti?n"))
+        assertEquals(SalesSummary(0, 0, 0, 0, 0), repository.getSummary(start, end))
+        assertTrue(repository.getDailyPoints(start, end).isEmpty())
+        assertTrue(repository.getSizeBreakdowns(start, end).isEmpty())
+        assertEquals("VOIDED", repository.getRecentTransactions(start, end).single().status)
+        assertTrue(repository.getRecentTransactions().single().isVoided)
+    }
+
 }
