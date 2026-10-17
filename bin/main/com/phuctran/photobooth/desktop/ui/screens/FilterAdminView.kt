@@ -31,7 +31,7 @@ fun FilterAdminView(
     var selectedEffectId by remember(effects) { mutableStateOf(effects.firstOrNull()?.id) }
     val selectedEffect = mutableEffects.find { it.id == selectedEffectId }
 
-    Row(modifier = Modifier.fillMaxSize().background(NeutralBg).padding(top = 16.dp)) {
+    Row(modifier = Modifier.fillMaxSize().background(Color(0xFFFBF9F5)).padding(top = 16.dp)) {
         // Left Column: List of Filters
         Column(
             modifier = Modifier
@@ -73,8 +73,8 @@ fun FilterAdminView(
                 mutableEffects.forEach { effect ->
                     val isSelected = effect.id == selectedEffectId
                     Card(
-                        modifier = Modifier.fillMaxWidth().border(1.dp, if (isSelected) AccentNude else NeutralBorder, RoundedCornerShape(12.dp)),
-                        backgroundColor = if (isSelected) AccentNudeLight else NeutralPanel,
+                        modifier = Modifier.fillMaxWidth().border(if (isSelected) 2.dp else 1.dp, if (isSelected) Color(0xFFB85838) else Color(0xFFEAE4DC), RoundedCornerShape(12.dp)),
+                        backgroundColor = Color.White,
                         elevation = 0.dp,
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                     ) {
@@ -86,7 +86,7 @@ fun FilterAdminView(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Box(Modifier.size(34.dp).background(Color(effect.accentColor), androidx.compose.foundation.shape.CircleShape))
+                            Box(Modifier.size(40.dp).border(5.dp, Color(effect.accentColor).copy(alpha = .18f), androidx.compose.foundation.shape.CircleShape).background(Color(effect.accentColor), androidx.compose.foundation.shape.CircleShape))
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     effect.title,
@@ -142,13 +142,14 @@ fun FilterAdminView(
                     mutableEffects = mutableEffects.map { if (it.id == updated.id) updated else it }.toMutableList()
                 }
 
-                Surface(color = NeutralPanel, shape = RoundedCornerShape(16.dp), elevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
+                Surface(color = Color.White, shape = RoundedCornerShape(18.dp), elevation = 0.dp, border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEAE4DC)), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Box(Modifier.size(76.dp).background(Color(selectedEffect.accentColor), RoundedCornerShape(14.dp)))
-                        Column {
+                        Box(Modifier.size(64.dp).background(Color(selectedEffect.accentColor), RoundedCornerShape(14.dp)))
+                        Column(Modifier.weight(1f)) {
                             Text(selectedEffect.title, color = NeutralText, style = MaterialTheme.typography.h5)
                             Text(selectedEffect.description, color = NeutralSecondary, style = MaterialTheme.typography.body2)
                         }
+                        InfoPill(selectedEffect.id, bgColor = AccentNudeLight, textColor = AccentNudeDark)
                     }
                 }
 
@@ -220,7 +221,9 @@ fun SliderControl(label: String, value: Float, range: ClosedFloatingPointRange<F
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, color = NeutralText, fontWeight = FontWeight.Bold)
-            Text(String.format("%.2f", value), color = NeutralSecondary)
+            Text(String.format("%.2f", value), color = AccentNudeDark, fontWeight = FontWeight.Bold,
+                fontSize = 13.sp, modifier = Modifier.background(AccentNudeLight, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp))
         }
         Slider(
             value = value,
@@ -228,8 +231,8 @@ fun SliderControl(label: String, value: Float, range: ClosedFloatingPointRange<F
             valueRange = range,
             modifier = Modifier.fillMaxWidth(),
             colors = SliderDefaults.colors(
-                thumbColor = AccentNude,
-                activeTrackColor = AccentNude,
+                thumbColor = Color(0xFFB85838),
+                activeTrackColor = Color(0xFFB85838),
                 inactiveTrackColor = NeutralBorder
             )
         )

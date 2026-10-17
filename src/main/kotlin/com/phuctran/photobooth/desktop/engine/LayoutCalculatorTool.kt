@@ -389,8 +389,9 @@ fun CalculatorApp(
 
             Surface(
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                color = Color(0xFF2B2B30),
-                shape = RoundedCornerShape(16.dp)
+                color = Color(0xFF141416),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26262B))
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(8.dp)) {
                     if (isProcessing) {
@@ -538,8 +539,9 @@ fun CalculatorApp(
             // Firebase Actions
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = NeutralPanel,
-                shape = RoundedCornerShape(16.dp)
+                color = Color.White,
+                shape = RoundedCornerShape(18.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEAE4DC))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("1 · Thông tin bố cục & Khổ in", color = NeutralText, style = MaterialTheme.typography.subtitle1)
@@ -612,7 +614,7 @@ fun CalculatorApp(
                 }
             }
 
-            Surface(modifier = Modifier.fillMaxWidth(), color = NeutralPanel, shape = RoundedCornerShape(16.dp)) {
+            Surface(modifier = Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(16.dp), border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("2 · Cấu hình Khung & QR Code", color = NeutralText, style = MaterialTheme.typography.subtitle1)
                     OutlinedTextField(
@@ -679,7 +681,7 @@ fun CalculatorApp(
                         if (specialEventName.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Cover Bundle:", color = Color.White, modifier = Modifier.width(100.dp))
+                                Text("Ảnh bìa Cover:", color = NeutralText, modifier = Modifier.width(100.dp))
                                 OutlinedButton(onClick = {
                                     val parentFrame = java.awt.Window.getWindows().firstOrNull { it.isShowing && it is javax.swing.JFrame } as? java.awt.Frame
                                     val dialog = java.awt.FileDialog(parentFrame, "Select Cover Image", java.awt.FileDialog.LOAD)
@@ -765,8 +767,9 @@ fun CalculatorApp(
 
             Surface(
                 modifier = Modifier.fillMaxWidth().height(250.dp),
-                color = NeutralPanel,
-                shape = RoundedCornerShape(16.dp)
+                color = Color.White,
+                shape = RoundedCornerShape(18.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEAE4DC))
             ) {
                 SelectionContainer {
                     Text(

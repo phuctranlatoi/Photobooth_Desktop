@@ -1,4 +1,4 @@
-package com.phuctran.photobooth.desktop.ui.screens
+﻿package com.phuctran.photobooth.desktop.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -14,7 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,11 +89,11 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
         loading = false
     }
 
-    Column(Modifier.fillMaxSize().background(NeutralBg).verticalScroll(rememberScrollState()).padding(24.dp),
+    Column(Modifier.fillMaxSize().background(Color(0xFFFBF9F5)).verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text("Doanh thu", style = MaterialTheme.typography.h4, color = NeutralText)
+                Text("Doanh thu", style = MaterialTheme.typography.h4, fontWeight = FontWeight.Bold, color = NeutralText)
                 Text("Tổng quan hoạt động và lịch sử giao dịch", style = MaterialTheme.typography.body2, color = NeutralSecondary)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -106,8 +108,8 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Hôm nay", "7 ngày", "Tháng này", "Tháng trước").forEachIndexed { index, label ->
                 val selected = index == period
-                Box(Modifier.background(if (selected) AccentNude else NeutralPanel, RoundedCornerShape(22.dp))
-                    .border(1.dp, if (selected) AccentNude else NeutralBorder, RoundedCornerShape(22.dp))
+                Box(Modifier.background(if (selected) Color(0xFFB85838) else Color(0xFFEFEBE4), RoundedCornerShape(22.dp))
+                    .border(1.dp, if (selected) Color(0xFFB85838) else Color(0xFFEFEBE4), RoundedCornerShape(22.dp))
                     .clickable { period = index }.padding(horizontal = 18.dp, vertical = 10.dp)) {
                     Text(label, style = MaterialTheme.typography.button, color = if (selected) Color.White else NeutralText)
                 }
@@ -172,8 +174,9 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
                             days.forEachIndexed { index, (_, amount) ->
                                 if (amount > 0) {
                                     val height = (amount.toFloat() / peak.toFloat() * (size.height - 8.dp.toPx())).coerceAtLeast(3.dp.toPx())
-                                    drawRect(if (amount == peak) AccentNudeDark else AccentNude.copy(alpha = .65f),
-                                        Offset(index * width + gap / 2, size.height - height), Size((width - gap).coerceAtLeast(2f), height))
+                                    drawRoundRect(if (amount == peak) Color(0xFFB85838) else Color(0xFFB85838).copy(alpha = .55f),
+                                        Offset(index * width + gap / 2, size.height - height), Size((width - gap).coerceAtLeast(2f), height),
+                                        cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx()))
                                 }
                             }
                         }
@@ -209,7 +212,8 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
                 Text("Giao dịch gần đây", style = MaterialTheme.typography.h6)
                 if (result.recent.isEmpty()) Text("Chưa có giao dịch trong khoảng thời gian này", color = NeutralSecondary)
                 result.recent.forEach { sale ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween,
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp).background(NeutralPanel, RoundedCornerShape(12.dp))
+                        .border(1.dp, NeutralBorder, RoundedCornerShape(12.dp)).padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -232,7 +236,6 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
                             }
                         }
                     }
-                    Divider(color = NeutralBorder)
                 }
             }
         }
@@ -254,7 +257,7 @@ private fun ReasonPicker(reasons: List<String>, selected: String?, onSelect: (St
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             row.forEach { reason ->
                 OutlinedButton(onClick = { onSelect(reason) }, colors = ButtonDefaults.outlinedButtonColors(
-                    backgroundColor = if (selected == reason) AccentNude.copy(alpha = .2f) else NeutralPanel)) {
+                    backgroundColor = if (selected == reason) AccentNudeLight else NeutralPanel)) {
                     Text(reason, style = MaterialTheme.typography.caption)
                 }
             }
@@ -319,12 +322,13 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScop
 
 @Composable
 private fun Metric(label: String, value: String, modifier: Modifier, hero: Boolean = false) {
-    Column(modifier.background(if (hero) AccentNude else NeutralPanel, RoundedCornerShape(16.dp))
-        .then(if (hero) Modifier else Modifier.border(1.dp, NeutralBorder, RoundedCornerShape(16.dp)))
+    Column(modifier.background(if (hero) Brush.horizontalGradient(listOf(Color(0xFFB85838), Color(0xFFA04A2E))) else Brush.linearGradient(listOf(Color.White, Color.White)), RoundedCornerShape(if (hero) 20.dp else 18.dp))
+        .then(if (hero) Modifier else Modifier.border(1.dp, Color(0xFFEAE4DC), RoundedCornerShape(18.dp)))
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, style = MaterialTheme.typography.body2, color = if (hero) Color.White else NeutralSecondary,
+        Text(label, style = MaterialTheme.typography.overline, color = if (hero) Color.White else NeutralSecondary,
             maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(value, style = MaterialTheme.typography.h5, color = if (hero) Color.White else NeutralText,
+        Text(value, style = if (hero) MaterialTheme.typography.h4 else MaterialTheme.typography.h5,
+            fontWeight = FontWeight.Bold, color = if (hero) Color.White else NeutralText,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

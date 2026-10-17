@@ -12,6 +12,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.Image
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.Icon
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -35,7 +40,6 @@ import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.model.FramePack
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.data.SalesRepository
-import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.withContext
 
@@ -83,46 +87,51 @@ fun AdminScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NeutralBg)
+            .background(Color(0xFFFBF9F5))
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                KioskSecondaryButton("← Thoát Admin", {
-                saveSettings()
-                onBack() 
-                }, modifier = Modifier.width(170.dp))
-                Column {
-                    Text("Quản trị Le Souvenir", style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold, color = NeutralText)
-                    Text("Kiểm tra nội dung, thiết bị và cấu hình vận hành.", color = NeutralSecondary, style = MaterialTheme.typography.body2.copy(fontSize = 13.sp))
+                Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White)
+                    .border(1.dp, Color(0xFFEAE4DC), CircleShape)
+                    .clickable { saveSettings(); onBack() }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Thoát", tint = Color(0xFF1A1918))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("LE SOUVENIR · ATELIER", style = MaterialTheme.typography.overline,
+                        color = Color(0xFFB85838), letterSpacing = 1.6.sp)
+                    Text("Quản trị hệ thống", style = MaterialTheme.typography.h5, color = Color(0xFF1A1918), fontWeight = FontWeight.Bold)
+                    Text("Cấu hình vận hành thiết bị, khung mẫu & doanh thu kiosk",
+                        color = Color(0xFF5A5550), style = MaterialTheme.typography.body2)
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                StatusChip("Camera", if (useHotFolder) "Hot folder" else "Webcam", AccentBlue)
-                StatusChip("Print", if (enablePrint) "Bật" else "Tắt", if (enablePrint) AccentMint else NeutralMuted)
-                StatusChip("Cloud Sync", if (config.canUploadAlbum) "Sẵn sàng" else "Local", if (config.canUploadAlbum) AccentMint else AccentAmber)
+                AdminStatusPill("Camera", if (useHotFolder) "Hot folder" else "Webcam", AccentBlue)
+                AdminStatusPill("Print", if (enablePrint) "Bật" else "Tắt", if (enablePrint) AccentMint else NeutralMuted)
+                AdminStatusPill("Cloud Sync", if (config.canUploadAlbum) "Sẵn sàng" else "Ngoại tuyến", if (config.canUploadAlbum) Color(0xFF10B981) else Color(0xFFD97706))
             }
         }
 
-        TabRow(
-            selectedTabIndex = selectedTab,
-            backgroundColor = NeutralPanel,
-            contentColor = MaterialTheme.colors.primary,
-            modifier = Modifier.clip(RoundedCornerShape(14.dp)).border(1.dp, NeutralBorder, RoundedCornerShape(14.dp)),
-            indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
-                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = MaterialTheme.colors.primary
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+                .background(Color(0xFFEFEBE4), RoundedCornerShape(18.dp)).padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) { Text("Khung", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) { Text("Bố cục", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) { Text("Cài đặt", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) { Text("Công cụ", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }) { Text("Màu ảnh", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            Tab(selected = selectedTab == 5, onClick = { selectedTab = 5 }) { Text("Doanh thu", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            listOf("Khung", "Bố cục", "Cài đặt", "Công cụ", "Màu ảnh", "Doanh thu").forEachIndexed { index, label ->
+                val active = selectedTab == index
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (active) Color.White else Color.Transparent)
+                        .then(if (active) Modifier.border(1.dp, Color(0xFFEAE4DC), RoundedCornerShape(12.dp)) else Modifier)
+                        .clickable { selectedTab = index },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(label, color = if (active) Color(0xFFB85838) else Color(0xFF5A5550),
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium)
+                }
+            }
         }
 
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
@@ -145,10 +154,10 @@ fun AdminScreen(
                                 
                                 val groupedByLayout = framesBySize.groupBy { it.targetLayoutId ?: "Bố cục Khác" }
                                 groupedByLayout.forEach { (layout, framesByLayout) ->
-                                    Text("Bố cục: $layout", style = MaterialTheme.typography.subtitle1, color = NeutralSecondary, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                                    Text("Bố cục: $layout", style = MaterialTheme.typography.subtitle1, color = NeutralSecondary, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 8.dp))
                                     
                                     framesByLayout.forEach { frame -> 
-                                        Box(modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp)) {
+                                        Box(modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)) {
                                             FrameAdminCard(frame) {
                                                 if (frame.customImagePath != null) {
                                                     java.nio.file.Files.deleteIfExists(frame.customImagePath)
@@ -223,15 +232,15 @@ fun AdminScreen(
                             Switch(
                                 checked = enablePrint,
                                 onCheckedChange = { enablePrint = it },
-                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = AccentNude, checkedTrackAlpha = 1f)
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFB85838), checkedTrackAlpha = 1f)
                             )
                         }
                     }
 
                     SettingsGroup("NGUỒN CAMERA") {
-                        ChoiceRow("Webcam / DroidCam", "Dùng camera kết nối trực tiếp.", !useHotFolder, AccentNude, { useHotFolder = false })
+                        ChoiceRow("Webcam / DroidCam", "Dùng camera kết nối trực tiếp.", !useHotFolder, Color(0xFFB85838), { useHotFolder = false })
                         Spacer(Modifier.height(10.dp))
-                        ChoiceRow("Thư mục ảnh (Hot Folder)", "Lấy ảnh từ thư mục do phần mềm camera xuất ra.", useHotFolder, AccentNude, { useHotFolder = true })
+                        ChoiceRow("Thư mục ảnh (Hot Folder)", "Lấy ảnh từ thư mục do phần mềm camera xuất ra.", useHotFolder, Color(0xFFB85838), { useHotFolder = true })
                         AnimatedVisibility(visible = useHotFolder, enter = expandVertically(), exit = shrinkVertically()) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Spacer(Modifier.height(14.dp))
@@ -352,13 +361,13 @@ fun AdminScreen(
 private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = NeutralPanel,
-        shape = RoundedCornerShape(AdminTokens.groupCornerRadius),
-        border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder.copy(alpha = AdminTokens.dividerAlpha)),
+        color = Color.White,
+        shape = RoundedCornerShape(18.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEAE4DC)),
         elevation = 0.dp
     ) {
-        Column(Modifier.padding(AdminTokens.groupPadding)) {
-            Text(title, style = MaterialTheme.typography.overline, color = AdminGroupLabelColor)
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+            Text(title, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, color = Color(0xFF9E978E))
             Spacer(Modifier.height(AdminTokens.groupHeaderBottomGap))
             content()
         }
@@ -392,7 +401,7 @@ private fun NumberStepper(label: String, value: Int, onValueChange: (Int) -> Uni
     SettingsRow(label, description) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StepperButton("−", value > 0) { onValueChange((value - 10).coerceAtLeast(0)) }
-            Text("$value giây", style = MaterialTheme.typography.subtitle1, color = NeutralText, textAlign = TextAlign.Center, modifier = Modifier.width(88.dp))
+            Text("$value giây", style = MaterialTheme.typography.h6, color = NeutralText, textAlign = TextAlign.Center, modifier = Modifier.width(120.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)).padding(vertical = 12.dp))
             StepperButton("+", value < 3600) { onValueChange((value + 10).coerceAtMost(3600)) }
         }
     }
@@ -403,9 +412,9 @@ private fun StepperButton(symbol: String, enabled: Boolean, onClick: () -> Unit)
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.size(48.dp),
+        modifier = Modifier.size(54.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.outlinedButtonColors(backgroundColor = AccentNudeLight, contentColor = AccentNudeDark, disabledContentColor = NeutralMuted),
+        colors = ButtonDefaults.outlinedButtonColors(backgroundColor = Color(0xFFFDF6F3), contentColor = Color(0xFFB85838), disabledContentColor = NeutralMuted),
         border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder),
         contentPadding = PaddingValues(0.dp)
     ) {
@@ -531,12 +540,12 @@ fun HardcodedCameraParamDropdown(
 @Composable
 fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDelete: () -> Unit) {
     androidx.compose.material.Card(
-        modifier = Modifier.fillMaxWidth().border(1.dp, NeutralBorder, RoundedCornerShape(14.dp)),
-        backgroundColor = NeutralPanel,
+        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFEAE4DC), RoundedCornerShape(16.dp)),
+        backgroundColor = Color.White,
         elevation = 0.dp,
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             if (frame.customImagePath != null) {
                 var imageBitmap by remember(frame.customImagePath) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
                 
@@ -548,11 +557,11 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
                     androidx.compose.foundation.Image(
                         bitmap = imageBitmap!!,
                         contentDescription = frame.title,
-                        modifier = Modifier.size(80.dp, 100.dp).clip(RoundedCornerShape(10.dp)).background(NeutralPanelAlt),
+                         modifier = Modifier.size(84.dp, 105.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF2EFE9)).border(1.dp, Color(0xFFEAE4DC), RoundedCornerShape(10.dp)),
                         contentScale = ContentScale.Fit,
                     )
                 } else {
-                    Box(modifier = Modifier.height(100.dp).width(80.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                     Box(modifier = Modifier.size(84.dp, 105.dp).background(Color(0xFFF2EFE9), RoundedCornerShape(10.dp)).border(1.dp, Color(0xFFEAE4DC), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = AccentNude, modifier = Modifier.size(24.dp))
                     }
                 }
@@ -562,19 +571,19 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
                 Text(frame.title, color = NeutralText, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoPill(frame.targetPrintSize ?: "Khổ khác", bgColor = NeutralPanelAlt, textColor = NeutralSecondary)
-                    InfoPill(frame.targetLayoutId ?: "Layout khác", bgColor = AccentNudeLight, textColor = AccentNudeDark)
-                    if (frame.isSpecial) InfoPill("Sự kiện", bgColor = AccentNudeLight, textColor = AccentNudeDark)
+                    InfoPill(frame.targetLayoutId ?: "Layout khác", bgColor = Color(0xFFFDF6F3), textColor = Color(0xFFB85838))
+                    if (frame.isSpecial) InfoPill("Sự kiện", bgColor = Color(0xFFFDF6F3), textColor = Color(0xFFB85838))
                 }
                 if (frame.customImagePath != null) {
                     Spacer(Modifier.height(6.dp))
-                    Text(frame.customImagePath.toString(), color = NeutralMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(frame.customImagePath.toString(), color = NeutralMuted, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, style = MaterialTheme.typography.caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (frame.customImagePath != null) {
                 androidx.compose.material.OutlinedButton(
                     onClick = onDelete,
                     shape = RoundedCornerShape(10.dp),
-                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentRed, backgroundColor = Color.Transparent)
+                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444), backgroundColor = Color(0xFFFEF2F2))
                 ) {
                     Text("Xóa", fontWeight = FontWeight.Bold)
                 }
@@ -641,24 +650,24 @@ fun LayoutAdminCard(layout: LayoutMode, onEdit: () -> Unit, onDelete: () -> Unit
     var showConfirm by remember { mutableStateOf(false) }
 
     androidx.compose.material.Card(
-        modifier = Modifier.fillMaxWidth().border(1.dp, NeutralBorder, RoundedCornerShape(14.dp)),
-        backgroundColor = NeutralPanel,
+        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFEAE4DC), RoundedCornerShape(18.dp)),
+        backgroundColor = Color.White,
         elevation = 0.dp,
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(18.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            MiniLayoutPreview(layout = layout, modifier = Modifier.height(96.dp).width(112.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)))
+        Row(modifier = Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            MiniLayoutPreview(layout = layout, modifier = Modifier.size(110.dp).background(Color(0xFFF6F3EE), RoundedCornerShape(12.dp)))
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(layout.title, color = NeutralText, fontWeight = FontWeight.Bold)
+                Text(layout.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1918))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Layout ID: ${layout.id}", color = NeutralSecondary, fontSize = 12.sp)
+                Text("Layout ID: ${layout.id}", color = Color(0xFF9E978E), fontSize = 11.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                  Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                       InfoPill("Khổ ${layout.printSizeLabel}")
                      InfoPill("Chụp ${layout.shotCount}")
                      InfoPill("Chọn ${layout.selectCount}")
                      InfoPill("Đếm ${layout.countdownSeconds}s")
-                      InfoPill("Giá ${layout.basePrice}đ", bgColor = AccentNudeLight, textColor = AccentNudeDark)
+                       InfoPill("Giá ${formatVnd(layout.basePrice)}", bgColor = Color(0xFFFDF6F3), textColor = Color(0xFFB85838))
                  }
                 Text(layout.description, color = NeutralMuted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
@@ -719,14 +728,14 @@ fun EventAdminCard(
     Surface(
         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
         color = NeutralPanel,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder)
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Cover Preview
                 Box(
-                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)).background(Color.LightGray),
+                    modifier = Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFF6F3EE)).border(1.dp, Color(0xFFEAE4DC), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     val currentBitmap = coverBitmap
@@ -738,7 +747,7 @@ fun EventAdminCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Text("Trống", color = NeutralSecondary, style = MaterialTheme.typography.caption)
+                        Text("Chưa có bìa", color = NeutralMuted, style = MaterialTheme.typography.caption)
                     }
                 }
                 Spacer(Modifier.width(16.dp))
@@ -829,5 +838,43 @@ fun EventAdminCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AdminStatusPill(label: String, value: String, color: Color) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(Color.White)
+            .border(1.dp, Color(0xFFEAE4DC), RoundedCornerShape(999.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(14.dp)
+                .background(color.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .background(color, CircleShape)
+            )
+        }
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF9E978E)
+        )
+        Text(
+            text = value,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF1A1918)
+        )
     }
 }
