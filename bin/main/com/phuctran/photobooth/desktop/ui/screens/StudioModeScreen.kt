@@ -136,7 +136,7 @@ fun Step1Layout(
                     state = pagerState,
                     pagerSnapDistance = androidx.compose.foundation.pager.PagerSnapDistance.atMost(20)
                 ),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().kioskPagerDrag(pagerState)
             ) { page ->
                 val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                 val absoluteOffset = kotlin.math.abs(pageOffset)
@@ -209,6 +209,7 @@ fun Step2Effect(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxWidth < 1024.dp
         val dock: @Composable () -> Unit = {
+            val dockScrollState = rememberScrollState()
             Row(
                 modifier = Modifier
                     .widthIn(max = 540.dp)
@@ -216,7 +217,8 @@ fun Step2Effect(
                     .clip(RoundedCornerShape(24.dp))
                     .background(Color(0xE6262528))
                     .padding(8.dp)
-                    .horizontalScroll(rememberScrollState()),
+                    .horizontalScroll(dockScrollState)
+                    .kioskHorizontalDrag(dockScrollState),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

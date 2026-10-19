@@ -48,6 +48,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.Size
@@ -536,10 +537,13 @@ fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, 
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnPreview by rememberUpdatedState(onPreview)
     val dimAlpha by androidx.compose.animation.core.animateFloatAsState(if (isDimmed) 0.4f else 0f)
+    var isPressed by remember { mutableStateOf(false) }
+    val pressScale by animateFloatAsState(if (isPressed) 0.98f else 1f, animationSpec = tween(100))
 
     Box(
         modifier
             .aspectRatio(aspectRatio)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .clip(RoundedCornerShape(14.dp))
             .background(NeutralPanelAlt)
             .border(if (selectedOrder != null) 4.dp else 1.dp, if (selectedOrder != null) AccentNude else NeutralBorder, RoundedCornerShape(14.dp))
@@ -550,15 +554,17 @@ fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, 
                         showedPreview = false
                         coroutineScope {
                             val previewJob = launch {
-                                delay(250)
+                                delay(500)
                                 showedPreview = true
                                 currentOnPreview(true)
                             }
                             try {
+                                isPressed = true
                                 tryAwaitRelease()
                             } finally {
+                                isPressed = false
                                 previewJob.cancel()
-                                currentOnPreview(false)
+                                if (showedPreview) currentOnPreview(false)
                             }
                         }
                     },
@@ -649,6 +655,9 @@ fun LayoutChoice(layout: LayoutMode, selected: Boolean, onClick: () -> Unit) {
 @Composable
 fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
     if (frame.customImagePath != null) {
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
+        val pressScale by animateFloatAsState(if (isPressed) 0.98f else 1f, animationSpec = tween(100))
         val imageBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, frame.customImagePath) {
             value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 loadFrameThumbnail(frame.customImagePath!!)
@@ -658,6 +667,7 @@ fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
                 .clip(RoundedCornerShape(14.dp))
                 .background(NeutralPanel)
                 .border(
@@ -665,7 +675,7 @@ fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
                     if (selected) Color(frame.accentColor) else NeutralBorder,
                     RoundedCornerShape(14.dp)
                 )
-                .bouncyClickable(onClick = onClick)
+                .bouncyClickable(interactionSource = interactionSource, onClick = onClick)
                 .padding(12.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -689,10 +699,10 @@ fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
                         .align(Alignment.TopEnd)
                         .size(30.dp)
                         .clip(CircleShape)
-                        .background(Color(frame.accentColor)),
+                        .background(AccentNude),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("OK", color = Color.White, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Black)
+                    Icon(Icons.Filled.Check, contentDescription = "Đã chọn", tint = Color.White, modifier = Modifier.size(19.dp))
                 }
             }
         }

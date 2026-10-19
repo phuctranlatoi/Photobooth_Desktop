@@ -133,10 +133,11 @@ fun StartScreen(
                                 
                                 Spacer(Modifier.height(24.dp))
                                 
-                                // Bundle Slider
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                                 // Bundle Slider
+                                 val bundleScrollState = rememberScrollState()
+                                 Row(
+                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                     modifier = Modifier.horizontalScroll(bundleScrollState).kioskHorizontalDrag(bundleScrollState)
                                 ) {
                                     eventNames.forEach { eventName ->
                                         val isSelected = selectedEvent == eventName
@@ -231,9 +232,10 @@ fun StartScreen(
                                     Modifier.height(380.dp) // Normal large size
                                 }
                                 
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                                    modifier = Modifier.fillMaxWidth().weight(1f).horizontalScroll(rememberScrollState()),
+                                 val frameScrollState = rememberScrollState()
+                                 Row(
+                                     horizontalArrangement = Arrangement.spacedBy(24.dp),
+                                     modifier = Modifier.fillMaxWidth().weight(1f).horizontalScroll(frameScrollState).kioskHorizontalDrag(frameScrollState),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     filteredFrames.forEach { frame ->

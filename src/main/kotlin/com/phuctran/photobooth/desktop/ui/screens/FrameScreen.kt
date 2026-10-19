@@ -61,9 +61,9 @@ fun FrameScreen(
                     LazyVerticalGrid(
                         state = state,
                         columns = GridCells.Fixed(2),
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.weight(1f).kioskVerticalDrag(state),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         items(frames, key = { it.id }) { frame ->
                             FrameChoice(frame, frame.id == selectedFrame.id) { onFrameSelected(frame.id) }

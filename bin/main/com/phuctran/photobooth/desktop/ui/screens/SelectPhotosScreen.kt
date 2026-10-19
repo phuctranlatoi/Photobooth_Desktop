@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.animation.AnimatedVisibility
@@ -43,6 +44,7 @@ fun SelectPhotosScreen(
 ) {
     val timeLeft by controller.inactivityTimeLeft.collectAsState()
     var previewingMoment by remember { mutableStateOf<CapturedMoment?>(null) }
+    val gridState = rememberLazyGridState()
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         CompactLocalHeader("Bước 6", "Chọn ảnh")
@@ -60,8 +62,9 @@ fun SelectPhotosScreen(
                     }
                 } else {
                     LazyVerticalGrid(
+                        state = gridState,
                         columns = GridCells.Fixed(6),
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        modifier = Modifier.weight(1f).fillMaxWidth().kioskVerticalDrag(gridState),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(bottom = 12.dp)
