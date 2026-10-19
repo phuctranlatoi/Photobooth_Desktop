@@ -32,6 +32,26 @@ class PricingCalculatorTest {
     }
 
     @Test
+    fun landscapePostcardPricesAndQuantityRules() {
+        listOf("15x10", "15 x 10 cm").forEach { size ->
+            listOf(2, 3, 10).forEach { quantity ->
+                val price = PricingCalculator.calculatePrice(size, quantity)
+                assertEquals(PricingCalculator.calculatePrice("10x15", quantity), price)
+                assertEquals(90_000L, price.basePrice)
+                assertEquals(30_000L, price.extraUnitPrice)
+                assertEquals(2, price.includedQuantity)
+            }
+            assertEquals((2..50).toList(), PricingCalculator.allowedOptions(size))
+            for (quantity in -5..50) {
+                assertEquals(maxOf(2, quantity), PricingCalculator.sanitizeQuantity(size, quantity))
+            }
+            assertFailsWith<IllegalArgumentException> { PricingCalculator.calculatePrice(size, 1) }
+        }
+        assertFailsWith<IllegalArgumentException> { PricingCalculator.calculatePrice("20x30", 2) }
+        assertFailsWith<IllegalArgumentException> { PricingCalculator.allowedOptions("20x30") }
+    }
+
+    @Test
     fun quantityRulesAndExpandedOptions() {
         assertEquals((2..50 step 2).toList(), PricingCalculator.allowedOptions("5x15"))
         assertEquals((2..50).toList(), PricingCalculator.allowedOptions("10x15"))

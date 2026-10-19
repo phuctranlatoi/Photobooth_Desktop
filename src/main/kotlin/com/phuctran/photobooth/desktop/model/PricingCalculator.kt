@@ -14,8 +14,8 @@ data class PricingSnapshot(
 object PricingCalculator {
     private fun isStrip(printSize: String): Boolean {
         val normalized = printSize.replace(" ", "").lowercase()
-        require(normalized.contains("5x15") || normalized.contains("10x15")) { "Unsupported print size: $printSize" }
-        return normalized.contains("5x15") && !normalized.contains("10x15")
+        require(normalized.contains("5x15") || normalized.contains("10x15") || normalized.contains("15x10")) { "Unsupported print size: $printSize" }
+        return normalized.contains("5x15") && !normalized.contains("10x15") && !normalized.contains("15x10")
     }
 
     fun allowedOptions(printSizeLabel: String): List<Int> =
