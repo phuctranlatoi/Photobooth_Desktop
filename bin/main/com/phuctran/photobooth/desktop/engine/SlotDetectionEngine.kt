@@ -19,6 +19,10 @@ import kotlin.math.sqrt
  */
 class SlotDetectionEngine {
 
+    private companion object {
+        const val DEFAULT_SLOT_EXPANSION_PX = 3
+    }
+
     private data class IntRect(
         val left: Int,
         val top: Int,
@@ -693,7 +697,91 @@ class SlotDetectionEngine {
             val ratio = slot.width / slot.height
             ratio in 0.9f..1.1f && slot.width < 0.35f
         }
-        val photoSlots = if (qrSlot != null) slots.filter { it != qrSlot } else slots
+        val selectedSlots = slots.filter { it != qrSlot }
+        val expandedBounds = selectedSlots.map { slot ->
+            val original = sortedBounds[slot.index]
+            var leftBleed = DEFAULT_SLOT_EXPANSION_PX
+            var rightBleed = DEFAULT_SLOT_EXPANSION_PX
+            var topBleed = DEFAULT_SLOT_EXPANSION_PX
+            var bottomBleed = DEFAULT_SLOT_EXPANSION_PX
+
+            for ((index, neighbor) in sortedBounds.withIndex()) {
+                if (index == slot.index) continue
+                if (max(original.minY, neighbor.minY) <= min(original.maxY, neighbor.maxY)) {
+                    if (neighbor.minX > original.maxX) {
+                        rightBleed = min(rightBleed, max(0, (neighbor.minX - original.maxX - 1) / 2))
+                    } else if (original.minX > neighbor.maxX) {
+                        leftBleed = min(leftBleed, max(0, (original.minX - neighbor.maxX - 1) / 2))
+                    }
+                }
+                if (max(original.minX, neighbor.minX) <= min(original.maxX, neighbor.maxX)) {
+                    if (neighbor.minY > original.maxY) {
+                        bottomBleed = min(bottomBleed, max(0, (neighbor.minY - original.maxY - 1) / 2))
+                    } else if (original.minY > neighbor.maxY) {
+                        topBleed = min(topBleed, max(0, (original.minY - neighbor.maxY - 1) / 2))
+                    }
+                }
+                // A diagonal neighbor can collide at the corner even without overlapping spans.
+                if (neighbor.minX > original.maxX && neighbor.minY > original.maxY ||
+                    neighbor.minX > original.maxX && neighbor.maxY < original.minY ||
+                    neighbor.maxX < original.minX && neighbor.minY > original.maxY ||
+                    neighbor.maxX < original.minX && neighbor.maxY < original.minY) {
+                    if (neighbor.minX > original.maxX) {
+                        rightBleed = min(rightBleed, max(0, (neighbor.minX - original.maxX - 1) / 2))
+                    } else {
+                        leftBleed = min(leftBleed, max(0, (original.minX - neighbor.maxX - 1) / 2))
+                    }
+                    if (neighbor.minY > original.maxY) {
+                        bottomBleed = min(bottomBleed, max(0, (neighbor.minY - original.maxY - 1) / 2))
+                    } else {
+                        topBleed = min(topBleed, max(0, (original.minY - neighbor.maxY - 1) / 2))
+                    }
+                }
+            }
+
+            val left = max(0, original.minX - leftBleed)
+            val top = max(0, original.minY - topBleed)
+            val right = min(width - 1, original.maxX + rightBleed)
+            val bottom = min(height - 1, original.maxY + bottomBleed)
+            intArrayOf(left, top, right, bottom)
+        }
+
+        // Resolve any residual collision from rounding or unusual slot arrangements.
+        for (i in expandedBounds.indices) {
+            for (j in 0 until i) {
+                val a = expandedBounds[j]
+                val b = expandedBounds[i]
+                if (a[2] < b[0] || b[2] < a[0] || a[3] < b[1] || b[3] < a[1]) continue
+                val overlapX = min(a[2], b[2]) - max(a[0], b[0]) + 1
+                val overlapY = min(a[3], b[3]) - max(a[1], b[1]) + 1
+                val axis = if (overlapX <= overlapY) 0 else 1
+                val first = sortedBounds[selectedSlots[j].index]
+                val second = sortedBounds[selectedSlots[i].index]
+                val firstMin = if (axis == 0) first.minX else first.minY
+                val firstMax = if (axis == 0) first.maxX else first.maxY
+                val secondMin = if (axis == 0) second.minX else second.minY
+                val secondMax = if (axis == 0) second.maxX else second.maxY
+                if (firstMax < secondMin) {
+                    a[axis + 2] = min(a[axis + 2], firstMax)
+                    b[axis] = max(b[axis], secondMin)
+                } else if (secondMax < firstMin) {
+                    b[axis + 2] = min(b[axis + 2], secondMax)
+                    a[axis] = max(a[axis], firstMin)
+                }
+            }
+        }
+        val photoSlots = selectedSlots.mapIndexed { index, slot ->
+            val (left, top, right, bottom) = expandedBounds[index]
+            slot.copy(
+                x = left.toFloat() / width,
+                y = top.toFloat() / height,
+                width = (right - left + 1).toFloat() / width,
+                height = (bottom - top + 1).toFloat() / height,
+                centerX = (left + right) / (2f * width),
+                centerY = (top + bottom) / (2f * height),
+                areaRatio = ((right - left + 1) * (bottom - top + 1)).toFloat() / totalPixels
+            )
+        }
 
         return DetectionResult(width, height, photoSlots, warnings, punched, qrSlot)
     }
