@@ -222,131 +222,16 @@ fun AdminScreen(
                     }
                 }
             } else if (selectedTab == 2) {
-
-                // Settings
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AdminTokens.sectionGap)) {
-                    SectionHeader("Admin", "Cài đặt thiết bị", "Bạn cần khởi động lại ứng dụng sau khi lưu để áp dụng.")
-
-                    SettingsGroup("IN ẢNH") {
-                        SettingsRow("Máy in Windows", "Gửi ảnh tới hộp thoại in Windows khi bật.") {
-                            Switch(
-                                checked = enablePrint,
-                                onCheckedChange = { enablePrint = it },
-                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFB85838), checkedTrackAlpha = 1f)
-                            )
-                        }
-                    }
-
-                    SettingsGroup("NGUỒN CAMERA") {
-                        ChoiceRow("Webcam / DroidCam", "Dùng camera kết nối trực tiếp.", !useHotFolder, Color(0xFFB85838), { useHotFolder = false })
-                        Spacer(Modifier.height(10.dp))
-                        ChoiceRow("Thư mục ảnh (Hot Folder)", "Lấy ảnh từ thư mục do phần mềm camera xuất ra.", useHotFolder, Color(0xFFB85838), { useHotFolder = true })
-                        AnimatedVisibility(visible = useHotFolder, enter = expandVertically(), exit = shrinkVertically()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Spacer(Modifier.height(14.dp))
-                                Text("Đường dẫn Hot Folder", style = MaterialTheme.typography.body2, color = NeutralSecondary)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    OutlinedTextField(
-                                        value = hotFolderPath,
-                                        onValueChange = { hotFolderPath = it },
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true,
-                                        placeholder = { Text("Chọn thư mục ảnh") },
-                                        colors = TextFieldDefaults.outlinedTextFieldColors(textColor = NeutralText)
-                                    )
-                                    KioskSecondaryButton("Chọn thư mục", onClick = {
-                                        val chooser = javax.swing.JFileChooser().apply {
-                                            fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
-                                            dialogTitle = "Chọn Hot Folder"
-                                        }
-                                        if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
-                                            hotFolderPath = chooser.selectedFile.absolutePath
-                                        }
-                                    })
-                                }
-                                Text("Mẹo: Dùng digiCamControl chụp để ảnh rớt vào đây.", color = NeutralMuted, style = MaterialTheme.typography.caption)
-                            }
-                        }
-                    }
-
-                    if (nativeCamera != null) {
-                        SettingsGroup("THÔNG SỐ CANON EDSDK") {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("Ghi chú: Nếu thông số hiện N/A, hãy đảm bảo máy ảnh đang ở chế độ M (Manual) và không bị kẹt báo bận.", color = NeutralMuted, style = MaterialTheme.typography.caption)
-                                
-                                // Phơi sáng (Exposure)
-                                Text("Phơi sáng (Exposure)", fontWeight = FontWeight.Medium, color = NeutralText, modifier = Modifier.padding(top = 8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                                    NativeCameraParamDropdown(
-                                        label = "ISO", 
-                                        currentValue = nativeCamera.getCurrentIso(),
-                                        fetchOptions = { nativeCamera.getAvailableIsoSpeeds() },
-                                        onSelect = { nativeCamera.setIso(it) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    NativeCameraParamDropdown(
-                                        label = "Khẩu độ (Av)", 
-                                        currentValue = nativeCamera.getCurrentAperture(),
-                                        fetchOptions = { nativeCamera.getAvailableApertures() },
-                                        onSelect = { nativeCamera.setAperture(it) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    NativeCameraParamDropdown(
-                                        label = "Tốc độ (Tv)", 
-                                        currentValue = nativeCamera.getCurrentShutterSpeed(),
-                                        fetchOptions = { nativeCamera.getAvailableShutterSpeeds() },
-                                        onSelect = { nativeCamera.setShutterSpeed(it) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                                // Màu sắc (Color)
-                                Text("Màu sắc (Color) - (Thiết lập 1 chiều)", fontWeight = FontWeight.Medium, color = NeutralText, modifier = Modifier.padding(top = 8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                                    HardcodedCameraParamDropdown(
-                                        label = "Cân bằng trắng (WB)", 
-                                        options = listOf(
-                                            "Tự động (Auto)" to "kEdsWhiteBalance_Auto",
-                                            "Ánh sáng mặt trời (Daylight)" to "kEdsWhiteBalance_Daylight",
-                                            "Nhiều mây (Cloudy)" to "kEdsWhiteBalance_Cloudy",
-                                            "Đèn tròn (Tungsten)" to "kEdsWhiteBalance_Tangsten",
-                                            "Đèn huỳnh quang (Fluorescent)" to "kEdsWhiteBalance_Fluorescent"
-                                        ),
-                                        onSelect = { nativeCamera.setWhiteBalanceSafe(it) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    HardcodedCameraParamDropdown(
-                                        label = "Kiểu màu (Picture Style)", 
-                                        options = listOf(
-                                            "Tiêu chuẩn (Standard)" to "kEdsPictureStyle_Standard",
-                                            "Chân dung (Portrait)" to "kEdsPictureStyle_Portrait",
-                                            "Phong cảnh (Landscape)" to "kEdsPictureStyle_Landscape",
-                                            "Trung tính (Neutral)" to "kEdsPictureStyle_Neutral",
-                                            "Chân thật (Faithful)" to "kEdsPictureStyle_Faithful",
-                                            "Trắng đen (Monochrome)" to "kEdsPictureStyle_Monochrome",
-                                            "Tự động (Auto)" to "kEdsPictureStyle_Auto"
-                                        ),
-                                        onSelect = { nativeCamera.setPictureStyleSafe(it) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    SettingsGroup("THỜI GIAN LỰA CHỌN") {
-                        Text("Điều chỉnh thời gian để khách chọn ảnh và khung. 0 giây sẽ tự động tiếp tục.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
-                        NumberStepper("Chọn ảnh", photoSelectionTimeoutSeconds, { photoSelectionTimeoutSeconds = it }, "Thời gian khách chọn ảnh")
-                        SettingsDivider()
-                        NumberStepper("Chọn khung", frameSelectionTimeoutSeconds, { frameSelectionTimeoutSeconds = it }, "Thời gian khách chọn khung")
-                        SettingsDivider()
-                        NumberStepper("Sau khi chụp (dự phòng)", postCaptureTimeoutSeconds, { postCaptureTimeoutSeconds = it }, "Thời gian chờ sau lượt chụp")
-                    }
-
-                    SettingsGroup("LƯU CẤU HÌNH") {
-                        KioskPrimaryButton("Lưu cài đặt", onClick = { saveSettings() }, modifier = Modifier.width(180.dp))
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
+                SettingsTabContent(
+                    config = config, nativeCamera = nativeCamera,
+                    enablePrint = enablePrint, onEnablePrintChange = { enablePrint = it },
+                    useHotFolder = useHotFolder, onUseHotFolderChange = { useHotFolder = it },
+                    hotFolderPath = hotFolderPath, onHotFolderPathChange = { hotFolderPath = it },
+                    postCaptureTimeoutSeconds = postCaptureTimeoutSeconds, onPostCaptureTimeoutChange = { postCaptureTimeoutSeconds = it },
+                    photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds, onPhotoSelectionTimeoutChange = { photoSelectionTimeoutSeconds = it },
+                    frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds, onFrameSelectionTimeoutChange = { frameSelectionTimeoutSeconds = it },
+                    onSaveSettings = { saveSettings() }
+                )
             } else if (selectedTab == 3) {
                 // Calculator App (Firebase Tool)
                 com.phuctran.photobooth.desktop.engine.CalculatorApp(config, layouts)
@@ -354,71 +239,6 @@ fun AdminScreen(
                 FilterAdminView(effects = effects, onSaveEffects = onSaveEffects)
             }
         }
-    }
-}
-
-@Composable
-private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shape = RoundedCornerShape(18.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEAE4DC)),
-        elevation = 0.dp
-    ) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-            Text(title, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, color = Color(0xFF9E978E))
-            Spacer(Modifier.height(AdminTokens.groupHeaderBottomGap))
-            content()
-        }
-    }
-}
-
-@Composable
-private fun SettingsDivider() {
-    Divider(color = NeutralBorder.copy(alpha = AdminTokens.dividerAlpha))
-}
-
-@Composable
-private fun SettingsRow(label: String, description: String, control: @Composable () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = AdminTokens.rowMinHeight)
-            .padding(horizontal = AdminTokens.rowHorizontalPadding, vertical = AdminTokens.rowVerticalPadding),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.body1, color = NeutralText, fontWeight = FontWeight.SemiBold)
-            Text(description, style = MaterialTheme.typography.body2, color = NeutralSecondary)
-        }
-        Spacer(Modifier.width(16.dp))
-        control()
-    }
-}
-
-@Composable
-private fun NumberStepper(label: String, value: Int, onValueChange: (Int) -> Unit, description: String = "") {
-    SettingsRow(label, description) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StepperButton("−", value > 0) { onValueChange((value - 10).coerceAtLeast(0)) }
-            Text("$value giây", style = MaterialTheme.typography.h6, color = NeutralText, textAlign = TextAlign.Center, modifier = Modifier.width(120.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)).padding(vertical = 12.dp))
-            StepperButton("+", value < 3600) { onValueChange((value + 10).coerceAtMost(3600)) }
-        }
-    }
-}
-
-@Composable
-private fun StepperButton(symbol: String, enabled: Boolean, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.size(54.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.outlinedButtonColors(backgroundColor = Color(0xFFFDF6F3), contentColor = Color(0xFFB85838), disabledContentColor = NeutralMuted),
-        border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder),
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        Text(symbol, style = MaterialTheme.typography.h6)
     }
 }
 
