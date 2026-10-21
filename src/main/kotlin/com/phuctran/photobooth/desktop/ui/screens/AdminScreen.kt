@@ -56,6 +56,8 @@ fun AdminScreen(
     onDeleteLayout: (String) -> Unit,
     onSaveSettings: (Boolean, Boolean, String, Int, Int, Int) -> Unit,
     onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
+    onImportLut: (java.nio.file.Path) -> String,
+    onPreviewEffect: (com.phuctran.photobooth.desktop.model.EffectMode, java.awt.image.BufferedImage) -> java.awt.image.BufferedImage,
     onBack: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
@@ -236,7 +238,7 @@ fun AdminScreen(
                 // Calculator App (Firebase Tool)
                 com.phuctran.photobooth.desktop.engine.CalculatorApp(config, layouts)
             } else if (selectedTab == 4) {
-                FilterAdminView(effects = effects, onSaveEffects = onSaveEffects)
+                FilterAdminView(effects = effects, onSaveEffects = onSaveEffects, onImportLut = onImportLut, onPreviewEffect = onPreviewEffect)
             }
         }
     }

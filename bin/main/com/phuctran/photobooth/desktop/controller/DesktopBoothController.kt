@@ -68,6 +68,24 @@ class DesktopBoothController(
     private val salesRepository: SalesRepository = SalesRepository(projectDir),
     private val revenueClient: DesktopRevenueClient = DesktopRevenueClient()
 ) {
+    init { imageProcessor.appDataDir = config.appDataDir }
+
+    fun importLut(source: Path): String {
+        require(source.fileName.toString().endsWith(".cube", ignoreCase = true)) { "Select a .cube file" }
+        com.phuctran.photobooth.desktop.imaging.lut.CubeLutParser.parse(source)
+        val directory = requireNotNull(config.appDataDir).resolve("data/filters/luts")
+        Files.createDirectories(directory)
+        val name = "${UUID.randomUUID()}.cube"
+        Files.copy(source, directory.resolve(name))
+        return name
+    }
+
+    fun previewEffect(effect: EffectMode, image: java.awt.image.BufferedImage): java.awt.image.BufferedImage {
+        val processor = DesktopImageProcessor()
+        processor.appDataDir = config.appDataDir
+        processor.availableEffects = listOf(effect)
+        return processor.applyEffectForLiveView(image, effect.id)
+    }
     val nativeCamera: com.phuctran.photobooth.desktop.services.NativeEosCaptureService?
         get() = cameraService as? com.phuctran.photobooth.desktop.services.NativeEosCaptureService
 
@@ -212,7 +230,7 @@ class DesktopBoothController(
             }
             SessionState.IDLE -> {
                 stopInactivityTimer()
-                chooseEffect(_availableEffects.value.first().id) // Reset to normal effect
+                _availableEffects.value.firstOrNull { it.enabled }?.let { chooseEffect(it.id) }
             }
             else -> {
                 stopInactivityTimer()
@@ -316,7 +334,7 @@ class DesktopBoothController(
     val liveViewStream: StateFlow<androidx.compose.ui.graphics.ImageBitmap?> = cameraService.liveViewStream
 
     fun chooseEffect(effectId: String) {
-        _availableEffects.value.firstOrNull { it.id == effectId }?.let {
+        _availableEffects.value.firstOrNull { it.id == effectId && it.enabled }?.let {
             _selectedEffect.value = it
             _statusMessage.value = "Đã chọn màu ${it.title}."
             // Always update live view with the new effect so they can preview it in SELECTING screen
@@ -996,6 +1014,18 @@ class DesktopBoothController(
         try {
             val jsonStr = gson.toJson(effects, listType)
             java.nio.file.Files.writeString(filtersFile, jsonStr)
+            val retained = effects.mapNotNull { it.lutPath }.toSet()
+            val lutDir = config.appDataDir?.resolve("data/filters/luts")
+            _availableEffects.value.mapNotNull { it.lutPath }.filter { it !in retained }.forEach { name ->
+                val path = lutDir?.resolve(name)?.normalize()
+                if (path != null && path.parent == lutDir.normalize() && name.endsWith(".cube", ignoreCase = true)) {
+                    try {
+                        java.nio.file.Files.deleteIfExists(path)
+                    } catch (e: Exception) {
+                        println("Failed to remove deleted LUT $name: ${e.message}")
+                    }
+                }
+            }
             refreshEffects()
             _statusMessage.value = "Đã lưu bộ lọc màu thành công."
         } catch (e: Exception) {
@@ -1014,10 +1044,19 @@ class DesktopBoothController(
         if (java.nio.file.Files.exists(filtersFile)) {
             try {
                 val jsonStr = java.nio.file.Files.readString(filtersFile)
-                val loadedFilters: List<com.phuctran.photobooth.desktop.model.EffectMode> = gson.fromJson(jsonStr, listType)
-                if (loadedFilters.isNotEmpty()) {
-                    _availableEffects.value = loadedFilters
+                val root = com.google.gson.JsonParser.parseString(jsonStr).asJsonArray
+                  val loadedFilters: List<EffectMode> = root.map { element ->
+                    val json = element.asJsonObject
+                    val parsed: EffectMode = gson.fromJson(element, EffectMode::class.java)
+                    parsed.copy(
+                        enabled = json.get("enabled")?.takeUnless { it.isJsonNull }?.asBoolean ?: true,
+                        lutIntensity = json.get("lutIntensity")?.takeUnless { it.isJsonNull }?.asFloat?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f,
+                        isSystemDefault = parsed.id in setOf("normal", "black_white", "vintage") || parsed.isSystemDefault
+                    )
                 }
+                  if (loadedFilters.isNotEmpty()) {
+                      _availableEffects.value = loadedFilters
+                  }
             } catch (e: Exception) {
                 println("Failed to parse filters.json: ${e.message}")
             }
@@ -1029,11 +1068,36 @@ class DesktopBoothController(
             } catch (e: Exception) {
                 println("Failed to write default filters.json: ${e.message}")
             }
-        }
-        imageProcessor.availableEffects = _availableEffects.value
-        if (_availableEffects.value.none { it.id == _selectedEffect.value.id }) {
-            _selectedEffect.value = _availableEffects.value.first()
-        }
+          }
+          val lutDir = config.appDataDir?.resolve("data/filters/luts")
+          if (lutDir != null && java.nio.file.Files.isDirectory(lutDir)) {
+              try {
+                  val known = _availableEffects.value.mapNotNull { it.lutPath }.toSet()
+                  val orphans = java.nio.file.Files.list(lutDir).use { files ->
+                      files.filter { java.nio.file.Files.isRegularFile(it) && it.fileName.toString().endsWith(".cube", ignoreCase = true) && it.fileName.toString() !in known }
+                          .sorted().toList()
+                  }
+                  if (orphans.isNotEmpty()) {
+                      val recovered = orphans.mapIndexed { index, file ->
+                          val filename = file.fileName.toString()
+                          val rawName = filename.substring(0, filename.length - 5)
+                          val title = if (rawName.matches(Regex("^[0-9a-fA-F-]{36}$"))) "Màu LUT ${index + 1}" else rawName.replace("_", " ").replace("-", " ").trim()
+                          EffectMode(id = "lut_$rawName", title = title, description = "Bộ lọc LUT đã nhập",
+                              accentColor = 0xFFC27357, isLut = true, lutPath = filename,
+                              lutIntensity = 1f, enabled = true, isSystemDefault = false)
+                      }
+                      val merged = _availableEffects.value + recovered
+                      java.nio.file.Files.writeString(filtersFile, gson.toJson(merged, listType))
+                      _availableEffects.value = merged
+                  }
+              } catch (e: Exception) {
+                  println("Failed to recover LUT files: ${e.message}")
+              }
+          }
+          imageProcessor.availableEffects = _availableEffects.value
+        _selectedEffect.value = _availableEffects.value.firstOrNull { it.id == _selectedEffect.value.id && it.enabled }
+            ?: _availableEffects.value.firstOrNull { it.enabled }
+            ?: com.phuctran.photobooth.desktop.model.DefaultEffectModes.first()
     }
 
     fun refreshFramesForLayout(layout: com.phuctran.photobooth.desktop.model.LayoutMode, preserveSelection: Boolean = true) {

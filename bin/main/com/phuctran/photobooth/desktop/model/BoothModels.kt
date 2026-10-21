@@ -84,7 +84,12 @@ data class EffectMode(
     val contrast: Float = 1.0f,
     val brightness: Float = 0.0f,
     val warmth: Float = 0.0f,
-    val tint: Float = 0.0f
+    val tint: Float = 0.0f,
+    val isLut: Boolean = false,
+    val lutPath: String? = null,
+    val lutIntensity: Float = 1.0f,
+    val enabled: Boolean = true,
+    val isSystemDefault: Boolean = false
 ) {
     fun toComposeColorMatrix(): androidx.compose.ui.graphics.ColorMatrix {
         val matrix = androidx.compose.ui.graphics.ColorMatrix()
@@ -226,7 +231,8 @@ val DefaultEffectModes = listOf(
         id = "normal",
         title = "Tự nhiên",
         description = "Màu tươi, nét cao, hợp đèn studio.",
-        accentColor = 0xFF475569
+        accentColor = 0xFF475569,
+        isSystemDefault = true
     ),
     EffectMode(
         id = "black_white",
@@ -235,7 +241,8 @@ val DefaultEffectModes = listOf(
         accentColor = 0xFF2F3338,
         saturation = 0.0f,
         contrast = 1.2f,
-        brightness = 0.05f
+        brightness = 0.05f,
+        isSystemDefault = true
     ),
     EffectMode(
         id = "vintage",
@@ -246,7 +253,8 @@ val DefaultEffectModes = listOf(
         contrast = 0.9f,
         warmth = 0.3f,
         tint = 0.1f,
-        brightness = 0.1f
+        brightness = 0.1f,
+        isSystemDefault = true
     )
 )
 

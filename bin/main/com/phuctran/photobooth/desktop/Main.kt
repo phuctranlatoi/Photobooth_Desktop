@@ -61,6 +61,7 @@ fun main() = application {
 
         val isAppReady by controller.isAppReady.collectAsState()
         val availableLayouts by controller.availableLayouts.collectAsState()
+        val availableEffects by controller.availableEffects.collectAsState()
         val currentConfig by controller.activeConfig.collectAsState()
 
         PhotoboothTheme {
@@ -145,7 +146,7 @@ fun main() = application {
                                     true
                                 }
                             }.sortedBy { it.id },
-                            effects = com.phuctran.photobooth.desktop.model.DefaultEffectModes,
+                            effects = availableEffects,
                             selectedLayout = layout,
                             selectedEffect = effect,
                             liveViewStream = controller.liveViewStream,
@@ -247,7 +248,6 @@ fun main() = application {
                         onFinish = { controller.finishSession() }
                     )
                     SessionState.ADMIN -> {
-                        val availableEffects by controller.availableEffects.collectAsState()
                         AdminScreen(
                             layouts = availableLayouts,
                             frames = availableFrames,
@@ -278,6 +278,8 @@ fun main() = application {
                             onSaveEffects = { effects ->
                                 controller.saveEffects(effects)
                             },
+                            onImportLut = { controller.importLut(it) },
+                            onPreviewEffect = { effect, image -> controller.previewEffect(effect, image) },
                             onBack = { controller.resetSession() }
                         )
                     }

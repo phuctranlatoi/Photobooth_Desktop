@@ -11,6 +11,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import kotlinx.coroutines.launch
 
 import androidx.compose.ui.layout.ContentScale
@@ -208,28 +209,36 @@ fun Step2Effect(
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxWidth < 1024.dp
+        val maxDockWidth = if (compact) maxWidth - 48.dp else minOf(720.dp, maxWidth - 440.dp)
         val dock: @Composable () -> Unit = {
             val dockScrollState = rememberScrollState()
             Row(
                 modifier = Modifier
-                    .widthIn(max = 540.dp)
+                    .widthIn(max = maxDockWidth)
                     .shadow(12.dp, RoundedCornerShape(24.dp))
                     .clip(RoundedCornerShape(24.dp))
                     .background(Color(0xE6262528))
                     .padding(8.dp)
                     .horizontalScroll(dockScrollState)
                     .kioskHorizontalDrag(dockScrollState),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                effects.forEach { effect ->
+                effects.filter { it.enabled }.forEach { effect ->
                     val isSelected = effect.id == selectedEffect.id
+                    val cleanTitle = remember(effect.title) { formatEffectDisplayName(effect.title) }
+                    val interactionSource = remember(effect.id) { MutableInteractionSource() }
+                    val isPressed by interactionSource.collectIsPressedAsState()
                     Row(
                         modifier = Modifier
                             .height(64.dp)
+                            .graphicsLayer {
+                                scaleX = if (isPressed) 0.97f else 1f
+                                scaleY = if (isPressed) 0.97f else 1f
+                            }
                             .clip(RoundedCornerShape(18.dp))
                             .background(if (isSelected) AccentNude else Color.Transparent)
-                            .clickable { onEffectSelect(effect.id) }
+                            .clickable(interactionSource = interactionSource, indication = null) { onEffectSelect(effect.id) }
                             .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -237,10 +246,10 @@ fun Step2Effect(
                         Box(
                             Modifier.size(14.dp).clip(CircleShape)
                                 .background(Color(effect.accentColor))
-                                .border(1.dp, Color.White.copy(alpha = 0.65f), CircleShape)
+                                .border(if (isSelected) 2.dp else 1.dp, if (isSelected) Color.White else Color.White.copy(alpha = 0.45f), CircleShape)
                         )
                         Text(
-                            effect.title,
+                            cleanTitle,
                             style = MaterialTheme.typography.subtitle1,
                             color = Color.White,
                             maxLines = 1
@@ -296,11 +305,23 @@ fun Step2Effect(
     }
 }
 
+internal fun formatEffectDisplayName(title: String): String {
+    val cleaned = title.trim()
+        .replace(Regex("(?i)\\.cube\\b"), "")
+        .replace(Regex("(?i)(?:[\\s_-]*\\d+x\\d+)(?=$|[\\s_-])"), "")
+        .replace(Regex("(?i)(?:[\\s_-]*v\\d+)(?=$|[\\s_-])"), "")
+        .replace(Regex("[_-]+"), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+    return cleaned.ifEmpty { title.trim() }
+}
+
 @Composable
 private fun StudioLiveView(liveViewStream: StateFlow<ImageBitmap?>, selectedEffect: EffectMode) {
     val liveViewBitmap by liveViewStream.collectAsState()
     if (liveViewBitmap != null) {
         val colorFilter = remember(selectedEffect) {
+            if (selectedEffect.isLut) null else
             androidx.compose.ui.graphics.ColorFilter.colorMatrix(selectedEffect.toComposeColorMatrix())
         }
         Image(

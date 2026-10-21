@@ -6,11 +6,16 @@ import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
+import com.phuctran.photobooth.desktop.imaging.lut.CubeLutParser
+import com.phuctran.photobooth.desktop.imaging.lut.Lut3D
+import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class DesktopImageProcessor {
+    var appDataDir: Path? = null
+    private val lutCache = ConcurrentHashMap<Path, Lut3D>()
     fun saveBoothCapture(
         source: Path,
         outputDir: Path,
@@ -60,6 +65,18 @@ class DesktopImageProcessor {
 
     private fun applyEffect(image: BufferedImage, effectId: String): BufferedImage {
         val effect = availableEffects.find { it.id == effectId } ?: availableEffects.firstOrNull()
+        if (effect?.isLut == true) {
+            return try {
+                val base = requireNotNull(appDataDir) { "App data directory unavailable" }.resolve("data/filters/luts").normalize()
+                val name = requireNotNull(effect.lutPath) { "LUT path unavailable" }
+                val file = base.resolve(name).normalize()
+                require(file.parent == base && Files.isRegularFile(file)) { "Invalid LUT file: $name" }
+                lutCache.computeIfAbsent(file) { CubeLutParser.parse(it) }.apply(image, effect.lutIntensity)
+            } catch (e: Exception) {
+                System.err.println("Unable to apply LUT ${effect.id}: ${e.message}")
+                image
+            }
+        }
         if (effect == null || (effect.saturation == 1.0f && effect.contrast == 1.0f && effect.brightness == 0.0f && effect.warmth == 0.0f && effect.tint == 0.0f)) {
             return image
         }
