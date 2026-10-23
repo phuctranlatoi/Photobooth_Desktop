@@ -25,11 +25,13 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.45.3.0")
     implementation("org.postgresql:postgresql:42.7.2")
     testImplementation(kotlin("test"))
+    testImplementation("com.microsoft.onnxruntime:onnxruntime:1.18.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    maxHeapSize = "1536m"
 }
 
 compose.desktop {
