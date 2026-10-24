@@ -1,5 +1,6 @@
 package com.phuctran.photobooth.desktop.facemask
 
+import java.awt.image.BufferedImage
 import kotlin.math.*
 
 /** Crop-space semantic mask, projected back without allowing interpolation outside the crop. */
@@ -13,7 +14,10 @@ class FaceOvalMaskBuilder {
         return total
     }
     data class Masks(val geometry: FloatArray, val protected: FloatArray, val candidate: FloatArray, val final: FloatArray, val cropFinal: FloatArray, val skinProb: FloatArray, val repaired: BooleanArray)
-    fun build(width: Int, height: Int, parsing: OnnxFaceParsingService.Parsing, face: DetectedFace, alignment: FaceAlignment): Masks {
+    data class Timings(var maskBuildMs: Double = 0.0, var guidedFilterMs: Double = 0.0, var reprojectMs: Double = 0.0)
+    fun build(width: Int, height: Int, parsing: OnnxFaceParsingService.Parsing, face: DetectedFace, alignment: FaceAlignment,
+              alignedCrop: BufferedImage? = null, timings: Timings? = null): Masks {
+        val start = System.nanoTime()
         val n = parsing.size; val plane = n * n
         val geometry = FloatArray(plane); val protected = FloatArray(plane); val candidate = FloatArray(plane); val crop = FloatArray(plane)
         val l = face.landmarks
@@ -36,14 +40,18 @@ class FaceOvalMaskBuilder {
             geometry[i] = if (y > jawCutoff || (y > jawBoundary && pNeck > .22f)) 0f else (upperAlpha * (1f - blend) + lowerAlpha * blend)
             skinProb[i] = pSkin
             val inEyes = inside(x.toDouble(), y.toDouble(), left.x, left.y, .15f * d, .10f * d) || inside(x.toDouble(), y.toDouble(), right.x, right.y, .15f * d, .10f * d)
-            val mouthCore = inside(x.toDouble(), y.toDouble(), mouth.x, mouth.y, .12f * d, .06f * d)
-            val semanticMouth = (label in 11..13 && parsing.lipsProb[i] > .35f)
-            val inMouth = semanticMouth || mouthCore
+            val vermilion = parsing.probability(12, x, y) + parsing.probability(13, x, y)
+            val cavity = parsing.probability(11, x, y)
+            val semanticLips = (label in 11..13) || vermilion > .30f || cavity > .30f
+            val mouthCore = inside(x.toDouble(), y.toDouble(), mouth.x, mouth.y, .14f * d, .06f * d)
+            // Philtrum skin is anatomically ABOVE the mouth (y < mouth.y - .02f * d).
+            // At and below mouth.y, mouthCore strictly protects the oral cavity / mouth center!
+            val confidentPhiltrumSkin = y < mouth.y - .02f * d && pSkin >= .60f && vermilion < .15f && cavity < .15f && label !in 11..13
+            val inMouth = (semanticLips || mouthCore) && !confidentPhiltrumSkin
             val isProtected = inEyes || inMouth ||
                 (label in 2..3 && parsing.browsProb[i] > .45f && parsing.browsProb[i] > pSkin) ||
                 label in 4..5 ||
-                label in 11..13 ||
-                (label == 6 && !(pSkin >= .25f && !inEyes) && (parsing.glassesProb[i] > .60f || pSkin < .18f)) ||
+                (label == 6 && (parsing.glassesProb[i] > .60f || pSkin < .20f) && !(pSkin >= .25f && !inEyes)) ||
                 (label == 17 && parsing.hairProb[i] > .50f && parsing.hairProb[i] > pSkin) ||
                 label in 14..15 || (pNeck > .28f && pNeck > pSkin * .7f)
             protected[i] = if (isProtected) 1f else 0f
@@ -67,52 +75,50 @@ class FaceOvalMaskBuilder {
             }
         }
         val visitedVoid = BooleanArray(plane)
-        fun inCore(px: Int, py: Int): Boolean =
-            inside(px.toDouble(), py.toDouble(), left.x, left.y, .15f * d, .10f * d) ||
-                inside(px.toDouble(), py.toDouble(), right.x, right.y, .15f * d, .10f * d) ||
-                inside(px.toDouble(), py.toDouble(), mouth.x, mouth.y, .12f * d, .06f * d)
         for (start in 0 until plane) if (crop[start] == 0f && protected[start] == 0f && !visitedVoid[start] && geometry[start] > .1f) {
-            head = 0; tail = 0; queue[tail++] = start; visitedVoid[start] = true
+            head = 0; tail = 0; queue[tail++] = start; visitedVoid[start] = true; var enclosed = true; var boundary = 1f
             while (head < tail) {
                 val i = queue[head++]; val x = i % n; val y = i / n
                 for (dy in -1..1) for (dx in -1..1) {
                     val nx = x + dx; val ny = y + dy
-                    if (nx !in 0 until n || ny !in 0 until n) continue
+                    if (nx !in 0 until n || ny !in 0 until n) { enclosed = false; continue }
                     val j = ny * n + nx
                     if (crop[j] == 0f && protected[j] == 0f && geometry[j] > .1f && !visitedVoid[j]) {
                         visitedVoid[j] = true; queue[tail++] = j
+                    } else if (crop[j] > 0f) {
+                        if (skinProb[j] < .50f || protected[j] > 0f || geometry[j] <= .1f || parsing.hairProb[j] > .15f || parsing.neckProb[j] > .15f || parsing.bgProb[j] > .15f || parsing.label(nx, ny) in 7..9) enclosed = false
+                        boundary = minOf(boundary, crop[j])
+                    } else if (protected[j] > 0f || geometry[j] <= .1f) {
+                        enclosed = false
                     }
                 }
             }
-            if (tail <= 1500) for (k in 0 until tail) {
-                val i = queue[k]; val x = i % n; val y = i / n
-                val touchesCoreFeature = inCore(x, y) || (parsing.label(x, y) in 11..13)
-                if (parsing.neckProb[i] <= .28f && parsing.bgProb[i] <= .50f && !touchesCoreFeature && parsing.clothProb[i] <= .40f) {
-                    crop[i] = geometry[i] * .95f; repaired[i] = true
-                }
+            if (enclosed && tail <= 150) for (k in 0 until tail) {
+                val i = queue[k]
+                crop[i] = boundary; repaired[i] = true
             }
         }
-        // Feather only the retained boundary; never paint excluded features or rejected islands.
-        val feathered = crop.copyOf()
-        for (y in 0 until n) for (x in 0 until n) {
-            val i = y * n + x
-            if (crop[i] == 0f || protected[i] > .5f || geometry[i] == 0f) continue
-            var sum = 0f; var count = 0
-            for (dy in -1..1) for (dx in -1..1) {
-                val nx = x + dx; val ny = y + dy
-                if (nx in 0 until n && ny in 0 until n) { if (crop[ny * n + nx] > 0f) { sum += crop[ny * n + nx]; count++ } }
-            }
-            feathered[i] = if (geometry[i] == 0f || protected[i] > 0.5f) 0f else sum / count
+        timings?.maskBuildMs = (System.nanoTime() - start) / 1e6
+        val filterStart = System.nanoTime()
+        require(alignedCrop == null || (alignedCrop.width == n && alignedCrop.height == n))
+        val guidance = FloatArray(plane)
+        for (i in 0 until plane) {
+            val rgb = alignedCrop?.getRGB(i % n, i / n) ?: 0
+            guidance[i] = (.2126f * (rgb shr 16 and 255) + .7152f * (rgb shr 8 and 255) + .0722f * (rgb and 255)) / 255f
         }
+        val feathered = FastGuidedMaskFilter().filter(guidance, crop, n, n)
+        for (i in 0 until plane) if (protected[i] > .5f || geometry[i] == 0f) feathered[i] = 0f
+        timings?.guidedFilterMs = (System.nanoTime() - filterStart) / 1e6
+        val projectionStart = System.nanoTime()
         val full = FloatArray(width * height)
         for (y in 0 until height) for (x in 0 until width) {
             val point = alignment.toCrop(x.toDouble(), y.toDouble()); val px = point.x; val py = point.y
             if (px < 0 || py < 0 || px >= n - 1 || py >= n - 1) continue
             val x0 = px.toInt(); val y0 = py.toInt(); val fx = (px - x0).toFloat(); val fy = (py - y0).toFloat()
             // Keep landmark cores excluded even when a subpixel-sized core misses crop pixel centers.
-            if (inside(px, py, left.x, left.y, .12f * d, .08f * d) ||
-                inside(px, py, right.x, right.y, .12f * d, .08f * d) ||
-                inside(px, py, mouth.x, mouth.y, .12f * d, .06f * d)) continue
+            if (inside(px, py, left.x, left.y, .16f * d, .11f * d) ||
+                inside(px, py, right.x, right.y, .16f * d, .11f * d) ||
+                inside(px, py, mouth.x, mouth.y, .14f * d, .06f * d)) continue
             val index = y0 * n + x0
             val value = feathered[index] * (1 - fx) * (1 - fy) + feathered[index + 1] * fx * (1 - fy) + feathered[index + n] * (1 - fx) * fy + feathered[index + n + 1] * fx * fy
             val protectedWeight = protected[index] * (1 - fx) * (1 - fy) + protected[index + 1] * fx * (1 - fy) +
@@ -124,6 +130,7 @@ class FaceOvalMaskBuilder {
             val attenuation = if (protectedWeight > 0.02f) ((0.15f - protectedWeight) / 0.13f).coerceIn(0f, 1f) else 1f
             full[y * width + x] = (value * attenuation).coerceIn(0f, 1f)
         }
+        timings?.reprojectMs = (System.nanoTime() - projectionStart) / 1e6
         return Masks(geometry, protected, candidate, full, feathered, skinProb, repaired)
     }
 }

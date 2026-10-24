@@ -107,7 +107,7 @@ class FaceMaskDiagnosticTest {
                             val crop = alignment.crop(image)
                             val parsing = service.parse(crop)
                             val builder = FaceOvalMaskBuilder()
-                            val masks = builder.build(image.width, image.height, parsing, face, alignment)
+                            val masks = builder.build(image.width, image.height, parsing, face, alignment, crop)
                             val primaryMask = masks.final
                             val n = parsing.size.toDouble()
                             val d = n / 3.6
