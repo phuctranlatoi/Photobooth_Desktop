@@ -9,16 +9,16 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /** Test-only ONNX detector; absent model is reported by [available]. */
-class YuNetFaceDetector : FaceDetector {
+class YuNetFaceDetector(private val selectedModelPath: Path = modelPath) : FaceDetector {
     companion object {
         const val SCORE_THRESHOLD = 0.85f
         const val NMS_IOU_THRESHOLD = 0.30f
-        val modelPath: Path = Path.of("app-resources/models/face_detection_yunet_2023mar.onnx")
+        val modelPath: Path get() = ModelPathResolver.resolve("face_detection_yunet_2023mar.onnx")
         val available: Boolean get() = Files.isRegularFile(modelPath)
     }
     override val name = "YuNet-ONNX"
     private val environment = OrtEnvironment.getEnvironment()
-    private val session = OrtSession.SessionOptions().use { environment.createSession(modelPath.toString(), it) }
+    private val session = OrtSession.SessionOptions().use { environment.createSession(selectedModelPath.toString(), it) }
     init {
         println("YuNet inputs: ${session.inputInfo.map { "${it.key}: ${(it.value.info as? TensorInfo)?.shape?.contentToString()}" }}")
         println("YuNet outputs: ${session.outputInfo.map { "${it.key}: ${(it.value.info as? TensorInfo)?.shape?.contentToString()}" }}")

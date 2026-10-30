@@ -20,6 +20,8 @@ import com.phuctran.photobooth.desktop.model.ExportSummary
 import com.phuctran.photobooth.desktop.model.FramePack
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.services.DesktopAlbumUploader
+import com.phuctran.photobooth.desktop.services.DesktopBeautyService
+import com.phuctran.photobooth.desktop.beauty.BeautyConfig
 import com.phuctran.photobooth.desktop.services.LocalFileServer
 import com.phuctran.photobooth.desktop.services.PrinterService
 import com.phuctran.photobooth.desktop.services.StillCaptureService
@@ -39,6 +41,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.async
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
@@ -418,6 +422,16 @@ class DesktopBoothController(
     val isRecordingVideo = _isRecordingVideo.asStateFlow()
     
     private val _videoEncodingJobs = mutableListOf<Job>()
+    private var beautyService: DesktopBeautyService? = null
+    private fun getBeautyService(): DesktopBeautyService = synchronized(this) {
+        beautyService ?: DesktopBeautyService().also { beautyService = it }
+    }
+    private val beautyJobs = java.util.concurrent.ConcurrentHashMap<Int, Deferred<java.io.File>>()
+
+    private fun cancelBeautyJobs() {
+        beautyJobs.values.forEach { it.cancel() }
+        beautyJobs.clear()
+    }
 
     fun startCaptureFlow() {
         if (captureJob?.isActive == true) return
@@ -428,6 +442,7 @@ class DesktopBoothController(
             _selectedMoments.value = emptyList()
             _exportSummary.value = ExportSummary(0, 0, 0)
             _videoEncodingJobs.clear()
+            cancelBeautyJobs()
 
             val layout = _selectedLayout.value
             for (index in 1..layout.shotCount) {
@@ -539,8 +554,33 @@ class DesktopBoothController(
                     videoPath = null // Will be updated when async encode finishes
                 )
 
+                if (config.isBeautyEnabled) {
+                    val original = photoPath.toFile()
+                    val sessionDir = projectDir.resolve("data").resolve("sessions").resolve(currentSessionId!!)
+                    val derivative = sessionDir.resolve("beauty").resolve("Photo_${index}_beauty.png").toFile()
+                    val beautyConfig = BeautyConfig.fromPreset(config.beautyPreset, enabled = true)
+                    beautyJobs[index] = scope.async(Dispatchers.IO) {
+                        getBeautyService().processCapture(original, derivative, beautyConfig, isCancelled = { !isActive })
+                    }
+                }
+
                 transitionTo(SessionState.LIVE_VIEW)
                 delay(700)
+            }
+
+            if (beautyJobs.isNotEmpty()) {
+                val results = withTimeoutOrNull(15_000L) {
+                    beautyJobs.mapValues { (_, task) -> runCatching { task.await() }.getOrNull() }
+                }
+                if (results != null && currentSessionId != null) {
+                    _capturedMoments.value = _capturedMoments.value.map { moment ->
+                        val derivative = results[moment.index]
+                        if (derivative != null && derivative.isFile && derivative.toPath() != moment.photoPath) {
+                            moment.copy(photoPath = derivative.toPath())
+                        } else moment
+                    }
+                }
+                cancelBeautyJobs()
             }
 
             _exportSummary.value = ExportSummary(
@@ -885,6 +925,7 @@ class DesktopBoothController(
 
     fun cancelSession(): Boolean {
         if (sessionState.value != SessionState.SELECTING_PHOTOS && sessionState.value != SessionState.EDITING) return false
+        cancelBeautyJobs()
         frozenPricingSnapshot = null
         val sessionId = currentSessionId
         captureJob?.cancel()
@@ -921,6 +962,7 @@ class DesktopBoothController(
     }
 
     fun resetSession() {
+        cancelBeautyJobs()
         frozenPricingSnapshot = null
         captureJob?.cancel()
         deliveryJob?.cancel()
@@ -942,6 +984,14 @@ class DesktopBoothController(
         _exportSummary.value = ExportSummary(0, 0, 0)
         _statusMessage.value = "Sẵn sàng."
         transitionTo(SessionState.IDLE)
+    }
+
+    fun close() {
+        resetSession()
+        synchronized(this) {
+            beautyService?.close()
+            beautyService = null
+        }
     }
 
     val activeConfig = MutableStateFlow(config)

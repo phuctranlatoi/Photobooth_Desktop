@@ -1,5 +1,6 @@
 package com.phuctran.photobooth.desktop.config
 
+import com.phuctran.photobooth.desktop.beauty.BeautyPreset
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -29,7 +30,9 @@ data class DesktopBoothConfig(
     val photoSelectionTimeoutSeconds: Int = 90,
     val frameSelectionTimeoutSeconds: Int = 60,
     val printerNameStrip: String = "",
-    val printerNameFull: String = ""
+    val printerNameFull: String = "",
+    val isBeautyEnabled: Boolean = false,
+    val beautyPreset: BeautyPreset = BeautyPreset.BRIGHT
 ) {
     val authHeader: String get() = "Bearer $boothApiKey"
     val canUploadAlbum: Boolean
@@ -79,7 +82,9 @@ object DesktopConfigLoader {
             photoSelectionTimeoutSeconds = env["PHOTO_SELECTION_TIMEOUT_SECONDS"]?.toIntOrNull() ?: 90,
             frameSelectionTimeoutSeconds = env["FRAME_SELECTION_TIMEOUT_SECONDS"]?.toIntOrNull() ?: 60,
             printerNameStrip = env["PRINTER_NAME_STRIP"].orEmpty(),
-            printerNameFull = env["PRINTER_NAME_FULL"].orEmpty()
+            printerNameFull = env["PRINTER_NAME_FULL"].orEmpty(),
+            isBeautyEnabled = env["BEAUTY_ENABLED"].toBooleanFlag(default = false),
+            beautyPreset = BeautyPreset.entries.firstOrNull { it.name.equals(env["BEAUTY_PRESET"], ignoreCase = true) } ?: BeautyPreset.BRIGHT
         )
     }
 

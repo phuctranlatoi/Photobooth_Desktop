@@ -43,6 +43,9 @@ fun main() = application {
         val config = remember { DesktopConfigLoader.load(DesktopAppPaths.appDataDir()) }
         val salesRepository = remember { com.phuctran.photobooth.desktop.data.SalesRepository(DesktopAppPaths.appDataDir()) }
         val controller = remember { DesktopBoothController(projectDir = DesktopAppPaths.appDataDir(), config = config, salesRepository = salesRepository) }
+        DisposableEffect(controller) {
+            onDispose { controller.close() }
+        }
 
         val state by controller.sessionState.collectAsState()
         val layout by controller.selectedLayout.collectAsState()

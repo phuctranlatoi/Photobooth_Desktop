@@ -9,12 +9,12 @@ import java.nio.file.Path
 import kotlin.math.exp
 
 /** Reusable, test-only BiSeNet session. Caller owns and closes the service. */
-class OnnxFaceParsingService : AutoCloseable {
+class OnnxFaceParsingService(private val selectedModelPath: Path = modelPath()) : AutoCloseable {
     companion object {
         const val SIZE = 512
         const val CLASSES = 19
         fun modelPath(): Path {
-            val local = Path.of("app-resources/models/bisenet_face_parsing.onnx")
+            val local = ModelPathResolver.resolve("bisenet_face_parsing.onnx")
             if (Files.isRegularFile(local)) return local
             val resource = OnnxFaceParsingService::class.java.getResourceAsStream("/models/bisenet_face_parsing.onnx") ?: error("Missing BiSeNet model: $local")
             return Files.createTempFile("bisenet-face-parsing-", ".onnx").also { path ->
@@ -24,7 +24,7 @@ class OnnxFaceParsingService : AutoCloseable {
         }
     }
     private val environment = OrtEnvironment.getEnvironment()
-    private val session = OrtSession.SessionOptions().use { environment.createSession(modelPath().toString(), it) }
+    private val session = OrtSession.SessionOptions().use { environment.createSession(selectedModelPath.toString(), it) }
     private val input = session.inputInfo.entries.single().also { require(it.value.info is TensorInfo) }
     val inputShape: LongArray = (input.value.info as TensorInfo).shape
     val dynamicSpatial: Boolean = inputShape.size == 4 && inputShape[2] == -1L && inputShape[3] == -1L
