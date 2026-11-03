@@ -1,7 +1,7 @@
----
+﻿---
 description: Architecture, safety, and performance specialist for the LE SOUVENIR PhotoboothDesktop application.
 mode: subagent
-model: 9router/cx/gpt-6.1-sol
+model: 9router/ag/claude-opus-4-6-thinking#medium
 permissions:
   - action: edit
     resource: "*"
