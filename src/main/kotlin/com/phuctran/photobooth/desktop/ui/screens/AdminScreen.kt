@@ -54,7 +54,7 @@ fun AdminScreen(
     onAddFrame: (String) -> Unit,
     onSaveLayoutConfig: (String, Long, Int, Int) -> Unit = { _, _, _, _ -> },
     onDeleteLayout: (String) -> Unit,
-    onSaveSettings: (Boolean, Boolean, String, Int, Int, Int) -> Unit,
+    onSaveSettings: (Boolean, Boolean, String, Int, Int, Int, Boolean) -> Unit,
     onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
     onImportLut: (java.nio.file.Path) -> String,
     onPreviewEffect: (com.phuctran.photobooth.desktop.model.EffectMode, java.awt.image.BufferedImage) -> java.awt.image.BufferedImage,
@@ -81,9 +81,10 @@ fun AdminScreen(
     var postCaptureTimeoutSeconds by remember { mutableIntStateOf(config.postCaptureTimeoutSeconds) }
     var photoSelectionTimeoutSeconds by remember { mutableIntStateOf(config.photoSelectionTimeoutSeconds) }
     var frameSelectionTimeoutSeconds by remember { mutableIntStateOf(config.frameSelectionTimeoutSeconds) }
+    var isRentalMode by remember { mutableStateOf(config.isRentalMode) }
 
     fun saveSettings() {
-        onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds)
+        onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, isRentalMode)
     }
 
     Column(
@@ -232,6 +233,7 @@ fun AdminScreen(
                     postCaptureTimeoutSeconds = postCaptureTimeoutSeconds, onPostCaptureTimeoutChange = { postCaptureTimeoutSeconds = it },
                     photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds, onPhotoSelectionTimeoutChange = { photoSelectionTimeoutSeconds = it },
                     frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds, onFrameSelectionTimeoutChange = { frameSelectionTimeoutSeconds = it },
+                    isRentalMode = isRentalMode, onRentalModeChange = { isRentalMode = it },
                     onSaveSettings = { saveSettings() }
                 )
             } else if (selectedTab == 3) {

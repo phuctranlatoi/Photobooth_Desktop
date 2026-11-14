@@ -162,6 +162,7 @@ fun main() = application {
                     SessionState.SELECTING_QUANTITY -> QuantityScreen(
                         layout = layout,
                         effect = effect,
+                        isRentalMode = currentConfig.isRentalMode,
                         onQuantitySelected = { controller.setQuantityAndStartPayment(it) },
                         onBack = { controller.goBack() }
                     )
@@ -275,8 +276,8 @@ fun main() = application {
                             onDeleteLayout = { layoutId ->
                                 controller.deleteLayout(layoutId)
                             },
-                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds ->
-                                controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds)
+                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, isRentalMode ->
+                                controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, isRentalMode)
                             },
                             onSaveEffects = { effects ->
                                 controller.saveEffects(effects)

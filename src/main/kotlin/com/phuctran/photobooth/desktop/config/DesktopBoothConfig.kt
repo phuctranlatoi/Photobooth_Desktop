@@ -32,7 +32,8 @@ data class DesktopBoothConfig(
     val printerNameStrip: String = "",
     val printerNameFull: String = "",
     val isBeautyEnabled: Boolean = false,
-    val beautyPreset: BeautyPreset = BeautyPreset.BRIGHT
+    val beautyPreset: BeautyPreset = BeautyPreset.BRIGHT,
+    val isRentalMode: Boolean = false
 ) {
     val authHeader: String get() = "Bearer $boothApiKey"
     val canUploadAlbum: Boolean
@@ -84,7 +85,8 @@ object DesktopConfigLoader {
             printerNameStrip = env["PRINTER_NAME_STRIP"].orEmpty(),
             printerNameFull = env["PRINTER_NAME_FULL"].orEmpty(),
             isBeautyEnabled = env["BEAUTY_ENABLED"].toBooleanFlag(default = false),
-            beautyPreset = BeautyPreset.entries.firstOrNull { it.name.equals(env["BEAUTY_PRESET"], ignoreCase = true) } ?: BeautyPreset.BRIGHT
+            beautyPreset = BeautyPreset.entries.firstOrNull { it.name.equals(env["BEAUTY_PRESET"], ignoreCase = true) } ?: BeautyPreset.BRIGHT,
+            isRentalMode = env["RENTAL_MODE"].toBooleanFlag(default = false)
         )
     }
 

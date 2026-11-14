@@ -35,6 +35,7 @@ fun SettingsTabContent(
     postCaptureTimeoutSeconds: Int, onPostCaptureTimeoutChange: (Int) -> Unit,
     photoSelectionTimeoutSeconds: Int, onPhotoSelectionTimeoutChange: (Int) -> Unit,
     frameSelectionTimeoutSeconds: Int, onFrameSelectionTimeoutChange: (Int) -> Unit,
+    isRentalMode: Boolean = false, onRentalModeChange: (Boolean) -> Unit = {},
     onSaveSettings: () -> Unit
 ) {
     var saved by remember { mutableStateOf(false) }
@@ -48,10 +49,47 @@ fun SettingsTabContent(
                 modifier = Modifier.background(AccentNudeLight, RoundedCornerShape(50)).padding(horizontal = 14.dp, vertical = 9.dp))
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatusCard("Chế độ Kiosk", if (isRentalMode) "Sự kiện (Gói thuê)" else "Thương mại (QR PayOS)")
             StatusCard("Nguồn Camera", if (useHotFolder) "Hot Folder" else if (nativeCamera != null) "Canon EDSDK" else "Webcam / DroidCam")
             StatusCard("Máy in Windows", if (enablePrint) "Đang bật" else "Đang tắt")
             StatusCard("Đồng bộ Đám mây", if (config.canUploadAlbum) "Sẵn sàng" else "Ngoại tuyến")
             StatusCard("Kiosk", "${config.boothId} · Port ${config.localServerPort}")
+        }
+        SettingsSection("Chế độ vận hành Kiosk") {
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Chế độ cho thuê sự kiện", style = MaterialTheme.typography.subtitle1, color = NeutralText)
+                    Text(
+                        if (isRentalMode) "Bỏ qua bước thanh toán PayOS. Khách chụp & in ảnh miễn phí theo gói thuê sự kiện."
+                        else "Kích hoạt thanh toán PayOS. Khách quét mã QR PayOS để thanh toán trước khi chụp.",
+                        style = MaterialTheme.typography.body2,
+                        color = NeutralSecondary
+                    )
+                }
+                Switch(
+                    checked = isRentalMode,
+                    onCheckedChange = onRentalModeChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = AccentNudeDark,
+                        checkedTrackAlpha = 1f,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = NeutralBorder,
+                        uncheckedTrackAlpha = 1f
+                    )
+                )
+            }
+            if (isRentalMode) {
+                Text(
+                    "✨ Đang bật chế độ sự kiện: Màn hình chọn số lượng sẽ hiển thị 'Miễn phí' và tự động bỏ qua bước thanh toán.",
+                    style = MaterialTheme.typography.caption,
+                    color = AccentNudeDark,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AccentNudeLight, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                )
+            }
         }
         SettingsSection("In ấn & Xuất ảnh") {
             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {

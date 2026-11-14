@@ -356,8 +356,31 @@ class DesktopBoothController(
     fun setQuantityAndStartPayment(quantity: Int) {
         val safeQuantity = PricingCalculator.sanitizeQuantity(_selectedLayout.value.printSizeLabel, quantity)
         val pricing = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, safeQuantity)
-        frozenPricingSnapshot = pricing
         _printCopies.value = safeQuantity
+
+        if (activeConfig.value.isRentalMode) {
+            paymentMethod = "Cho thuê"
+            _totalPrice.value = 0L
+            frozenPricingSnapshot = pricing.copy(
+                basePrice = 0L,
+                extraUnitPrice = 0L,
+                extraAmount = 0L,
+                totalAmount = 0L
+            )
+            paymentPollingJob?.cancel()
+            paymentPollingJob = null
+            _paymentQrData.value = null
+
+            scope.launch {
+                transitionTo(SessionState.PREPARING)
+                cameraService.startLiveView(_selectedEffect.value.id)
+                delay(1600)
+                transitionTo(SessionState.LIVE_VIEW)
+            }
+            return
+        }
+
+        frozenPricingSnapshot = pricing
         _totalPrice.value = pricing.totalAmount
         paymentMethod = "Tiền mặt"
         transitionTo(SessionState.PAYMENT_PENDING)
@@ -1002,7 +1025,8 @@ class DesktopBoothController(
         hotFolderPath: String,
         postCaptureTimeoutSeconds: Int,
         photoSelectionTimeoutSeconds: Int,
-        frameSelectionTimeoutSeconds: Int
+        frameSelectionTimeoutSeconds: Int,
+        isRentalMode: Boolean = false
     ) {
         val envFile = config.envSource ?: DesktopAppPaths.workingDir().resolve(".env")
         val updates = mapOf(
@@ -1011,19 +1035,21 @@ class DesktopBoothController(
             "HOT_FOLDER_PATH" to hotFolderPath,
             "POST_CAPTURE_TIMEOUT_SECONDS" to postCaptureTimeoutSeconds.toString(),
             "PHOTO_SELECTION_TIMEOUT_SECONDS" to photoSelectionTimeoutSeconds.toString(),
-            "FRAME_SELECTION_TIMEOUT_SECONDS" to frameSelectionTimeoutSeconds.toString()
+            "FRAME_SELECTION_TIMEOUT_SECONDS" to frameSelectionTimeoutSeconds.toString(),
+            "RENTAL_MODE" to isRentalMode.toString()
         )
         runCatching {
             com.phuctran.photobooth.desktop.config.SettingsManager.updateSettings(envFile, updates)
         }.onSuccess {
             _statusMessage.value = "Đã lưu cài đặt. Khởi động lại ứng dụng để áp dụng."
-            activeConfig.value = config.copy(
+            activeConfig.value = activeConfig.value.copy(
                 enableSystemPrint = enablePrint,
                 useHotFolder = useHotFolder,
                 hotFolderPath = hotFolderPath,
                 postCaptureTimeoutSeconds = postCaptureTimeoutSeconds,
                 photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds,
-                frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds
+                frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds,
+                isRentalMode = isRentalMode
             )
         }.onFailure { e ->
             _statusMessage.value = "Lỗi lưu cài đặt: ${e.message}"
