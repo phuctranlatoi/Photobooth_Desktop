@@ -20,6 +20,7 @@ import com.phuctran.photobooth.desktop.ui.components.InfoPill
 import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
 import com.phuctran.photobooth.desktop.ui.components.KioskSecondaryButton
 import com.phuctran.photobooth.desktop.ui.components.SectionHeader
+import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import com.phuctran.photobooth.desktop.ui.theme.*
 import java.awt.FileDialog
 import java.io.File
@@ -128,11 +129,13 @@ fun FilterAdminView(
             )
             error?.let { Text(it, color = AccentRed) }
 
+            val filterListScroll = rememberScrollState()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(filterListScroll)
+                    .kioskVerticalDrag(filterListScroll),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 mutableEffects.forEach { effect ->
@@ -194,7 +197,8 @@ fun FilterAdminView(
                 .padding(start = 16.dp)
         ) {
             if (selectedEffect != null) {
-                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                val filterEditorScroll = rememberScrollState()
+                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(filterEditorScroll).kioskVerticalDrag(filterEditorScroll), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionHeader("Chỉnh sửa bộ lọc", selectedEffect.title, "Thay đổi thông số màu và lưu để áp dụng cho kiosk.")
                 
                 var title by remember(selectedEffect) { mutableStateOf(selectedEffect.title) }

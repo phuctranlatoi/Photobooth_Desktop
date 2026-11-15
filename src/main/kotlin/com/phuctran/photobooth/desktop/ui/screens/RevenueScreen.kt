@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.data.*
 import com.phuctran.photobooth.desktop.remote.DesktopRevenueClient
+import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import com.phuctran.photobooth.desktop.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,7 +90,8 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
         loading = false
     }
 
-    Column(Modifier.fillMaxSize().background(Color(0xFFFBF9F5)).verticalScroll(rememberScrollState()).padding(24.dp),
+    val revenueScroll = rememberScrollState()
+    Column(Modifier.fillMaxSize().background(Color(0xFFFBF9F5)).verticalScroll(revenueScroll).kioskVerticalDrag(revenueScroll).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
@@ -276,7 +278,8 @@ private fun AdjustTransactionDialog(sale: SaleTransaction, zone: ZoneId, error: 
     val delta = total - sale.totalAmount
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Điều chỉnh giao dịch", style = MaterialTheme.typography.h6) },
         text = {
-            Column(Modifier.widthIn(min = 420.dp, max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            val adjustScroll = rememberScrollState()
+            Column(Modifier.widthIn(min = 420.dp, max = 560.dp).verticalScroll(adjustScroll).kioskVerticalDrag(adjustScroll), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("${sale.printSize.replace("x", "×")} · ${Instant.ofEpochMilli(sale.createdAt).atZone(zone).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}", color = AccentNudeDark)
                 Text("Phiên: ${sale.sessionId}", style = MaterialTheme.typography.caption, color = NeutralSecondary)
                 Panel(Modifier.fillMaxWidth()) { Text("DỮ LIỆU BAN ĐẦU: ${sale.originalQuantity ?: sale.quantity} tấm · ${vnd(sale.originalTotalAmount ?: sale.totalAmount)}") }
@@ -304,7 +307,9 @@ private fun VoidTransactionDialog(sale: SaleTransaction, error: String?, onDismi
     var reason by remember(sale.sessionId) { mutableStateOf<String?>(null) }
     var note by remember(sale.sessionId) { mutableStateOf("") }
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Xóa khỏi doanh thu", style = MaterialTheme.typography.h6) },
-        text = { Column(Modifier.widthIn(min = 420.dp, max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        text = {
+            val voidScroll = rememberScrollState()
+            Column(Modifier.widthIn(min = 420.dp, max = 560.dp).verticalScroll(voidScroll).kioskVerticalDrag(voidScroll), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Giao dịch sẽ không còn được tính vào doanh thu. Dữ liệu gốc và ảnh khách hàng vẫn được giữ nguyên để đối soát.")
             Panel(Modifier.fillMaxWidth()) { Text("${sale.layoutTitle} · ${sale.printSize} · ${sale.quantity} tấm"); Text("${vnd(sale.totalAmount)} · ${sale.sessionId}") }
             ReasonPicker(listOf("Kẹt giấy / lỗi in", "Khách hủy / hoàn tiền", "Chụp thử nghiệm", "Khác"), reason, { reason = it }, note, { note = it })

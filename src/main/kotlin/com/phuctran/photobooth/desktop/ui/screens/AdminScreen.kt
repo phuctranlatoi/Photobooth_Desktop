@@ -145,7 +145,8 @@ fun AdminScreen(
                 Column(Modifier.fillMaxSize()) {
                     SectionHeader("Admin", "Quản lý khung ảnh", "Xem, lọc và xóa các khung ảnh đã lưu trên hệ thống.")
                     Spacer(Modifier.height(12.dp))
-                    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    val frameScroll = rememberScrollState()
+                    Column(Modifier.fillMaxWidth().verticalScroll(frameScroll).kioskVerticalDrag(frameScroll), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         val standardFrames = adminFrames.filter { !it.isSpecial }
                         val specialFrames = adminFrames.filter { it.isSpecial }
                         
@@ -197,7 +198,8 @@ fun AdminScreen(
                 Column(Modifier.fillMaxSize()) {
                     SectionHeader("Admin", "Quản lý bố cục", "Xem các bố cục ảnh đang khả dụng trên hệ thống.")
                     Spacer(Modifier.height(12.dp))
-                    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val layoutScroll = rememberScrollState()
+                    Column(Modifier.fillMaxWidth().verticalScroll(layoutScroll).kioskVerticalDrag(layoutScroll), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (layouts.isEmpty()) {
                             Text("Chưa có bố cục nào được tải.", color = NeutralSecondary, modifier = Modifier.padding(16.dp))
                         } else {

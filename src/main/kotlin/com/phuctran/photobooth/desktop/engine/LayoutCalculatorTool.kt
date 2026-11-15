@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import com.phuctran.photobooth.desktop.remote.FirebaseManager
+import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import java.io.ByteArrayOutputStream
@@ -535,7 +536,8 @@ fun CalculatorApp(
         }
 
         // Right Column (Result Code & Firebase Actions)
-        Column(modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        val calcRightScroll = rememberScrollState()
+        Column(modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(calcRightScroll).kioskVerticalDrag(calcRightScroll), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // Firebase Actions
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -772,13 +774,15 @@ fun CalculatorApp(
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEAE4DC))
             ) {
                 SelectionContainer {
+                    val codeScroll = rememberScrollState()
                     Text(
                         text = generatedCode,
                         color = NeutralText,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(16.dp)
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(codeScroll)
+                            .kioskVerticalDrag(codeScroll),
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         fontSize = 13.sp
                     )

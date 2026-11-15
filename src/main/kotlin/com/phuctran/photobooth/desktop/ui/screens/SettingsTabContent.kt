@@ -21,6 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.services.NativeEosCaptureService
+import com.phuctran.photobooth.desktop.ui.components.kioskHorizontalDrag
+import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import com.phuctran.photobooth.desktop.ui.theme.*
 import kotlinx.coroutines.delay
 import javax.swing.JFileChooser
@@ -40,7 +42,8 @@ fun SettingsTabContent(
 ) {
     var saved by remember { mutableStateOf(false) }
     LaunchedEffect(saved) { if (saved) { delay(3000); saved = false } }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    val scrollState = rememberScrollState()
+    Column(Modifier.fillMaxSize().verticalScroll(scrollState).kioskVerticalDrag(scrollState), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("VẬN HÀNH THIẾT BỊ", style = MaterialTheme.typography.overline, color = AccentNudeDark)
             Text("Cài đặt hệ thống Kiosk", style = MaterialTheme.typography.h5, color = NeutralText)
@@ -48,7 +51,8 @@ fun SettingsTabContent(
             Text("Khởi động lại ứng dụng sau khi lưu để áp dụng cấu hình.", style = MaterialTheme.typography.caption, color = AccentNudeDark,
                 modifier = Modifier.background(AccentNudeLight, RoundedCornerShape(50)).padding(horizontal = 14.dp, vertical = 9.dp))
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        val statusScroll = rememberScrollState()
+        Row(Modifier.fillMaxWidth().horizontalScroll(statusScroll).kioskHorizontalDrag(statusScroll), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             StatusCard("Chế độ Kiosk", if (isRentalMode) "Sự kiện (Gói thuê)" else "Thương mại (QR PayOS)")
             StatusCard("Nguồn Camera", if (useHotFolder) "Hot Folder" else if (nativeCamera != null) "Canon EDSDK" else "Webcam / DroidCam")
             StatusCard("Máy in Windows", if (enablePrint) "Đang bật" else "Đang tắt")
@@ -101,7 +105,8 @@ fun SettingsTabContent(
                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = AccentNudeDark, checkedTrackAlpha = 1f))
             }
             if (config.printerNameStrip.isNotBlank() || config.printerNameFull.isNotBlank()) {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val chipsScroll = rememberScrollState()
+                Row(Modifier.horizontalScroll(chipsScroll).kioskHorizontalDrag(chipsScroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (config.printerNameStrip.isNotBlank()) InfoChip("Ảnh dải · ${config.printerNameStrip}")
                     if (config.printerNameFull.isNotBlank()) InfoChip("Ảnh đầy đủ · ${config.printerNameFull}")
                 }
