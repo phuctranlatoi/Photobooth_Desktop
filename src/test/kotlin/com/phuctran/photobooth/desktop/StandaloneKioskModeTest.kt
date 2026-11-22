@@ -240,7 +240,13 @@ class StandaloneKioskModeTest {
         val (commercialController, commercialTelegram) = createController(commercialConfig)
         commercialController.setQuantityAndStartPayment(2)
         commercialController.completePayment("QR PayOS")
-        assertEquals(0, commercialTelegram.paidCalls, "Telegram alert must NOT be sent in COMMERCIAL mode")
+        assertEquals(1, commercialTelegram.paidCalls, "Telegram alert must be sent in COMMERCIAL mode when configured")
+
+        val rentalConfig = standaloneConfig.copy(isStandaloneKioskMode = false, isRentalMode = true)
+        val (rentalController, rentalTelegram) = createController(rentalConfig)
+        rentalController.setQuantityAndStartPayment(2)
+        rentalController.completePayment("Miễn phí (Event)")
+        assertEquals(0, rentalTelegram.paidCalls, "Telegram alert must NOT be sent in RENTAL mode")
     }
 
     @Test

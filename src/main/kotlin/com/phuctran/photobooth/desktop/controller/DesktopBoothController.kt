@@ -493,7 +493,7 @@ class DesktopBoothController(
         paymentPollingJob?.cancel()
         paymentPollingJob = null
         val cfg = activeConfig.value
-        if (cfg.operatingMode == BoothOperatingMode.STANDALONE_KIOSK && cfg.telegramAlertsConfigured) {
+        if (cfg.telegramAlertsConfigured && cfg.operatingMode != BoothOperatingMode.RENTAL) {
             val orderCode = lastOrderCode ?: System.currentTimeMillis().toString()
             telegramNotificationService.sendOrderPaid(
                 config = cfg,
