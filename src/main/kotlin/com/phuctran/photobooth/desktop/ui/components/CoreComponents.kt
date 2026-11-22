@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -142,20 +143,23 @@ fun KioskPrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    textStyle: TextStyle? = null,
+    contentPadding: PaddingValues? = null,
+    cornerRadius: Dp? = null
 ) {
     LiquidGlassButtonSurface(
         onClick = onClick,
         palette = PrimaryGlassPalette,
         enabled = enabled,
-        cornerRadius = LiquidGlassMetrics.standardCornerRadius,
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+        cornerRadius = cornerRadius ?: LiquidGlassMetrics.standardCornerRadius,
+        contentPadding = contentPadding ?: PaddingValues(horizontal = 24.dp, vertical = 14.dp),
         modifier = modifier.heightIn(min = KioskControlTokens.buttonMinHeight)
     ) {
         Text(
             text = text,
             color = if (enabled) PrimaryGlassPalette.contentColor else DisabledGlassPalette.contentColor,
-            style = MaterialTheme.typography.button,
+            style = textStyle ?: MaterialTheme.typography.button,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

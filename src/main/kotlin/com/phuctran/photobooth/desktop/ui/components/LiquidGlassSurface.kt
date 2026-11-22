@@ -253,7 +253,6 @@ fun LiquidGlassButtonSurface(
         // Inner visual layer applies tactile compression and optical glass rendering.
         Row(
             modifier = Modifier
-                .wrapContentWidth()
                 .defaultMinSize(minHeight = LiquidGlassMetrics.buttonMinHeight)
                 .graphicsLayer {
                     scaleX = scale

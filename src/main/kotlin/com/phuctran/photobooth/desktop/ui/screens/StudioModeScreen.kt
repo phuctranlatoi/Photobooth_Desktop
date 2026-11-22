@@ -191,7 +191,10 @@ private fun Step2UpfrontFrame(
                     layout = layout,
                     moments = emptyList(),
                     frame = selectedFrame,
-                    modifier = Modifier.weight(1f).fillMaxWidth()
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .shadow(10.dp, RoundedCornerShape(8.dp), clip = false)
                 )
             }
 
@@ -249,75 +252,85 @@ private fun UpfrontFrameTile(
     onClick: () -> Unit
 ) {
     val interactionSource = remember(frame.id) { MutableInteractionSource() }
-    val plateVariant = if (selected) LiquidGlassPlateVariant.Selected else LiquidGlassPlateVariant.Standard
     val imageBitmap by produceState<ImageBitmap?>(initialValue = null, frame.customImagePath) {
         value = frame.customImagePath?.let { path ->
             withContext(Dispatchers.IO) { loadFrameThumbnail(path) }
         }
     }
 
+    val tileShape = RoundedCornerShape(LiquidGlassPlateMetrics.cardCornerRadius)
+    val borderWidth = if (selected) 2.dp else 1.5.dp
+    val borderColor = if (selected) AccentNude else Color(0xFFDDD7CF)
+    val elevation = if (selected) 12.dp else 6.dp
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1.5f)
+            .shadow(elevation, tileShape, clip = false)
+            .clip(tileShape)
+            .background(Color.White)
+            .border(borderWidth, borderColor, tileShape)
             .bouncyClickable(interactionSource = interactionSource, onClick = onClick)
-            .liquidGlassPlate(
-                variant = plateVariant,
-                cornerRadius = LiquidGlassPlateMetrics.cardCornerRadius,
-                elevation = if (selected) 8.dp else 4.dp,
-                rimWidth = if (selected) LiquidGlassPlateMetrics.selectedRimWidth else LiquidGlassPlateMetrics.outerRimWidth
-            )
-            .padding(14.dp),
-        contentAlignment = Alignment.Center
     ) {
-        val customPath = frame.customImagePath
-        val bmp = imageBitmap
-        if (customPath != null) {
-            if (bmp != null) {
-                Image(
-                    bitmap = bmp,
-                    contentDescription = frame.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
+        // Inner photographic stage
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
+                .background(Color(0xFFF3EFEA), RoundedCornerShape(10.dp))
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val customPath = frame.customImagePath
+            val bmp = imageBitmap
+            if (customPath != null) {
+                if (bmp != null) {
+                    Image(
+                        bitmap = bmp,
+                        contentDescription = frame.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(Modifier.size(38.dp).clip(CircleShape).background(NeutralPanelAlt))
+                        Text(
+                            text = "Đang tải khung",
+                            color = NeutralMuted,
+                            style = MaterialTheme.typography.caption,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             } else {
                 Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Box(Modifier.size(38.dp).clip(CircleShape).background(NeutralPanelAlt))
                     Text(
-                        text = "Đang tải khung",
-                        color = NeutralMuted,
-                        style = MaterialTheme.typography.caption,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = frame.title,
-                    color = NeutralText,
-                    style = MaterialTheme.typography.h6,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (frame.description.isNotBlank()) {
-                    Text(
-                        text = frame.description,
-                        color = NeutralSecondary,
-                        style = MaterialTheme.typography.body2,
+                        text = frame.title,
+                        color = NeutralText,
+                        style = MaterialTheme.typography.h6,
+                        fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (frame.description.isNotBlank()) {
+                        Text(
+                            text = frame.description,
+                            color = NeutralSecondary,
+                            style = MaterialTheme.typography.body2,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -326,6 +339,7 @@ private fun UpfrontFrameTile(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    .padding(8.dp)
                     .size(30.dp)
                     .clip(CircleShape)
                     .background(AccentNude)
