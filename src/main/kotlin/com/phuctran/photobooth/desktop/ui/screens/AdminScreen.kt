@@ -67,7 +67,8 @@ fun AdminScreen(
         standaloneInactivityTimeoutSeconds: Int,
         enableTelegramAlerts: Boolean,
         telegramBotToken: String,
-        telegramChatId: String
+        telegramChatId: String,
+        staffCashPin: String
     ) -> Unit,
     onTestTelegramAlert: (String, String) -> CompletableFuture<Boolean> = { _, _ -> CompletableFuture.completedFuture(false) },
     onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
@@ -102,8 +103,12 @@ fun AdminScreen(
     var enableTelegramAlerts by remember { mutableStateOf(config.enableTelegramAlerts) }
     var telegramBotToken by remember { mutableStateOf(config.telegramBotToken) }
     var telegramChatId by remember { mutableStateOf(config.telegramChatId) }
+    var staffCashPin by remember { mutableStateOf(config.staffCashPin) }
 
     fun saveSettings() {
+        val safeStaffCashPin = staffCashPin.takeIf {
+            it.length == 4 && it.all { c -> c in '0'..'9' }
+        } ?: config.staffCashPin
         onSaveSettings(
             enablePrint,
             useHotFolder,
@@ -116,7 +121,8 @@ fun AdminScreen(
             standaloneInactivityTimeoutSeconds.coerceIn(30, 300),
             enableTelegramAlerts,
             telegramBotToken,
-            telegramChatId
+            telegramChatId,
+            safeStaffCashPin
         )
     }
 
@@ -275,6 +281,7 @@ fun AdminScreen(
                     enableTelegramAlerts = enableTelegramAlerts, onEnableTelegramAlertsChange = { enableTelegramAlerts = it },
                     telegramBotToken = telegramBotToken, onTelegramBotTokenChange = { telegramBotToken = it },
                     telegramChatId = telegramChatId, onTelegramChatIdChange = { telegramChatId = it },
+                    staffCashPin = staffCashPin, onStaffCashPinChange = { staffCashPin = it },
                     onTestTelegramAlert = onTestTelegramAlert,
                     onSaveSettings = { saveSettings() }
                 )

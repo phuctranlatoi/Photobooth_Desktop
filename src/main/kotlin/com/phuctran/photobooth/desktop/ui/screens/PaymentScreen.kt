@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.*
@@ -21,6 +22,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,14 +45,20 @@ fun PaymentScreen(
     onPaid: () -> Unit,
     onBack: () -> Unit
 ) {
-    var showStaffPinDialog by remember { mutableStateOf(false) }
+    var staffButtonVisible by remember { mutableStateOf(false) }
+    var staffCashDialogVisible by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.align(Alignment.TopStart).padding(24.dp)) {
             CompactLocalHeader(
                 step = "Bước 3",
                 title = "Thanh toán",
-                onBack = onBack
+                onBack = onBack,
+                titleModifier = Modifier.pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { staffButtonVisible = true }
+                    )
+                }
             )
             Text("Quét QR bằng ứng dụng ngân hàng hoặc nhờ nhân viên xác nhận tiền mặt.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
         }
@@ -140,20 +148,22 @@ fun PaymentScreen(
             }
         }
 
-        StaffCashAuthorizationButton(
-            onClick = { showStaffPinDialog = true },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 22.dp)
-        )
+        if (staffButtonVisible || !isPaymentConfigured || paymentQrData == "ERROR") {
+            StaffCashAuthorizationButton(
+                onClick = { staffCashDialogVisible = true },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 22.dp)
+            )
+        }
 
-        if (showStaffPinDialog) {
+        if (staffCashDialogVisible) {
             StaffCashAuthorizationDialog(
                 totalAmount = totalAmount,
                 expectedPin = staffCashPin,
-                onDismiss = { showStaffPinDialog = false },
+                onDismiss = { staffCashDialogVisible = false },
                 onAuthorized = {
-                    showStaffPinDialog = false
+                    staffCashDialogVisible = false
                     onPaid()
                 }
             )

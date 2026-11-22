@@ -283,7 +283,7 @@ fun main() = application {
                             onDeleteLayout = { layoutId ->
                                 controller.deleteLayout(layoutId)
                             },
-                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, operatingMode, maxVisibleFilters, standaloneInactivityTimeoutSeconds, enableTelegramAlerts, telegramBotToken, telegramChatId ->
+                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, operatingMode, maxVisibleFilters, standaloneInactivityTimeoutSeconds, enableTelegramAlerts, telegramBotToken, telegramChatId, staffCashPin ->
                                 controller.saveDeviceSettings(
                                     enablePrint = enablePrint,
                                     useHotFolder = useHotFolder,
@@ -296,7 +296,8 @@ fun main() = application {
                                     standaloneInactivityTimeoutSeconds = standaloneInactivityTimeoutSeconds,
                                     enableTelegramAlerts = enableTelegramAlerts,
                                     telegramBotToken = telegramBotToken,
-                                    telegramChatId = telegramChatId
+                                    telegramChatId = telegramChatId,
+                                    staffCashPin = staffCashPin
                                 )
                             },
                             onTestTelegramAlert = { token, chatId ->

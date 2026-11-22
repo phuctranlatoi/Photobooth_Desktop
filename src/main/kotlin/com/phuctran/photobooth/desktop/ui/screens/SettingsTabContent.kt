@@ -31,6 +31,7 @@ import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
 import com.phuctran.photobooth.desktop.ui.components.KioskSecondaryButton
 import com.phuctran.photobooth.desktop.ui.components.kioskHorizontalDrag
 import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
+import com.phuctran.photobooth.desktop.ui.components.liquidGlassPlate
 import com.phuctran.photobooth.desktop.ui.theme.*
 import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +69,8 @@ fun SettingsTabContent(
     onTelegramBotTokenChange: (String) -> Unit = {},
     telegramChatId: String = config.telegramChatId,
     onTelegramChatIdChange: (String) -> Unit = {},
+    staffCashPin: String = config.staffCashPin,
+    onStaffCashPinChange: (String) -> Unit = {},
     onTestTelegramAlert: (String, String) -> CompletableFuture<Boolean> = { _, _ -> CompletableFuture.completedFuture(false) },
     onSaveSettings: () -> Unit
 ) {
@@ -171,6 +174,11 @@ fun SettingsTabContent(
                 }
             }
         }
+
+        StaffCashPinSettingsCard(
+            staffCashPin = staffCashPin,
+            onStaffCashPinChange = onStaffCashPinChange
+        )
 
         SettingsSection("Cảnh báo Telegram") {
             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -378,11 +386,84 @@ fun SettingsTabContent(
                 }
                 KioskPrimaryButton(
                     text = "Lưu cài đặt",
+                    enabled = staffCashPin.isValidStaffCashPin(),
                     onClick = { onSaveSettings(); saved = true }
                 )
             }
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+private fun String.isValidStaffCashPin(): Boolean =
+    length == 4 && all { character -> character in '0'..'9' }
+
+@Composable
+private fun StaffCashPinSettingsCard(
+    staffCashPin: String,
+    onStaffCashPinChange: (String) -> Unit
+) {
+    var showPinPlaintext by remember { mutableStateOf(false) }
+    val isPinValid = staffCashPin.isValidStaffCashPin()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlassPlate(
+                variant = LiquidGlassPlateVariant.Standard,
+                cornerRadius = 16.dp,
+                elevation = LiquidGlassPlateMetrics.nestedRowElevation
+            )
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Mã PIN xác nhận tiền mặt (Nhân viên)",
+            style = MaterialTheme.typography.subtitle1,
+            color = NeutralText
+        )
+        Text(
+            text = "Mã gồm 4 chữ số dùng để mở khóa xác nhận tiền mặt tại màn hình thanh toán.",
+            style = MaterialTheme.typography.body2,
+            color = NeutralSecondary
+        )
+        OutlinedTextField(
+            value = staffCashPin,
+            onValueChange = { next ->
+                onStaffCashPinChange(next.filter { c -> c in '0'..'9' }.take(4))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = !isPinValid,
+            label = { Text("Mã PIN 4 chữ số") },
+            placeholder = { Text("1234") },
+            visualTransformation = if (showPinPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                TextButton(onClick = { showPinPlaintext = !showPinPlaintext }) {
+                    Text(
+                        text = if (showPinPlaintext) "Ẩn" else "Hiện",
+                        style = MaterialTheme.typography.caption,
+                        color = AccentNudeDark
+                    )
+                }
+            },
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                textColor = NeutralText,
+                focusedBorderColor = AccentNude,
+                unfocusedBorderColor = NeutralBorder,
+                errorBorderColor = AccentRed,
+                focusedLabelColor = AccentNudeDark,
+                errorLabelColor = AccentRed
+            )
+        )
+        if (!isPinValid) {
+            Text(
+                text = "Mã PIN phải gồm đúng 4 chữ số (0–9).",
+                style = MaterialTheme.typography.caption,
+                color = AccentRed,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 

@@ -1167,7 +1167,8 @@ class DesktopBoothController(
         postCaptureTimeoutSeconds: Int,
         photoSelectionTimeoutSeconds: Int,
         frameSelectionTimeoutSeconds: Int,
-        isRentalMode: Boolean = false
+        isRentalMode: Boolean = false,
+        staffCashPin: String = activeConfig.value.staffCashPin
     ) {
         val mode = if (isRentalMode) BoothOperatingMode.RENTAL else BoothOperatingMode.COMMERCIAL
         saveDeviceSettings(
@@ -1182,7 +1183,8 @@ class DesktopBoothController(
             standaloneInactivityTimeoutSeconds = activeConfig.value.standaloneInactivityTimeoutSeconds,
             enableTelegramAlerts = activeConfig.value.enableTelegramAlerts,
             telegramBotToken = activeConfig.value.telegramBotToken,
-            telegramChatId = activeConfig.value.telegramChatId
+            telegramChatId = activeConfig.value.telegramChatId,
+            staffCashPin = staffCashPin
         )
     }
 
@@ -1198,7 +1200,8 @@ class DesktopBoothController(
         standaloneInactivityTimeoutSeconds: Int = activeConfig.value.standaloneInactivityTimeoutSeconds,
         enableTelegramAlerts: Boolean = activeConfig.value.enableTelegramAlerts,
         telegramBotToken: String = activeConfig.value.telegramBotToken,
-        telegramChatId: String = activeConfig.value.telegramChatId
+        telegramChatId: String = activeConfig.value.telegramChatId,
+        staffCashPin: String = activeConfig.value.staffCashPin
     ) {
         val safeMaxFilters = maxVisibleFilters.coerceIn(1, 10)
         val safeStandaloneTimeout = standaloneInactivityTimeoutSeconds.coerceIn(30, 300)
@@ -1206,6 +1209,9 @@ class DesktopBoothController(
         val isStandaloneKioskMode = operatingMode == BoothOperatingMode.STANDALONE_KIOSK
         val cleanToken = telegramBotToken.trim()
         val cleanChatId = telegramChatId.trim()
+        val cleanStaffCashPin = staffCashPin.trim().takeIf {
+            it.length == 4 && it.all { c -> c in '0'..'9' }
+        } ?: activeConfig.value.staffCashPin
         val envFile = config.envSource ?: DesktopAppPaths.workingDir().resolve(".env")
         val updates = mapOf(
             "ENABLE_SYSTEM_PRINT" to enablePrint.toString(),
@@ -1221,7 +1227,8 @@ class DesktopBoothController(
             "STANDALONE_INACTIVITY_TIMEOUT_SECONDS" to safeStandaloneTimeout.toString(),
             "ENABLE_TELEGRAM_ALERTS" to enableTelegramAlerts.toString(),
             "TELEGRAM_BOT_TOKEN" to cleanToken,
-            "TELEGRAM_CHAT_ID" to cleanChatId
+            "TELEGRAM_CHAT_ID" to cleanChatId,
+            "STAFF_CASH_PIN" to cleanStaffCashPin
         )
         runCatching {
             com.phuctran.photobooth.desktop.config.SettingsManager.updateSettings(envFile, updates)
@@ -1240,7 +1247,8 @@ class DesktopBoothController(
                 standaloneInactivityTimeoutSeconds = safeStandaloneTimeout,
                 enableTelegramAlerts = enableTelegramAlerts,
                 telegramBotToken = cleanToken,
-                telegramChatId = cleanChatId
+                telegramChatId = cleanChatId,
+                staffCashPin = cleanStaffCashPin
             )
             refreshStandaloneWatchdog(stateMachine.currentState.value)
         }.onFailure { e ->

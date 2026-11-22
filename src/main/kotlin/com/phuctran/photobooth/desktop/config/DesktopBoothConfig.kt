@@ -155,7 +155,7 @@ object DesktopConfigLoader {
             enableTelegramAlerts = enabled,
             telegramBotToken = token,
             telegramChatId = chatId,
-            staffCashPin = env["STAFF_CASH_PIN"]?.trim()?.takeIf { it.length == 4 && it.all { c -> c.isDigit() } } ?: "1234"
+            staffCashPin = env["STAFF_CASH_PIN"]?.trim()?.takeIf { it.length == 4 && it.all { c -> c in '0'..'9' } } ?: "1234"
         )
     }
 
