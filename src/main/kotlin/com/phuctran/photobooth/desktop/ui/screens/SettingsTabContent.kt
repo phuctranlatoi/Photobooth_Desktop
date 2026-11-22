@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.config.BoothOperatingMode
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
@@ -106,7 +107,10 @@ fun SettingsTabContent(
                 style = MaterialTheme.typography.body2,
                 color = NeutralSecondary
             )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 OperatingModeOption(
                     title = "Thương mại (QR PayOS)",
                     detail = "Chọn Bố cục & Màu -> Thanh toán PayOS -> Chụp -> Chọn ảnh & Khung.",
@@ -249,25 +253,33 @@ fun SettingsTabContent(
                         }
                     )
 
-                    when (telegramTestStatus) {
-                        TelegramTestStatus.IDLE -> Unit
-                        TelegramTestStatus.SENDING -> Text(
-                            text = "Đang gửi tin nhắn thử nghiệm...",
-                            style = MaterialTheme.typography.body2,
-                            color = NeutralSecondary
-                        )
-                        TelegramTestStatus.SUCCESS -> Text(
-                            text = "✓ Đã gửi tin nhắn thử nghiệm thành công!",
-                            style = MaterialTheme.typography.body2,
-                            color = AccentMint,
-                            fontWeight = FontWeight.Bold
-                        )
-                        TelegramTestStatus.FAILED -> Text(
-                            text = "✗ Gửi thất bại. Vui lòng kiểm tra Bot Token và Chat ID.",
-                            style = MaterialTheme.typography.body2,
-                            color = AccentRed,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Box(modifier = Modifier.weight(1f)) {
+                        when (telegramTestStatus) {
+                            TelegramTestStatus.IDLE -> Unit
+                            TelegramTestStatus.SENDING -> Text(
+                                text = "Đang gửi tin nhắn thử nghiệm...",
+                                style = MaterialTheme.typography.body2,
+                                color = NeutralSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            TelegramTestStatus.SUCCESS -> Text(
+                                text = "✓ Đã gửi tin nhắn thử nghiệm thành công!",
+                                style = MaterialTheme.typography.body2,
+                                color = AccentMint,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            TelegramTestStatus.FAILED -> Text(
+                                text = "✗ Gửi thất bại. Vui lòng kiểm tra Bot Token và Chat ID.",
+                                style = MaterialTheme.typography.body2,
+                                color = AccentRed,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -299,7 +311,10 @@ fun SettingsTabContent(
             }
         }
         SettingsSection("Nguồn Camera & Thu nhận ảnh") {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 CameraOption("Webcam / DroidCam", "Camera kết nối trực tiếp", !useHotFolder, { onUseHotFolderChange(false) }, Modifier.weight(1f))
                 CameraOption("Thư mục ảnh (Hot Folder)", "Ảnh do phần mềm camera xuất ra", useHotFolder, { onUseHotFolderChange(true) }, Modifier.weight(1f))
             }
@@ -357,7 +372,11 @@ fun SettingsTabContent(
             TimeoutStepper("Sau khi chụp (dự phòng)", "Thời gian chờ sau lượt chụp", postCaptureTimeoutSeconds, onPostCaptureTimeoutChange)
         }
         Surface(shape = RoundedCornerShape(16.dp), color = NeutralPanelAlt, modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 Column(Modifier.weight(1f)) {
                     Text("Cấu hình bổ sung", style = MaterialTheme.typography.subtitle2)
                     Text("Tên máy in, Booth ID và Port được cấu hình trong tệp .env.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
@@ -387,16 +406,22 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
 private fun StatusCard(label: String, value: String) {
     Surface(shape = RoundedCornerShape(12.dp), color = Color.White, border = BorderStroke(1.dp, NeutralBorder), modifier = Modifier.widthIn(min = 185.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(label, style = MaterialTheme.typography.caption, color = NeutralSecondary)
-            Text(value, style = MaterialTheme.typography.subtitle2, color = NeutralText)
+            Text(label, style = MaterialTheme.typography.caption, color = NeutralSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(value, style = MaterialTheme.typography.subtitle2, color = NeutralText, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 @Composable
 private fun InfoChip(text: String) {
-    Text(text, style = MaterialTheme.typography.caption, color = AccentNudeDark,
-        modifier = Modifier.background(AccentNudeLight, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 8.dp))
+    Text(
+        text = text,
+        style = MaterialTheme.typography.caption,
+        color = AccentNudeDark,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.background(AccentNudeLight, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 8.dp)
+    )
 }
 
 @Composable
@@ -404,6 +429,7 @@ private fun OperatingModeOption(title: String, detail: String, selected: Boolean
     val shape = RoundedCornerShape(14.dp)
     Column(
         modifier = modifier
+            .fillMaxHeight()
             .background(if (selected) AccentNudeLight else NeutralPanelAlt, shape)
             .border(
                 width = if (selected) 2.dp else 1.dp,
@@ -418,7 +444,9 @@ private fun OperatingModeOption(title: String, detail: String, selected: Boolean
             text = if (selected) "●  $title" else "○  $title",
             style = MaterialTheme.typography.subtitle2,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) AccentNudeDark else NeutralText
+            color = if (selected) AccentNudeDark else NeutralText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         Text(detail, style = MaterialTheme.typography.body2, color = NeutralSecondary)
     }
@@ -427,9 +455,27 @@ private fun OperatingModeOption(title: String, detail: String, selected: Boolean
 @Composable
 private fun CameraOption(title: String, detail: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
     val shape = RoundedCornerShape(14.dp)
-    Column(modifier.background(if (selected) AccentNudeLight else NeutralPanelAlt, shape)
-        .clickable(onClick = onClick).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(if (selected) "●  $title" else "○  $title", style = MaterialTheme.typography.subtitle2, color = if (selected) AccentNudeDark else NeutralText)
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .background(if (selected) AccentNudeLight else NeutralPanelAlt, shape)
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) AccentNude else NeutralBorder,
+                shape = shape
+            )
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = if (selected) "●  $title" else "○  $title",
+            style = MaterialTheme.typography.subtitle2,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) AccentNudeDark else NeutralText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Text(detail, style = MaterialTheme.typography.body2, color = NeutralSecondary)
     }
 }
@@ -447,6 +493,8 @@ private fun StandaloneTimeoutStepper(label: String, detail: String, value: Int, 
             text = "$value giây",
             style = MaterialTheme.typography.subtitle1,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
             modifier = Modifier
                 .width(120.dp)
                 .padding(horizontal = 6.dp)
@@ -470,6 +518,8 @@ private fun FilterCountStepper(label: String, detail: String, value: Int, onValu
             text = "$value bộ lọc",
             style = MaterialTheme.typography.subtitle1,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
             modifier = Modifier
                 .width(120.dp)
                 .padding(horizontal = 6.dp)
@@ -487,9 +537,20 @@ private fun TimeoutStepper(label: String, detail: String, value: Int, onValueCha
             Text(label, style = MaterialTheme.typography.subtitle2)
             Text(detail, style = MaterialTheme.typography.body2, color = NeutralSecondary)
         }
+        Spacer(Modifier.width(12.dp))
         StepControl("−", value > 0) { onValueChange((value - 10).coerceAtLeast(0)) }
-        Text("$value giây", style = MaterialTheme.typography.subtitle1, textAlign = TextAlign.Center,
-            modifier = Modifier.width(120.dp).padding(horizontal = 6.dp).background(NeutralPanelAlt, RoundedCornerShape(10.dp)).padding(vertical = 14.dp))
+        Text(
+            text = "$value giây",
+            style = MaterialTheme.typography.subtitle1,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier
+                .width(120.dp)
+                .padding(horizontal = 6.dp)
+                .background(NeutralPanelAlt, RoundedCornerShape(10.dp))
+                .padding(vertical = 14.dp)
+        )
         StepControl("+", value < 3600) { onValueChange((value + 10).coerceAtMost(3600)) }
     }
 }

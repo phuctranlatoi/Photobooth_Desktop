@@ -247,12 +247,13 @@ fun LiquidGlassButtonSurface(
                 onClickLabel = onClickLabel,
                 onClick = onClick
             ),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
+        propagateMinConstraints = true
     ) {
         // Inner visual layer applies tactile compression and optical glass rendering.
         Row(
             modifier = Modifier
-                .fillMaxWidth()
+                .wrapContentWidth()
                 .defaultMinSize(minHeight = LiquidGlassMetrics.buttonMinHeight)
                 .graphicsLayer {
                     scaleX = scale

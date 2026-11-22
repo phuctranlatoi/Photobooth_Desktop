@@ -35,7 +35,6 @@ import com.phuctran.photobooth.desktop.ui.components.*
 import com.phuctran.photobooth.desktop.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
-import com.phuctran.photobooth.desktop.model.DefaultLayoutModes
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.model.FramePack
 import com.phuctran.photobooth.desktop.config.BoothOperatingMode
@@ -128,16 +127,17 @@ fun AdminScreen(
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 KioskBackButton(onClick = { saveSettings(); onBack() })
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("LE SOUVENIR · ATELIER", style = MaterialTheme.typography.overline,
-                        color = Color(0xFFB85838), letterSpacing = 1.6.sp)
-                    Text("Quản trị hệ thống", style = MaterialTheme.typography.h5, color = Color(0xFF1A1918), fontWeight = FontWeight.Bold)
+                        color = Color(0xFFB85838), letterSpacing = 1.6.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Quản trị hệ thống", style = MaterialTheme.typography.h5, color = Color(0xFF1A1918), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("Cấu hình vận hành thiết bị, khung mẫu & doanh thu kiosk",
-                        color = Color(0xFF5A5550), style = MaterialTheme.typography.body2)
+                        color = Color(0xFF5A5550), style = MaterialTheme.typography.body2, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
+            Spacer(Modifier.width(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 AdminStatusPill("Camera", if (useHotFolder) "Hot folder" else "Webcam", AccentBlue)
                 AdminStatusPill("Print", if (enablePrint) "Bật" else "Tắt", if (enablePrint) AccentMint else NeutralMuted)
@@ -160,8 +160,13 @@ fun AdminScreen(
                         .clickable { selectedTab = index },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(label, color = if (active) Color(0xFFB85838) else Color(0xFF5A5550),
-                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium)
+                    Text(
+                        text = label,
+                        color = if (active) Color(0xFFB85838) else Color(0xFF5A5550),
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -429,7 +434,7 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(frame.title, color = NeutralText, fontWeight = FontWeight.Bold)
+                Text(frame.title, color = NeutralText, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoPill(frame.targetPrintSize ?: "Khổ khác", bgColor = NeutralPanelAlt, textColor = NeutralSecondary)
                     InfoPill(frame.targetLayoutId ?: "Layout khác", bgColor = Color(0xFFFDF6F3), textColor = Color(0xFFB85838))
@@ -518,9 +523,9 @@ fun LayoutAdminCard(layout: LayoutMode, onEdit: () -> Unit, onDelete: () -> Unit
             MiniLayoutPreview(layout = layout, modifier = Modifier.size(110.dp).background(Color(0xFFF6F3EE), RoundedCornerShape(12.dp)))
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(layout.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1918))
+                Text(layout.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1918), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Layout ID: ${layout.id}", color = Color(0xFF9E978E), fontSize = 11.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("Layout ID: ${layout.id}", color = Color(0xFF9E978E), fontSize = 11.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis)
                  Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                       InfoPill("Khổ ${layout.printSizeLabel}")
                      InfoPill("Chụp ${layout.shotCount}")
@@ -605,9 +610,9 @@ fun EventAdminCard(
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(eventName, style = MaterialTheme.typography.h6, color = NeutralText, fontWeight = FontWeight.Bold)
+                    Text(eventName, style = MaterialTheme.typography.h6, color = NeutralText, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(4.dp))
-                    Text("Tổng cộng: ${frames.size} khung", color = NeutralSecondary, style = MaterialTheme.typography.body2)
+                    Text("Tổng cộng: ${frames.size} khung", color = NeutralSecondary, style = MaterialTheme.typography.body2, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(Modifier.width(16.dp))
                 
@@ -721,13 +726,17 @@ private fun AdminStatusPill(label: String, value: String, color: Color) {
             text = label,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
-            color = Color(0xFF9E978E)
+            color = Color(0xFF9E978E),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         Text(
             text = value,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1A1918)
+            color = Color(0xFF1A1918),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
