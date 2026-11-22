@@ -20,6 +20,7 @@ import com.phuctran.photobooth.desktop.ui.theme.*
 fun QuantityScreen(
     layout: LayoutMode,
     effect: EffectMode,
+    isRentalMode: Boolean = false,
     onQuantitySelected: (Int) -> Unit,
     onBack: () -> Unit
 ) {
@@ -29,6 +30,9 @@ fun QuantityScreen(
         if (quantity !in quantityOptions) quantity = quantityOptions.first()
     }
     val selectedIndex = quantityOptions.indexOf(quantity)
+    val calculatedPrice = remember(layout.printSizeLabel, quantity) { PricingCalculator.calculatePrice(layout.printSizeLabel, quantity).totalAmount }
+    val priceDisplay = if (isRentalMode) "Miễn phí · Gói sự kiện" else formatVnd(calculatedPrice)
+    val buttonText = if (isRentalMode) "Tiếp tục · Miễn phí" else "Tiếp tục · ${formatVnd(calculatedPrice)}"
 
     Column(Modifier.fillMaxSize().padding(24.dp)) {
         CompactLocalHeader("Bước 2", "Chọn số lượng", onBack)
@@ -58,7 +62,7 @@ fun QuantityScreen(
                 Spacer(Modifier.height(32.dp))
                 OutputRow("Màu ảnh", effect.title)
                 Spacer(Modifier.height(10.dp))
-                OutputRow("Tổng thanh toán", formatVnd(PricingCalculator.calculatePrice(layout.printSizeLabel, quantity).totalAmount))
+                OutputRow("Tổng thanh toán", priceDisplay)
             }
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 Text("Bản in dự kiến", style = MaterialTheme.typography.h5, color = NeutralText)
@@ -73,26 +77,23 @@ fun QuantityScreen(
             }
         }
         Spacer(Modifier.height(20.dp))
-        BottomActionBar("Tiếp tục · ${formatVnd(PricingCalculator.calculatePrice(layout.printSizeLabel, quantity).totalAmount)}", { onQuantitySelected(quantity) }, "Quay lại", onBack)
+        BottomActionBar(buttonText, { onQuantitySelected(quantity) }, "Quay lại", onBack)
     }
 }
 
 @Composable
 private fun QuantityStepButton(label: String, enabled: Boolean, onClick: () -> Unit) {
-    Button(
+    KioskIconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.size(72.dp),
-        shape = CircleShape,
-        colors = ButtonDefaults.buttonColors(
-            backgroundColor = NeutralPanelAlt,
-            contentColor = NeutralText,
-            disabledBackgroundColor = NeutralPanelAlt,
-            disabledContentColor = NeutralMuted
-        ),
-        elevation = ButtonDefaults.elevation(0.dp, 0.dp, 0.dp),
-        contentPadding = PaddingValues(0.dp)
+        size = LiquidGlassMetrics.stepperButtonSize,
+        palette = SecondaryGlassPalette,
+        onClickLabel = label
     ) {
-        Text(label, style = MaterialTheme.typography.h3)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.h3,
+            color = if (enabled) NeutralText else NeutralMuted
+        )
     }
 }

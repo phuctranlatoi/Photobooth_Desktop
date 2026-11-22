@@ -83,20 +83,17 @@ fun QuantityScreen(
 
 @Composable
 private fun QuantityStepButton(label: String, enabled: Boolean, onClick: () -> Unit) {
-    Button(
+    KioskIconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.size(72.dp),
-        shape = CircleShape,
-        colors = ButtonDefaults.buttonColors(
-            backgroundColor = NeutralPanelAlt,
-            contentColor = NeutralText,
-            disabledBackgroundColor = NeutralPanelAlt,
-            disabledContentColor = NeutralMuted
-        ),
-        elevation = ButtonDefaults.elevation(0.dp, 0.dp, 0.dp),
-        contentPadding = PaddingValues(0.dp)
+        size = LiquidGlassMetrics.stepperButtonSize,
+        palette = SecondaryGlassPalette,
+        onClickLabel = label
     ) {
-        Text(label, style = MaterialTheme.typography.h3)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.h3,
+            color = if (enabled) NeutralText else NeutralMuted
+        )
     }
 }

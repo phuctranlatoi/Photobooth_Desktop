@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.data.*
 import com.phuctran.photobooth.desktop.remote.DesktopRevenueClient
+import com.phuctran.photobooth.desktop.ui.components.KioskCompactButton
 import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import com.phuctran.photobooth.desktop.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -91,7 +92,7 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
     }
 
     val revenueScroll = rememberScrollState()
-    Column(Modifier.fillMaxSize().background(Color(0xFFFBF9F5)).verticalScroll(revenueScroll).kioskVerticalDrag(revenueScroll).padding(24.dp),
+    Column(Modifier.fillMaxSize().verticalScroll(revenueScroll).kioskVerticalDrag(revenueScroll).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
@@ -101,10 +102,11 @@ fun RevenueScreen(salesRepository: SalesRepository, revenueClient: DesktopRevenu
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(if (data?.cloud == true) "● Đồng bộ đám mây (Neon)" else "● Ngoại tuyến · Dữ liệu trên máy này",
                     style = MaterialTheme.typography.body2, color = if (data?.cloud == true) AccentMint else AccentAmber)
-                OutlinedButton(onClick = { refresh++ }, enabled = !loading) {
-                    if (loading) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    else Text("Làm mới")
-                }
+                KioskCompactButton(
+                    text = if (loading) "Đang tải..." else "Làm mới",
+                    onClick = { refresh++ },
+                    enabled = !loading
+                )
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

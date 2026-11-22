@@ -29,7 +29,7 @@ fun PrintingScreen(layout: LayoutMode, frame: FramePack, statusMessage: String) 
         else -> 0
     }
 
-    Box(Modifier.fillMaxSize().background(NeutralBg).padding(32.dp)) {
+    Box(Modifier.fillMaxSize().background(Color.Transparent).padding(32.dp)) {
         PanelBox(Modifier.fillMaxSize()) {
             Column(
                 Modifier.fillMaxSize(),

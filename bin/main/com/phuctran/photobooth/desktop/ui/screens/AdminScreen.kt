@@ -54,7 +54,7 @@ fun AdminScreen(
     onAddFrame: (String) -> Unit,
     onSaveLayoutConfig: (String, Long, Int, Int) -> Unit = { _, _, _, _ -> },
     onDeleteLayout: (String) -> Unit,
-    onSaveSettings: (Boolean, Boolean, String, Int, Int, Int) -> Unit,
+    onSaveSettings: (Boolean, Boolean, String, Int, Int, Int, Boolean) -> Unit,
     onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
     onImportLut: (java.nio.file.Path) -> String,
     onPreviewEffect: (com.phuctran.photobooth.desktop.model.EffectMode, java.awt.image.BufferedImage) -> java.awt.image.BufferedImage,
@@ -81,25 +81,21 @@ fun AdminScreen(
     var postCaptureTimeoutSeconds by remember { mutableIntStateOf(config.postCaptureTimeoutSeconds) }
     var photoSelectionTimeoutSeconds by remember { mutableIntStateOf(config.photoSelectionTimeoutSeconds) }
     var frameSelectionTimeoutSeconds by remember { mutableIntStateOf(config.frameSelectionTimeoutSeconds) }
+    var isRentalMode by remember { mutableStateOf(config.isRentalMode) }
 
     fun saveSettings() {
-        onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds)
+        onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, isRentalMode)
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFBF9F5))
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White)
-                    .border(1.dp, Color(0xFFEAE4DC), CircleShape)
-                    .clickable { saveSettings(); onBack() }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Thoát", tint = Color(0xFF1A1918))
-                }
+                KioskBackButton(onClick = { saveSettings(); onBack() })
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("LE SOUVENIR · ATELIER", style = MaterialTheme.typography.overline,
                         color = Color(0xFFB85838), letterSpacing = 1.6.sp)
@@ -144,7 +140,8 @@ fun AdminScreen(
                 Column(Modifier.fillMaxSize()) {
                     SectionHeader("Admin", "Quản lý khung ảnh", "Xem, lọc và xóa các khung ảnh đã lưu trên hệ thống.")
                     Spacer(Modifier.height(12.dp))
-                    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    val frameScroll = rememberScrollState()
+                    Column(Modifier.fillMaxWidth().verticalScroll(frameScroll).kioskVerticalDrag(frameScroll), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         val standardFrames = adminFrames.filter { !it.isSpecial }
                         val specialFrames = adminFrames.filter { it.isSpecial }
                         
@@ -196,7 +193,8 @@ fun AdminScreen(
                 Column(Modifier.fillMaxSize()) {
                     SectionHeader("Admin", "Quản lý bố cục", "Xem các bố cục ảnh đang khả dụng trên hệ thống.")
                     Spacer(Modifier.height(12.dp))
-                    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val layoutScroll = rememberScrollState()
+                    Column(Modifier.fillMaxWidth().verticalScroll(layoutScroll).kioskVerticalDrag(layoutScroll), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (layouts.isEmpty()) {
                             Text("Chưa có bố cục nào được tải.", color = NeutralSecondary, modifier = Modifier.padding(16.dp))
                         } else {
@@ -232,6 +230,7 @@ fun AdminScreen(
                     postCaptureTimeoutSeconds = postCaptureTimeoutSeconds, onPostCaptureTimeoutChange = { postCaptureTimeoutSeconds = it },
                     photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds, onPhotoSelectionTimeoutChange = { photoSelectionTimeoutSeconds = it },
                     frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds, onFrameSelectionTimeoutChange = { frameSelectionTimeoutSeconds = it },
+                    isRentalMode = isRentalMode, onRentalModeChange = { isRentalMode = it },
                     onSaveSettings = { saveSettings() }
                 )
             } else if (selectedTab == 3) {
@@ -402,13 +401,11 @@ fun FrameAdminCard(frame: com.phuctran.photobooth.desktop.model.FramePack, onDel
                 }
             }
             if (frame.customImagePath != null) {
-                androidx.compose.material.OutlinedButton(
+                KioskCompactButton(
+                    text = "Xóa",
                     onClick = onDelete,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444), backgroundColor = Color(0xFFFEF2F2))
-                ) {
-                    Text("Xóa", fontWeight = FontWeight.Bold)
-                }
+                    palette = DangerGlassPalette
+                )
             }
         }
     }
@@ -496,38 +493,32 @@ fun LayoutAdminCard(layout: LayoutMode, onEdit: () -> Unit, onDelete: () -> Unit
             if (showConfirm) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Xác nhận xóa bố cục này?", color = AccentRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    androidx.compose.material.OutlinedButton(
+                    KioskCompactButton(
+                        text = "Hủy",
                         onClick = { showConfirm = false },
-                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralSecondary)
-                    ) {
-                        Text("Hủy")
-                    }
-                    androidx.compose.material.Button(
+                        palette = SecondaryGlassPalette
+                    )
+                    KioskCompactButton(
+                        text = "Xóa",
                         onClick = { 
                             showConfirm = false
                             onDelete() 
                         },
-                        colors = androidx.compose.material.ButtonDefaults.buttonColors(backgroundColor = AccentRed, contentColor = Color.White)
-                    ) {
-                        Text("Xóa")
-                    }
+                        palette = DangerGlassPalette
+                    )
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material.OutlinedButton(
+                    KioskCompactButton(
+                        text = "Sửa",
                         onClick = onEdit,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentBlue)
-                    ) {
-                        Text("Sửa")
-                    }
-                    androidx.compose.material.OutlinedButton(
+                        palette = SecondaryGlassPalette
+                    )
+                    KioskCompactButton(
+                        text = "Xóa",
                         onClick = { showConfirm = true },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentRed)
-                    ) {
-                        Text("Xóa")
-                    }
+                        palette = DangerGlassPalette
+                    )
                 }
             }
         }
@@ -584,12 +575,13 @@ fun EventAdminCard(
                 if (showConfirm) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Xóa toàn bộ sự kiện này?", color = AccentRed, style = MaterialTheme.typography.body2)
-                        androidx.compose.material.OutlinedButton(
+                        KioskCompactButton(
+                            text = "Hủy",
                             onClick = { showConfirm = false },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralSecondary)
-                        ) { Text("Hủy") }
-                        androidx.compose.material.Button(
+                            palette = SecondaryGlassPalette
+                        )
+                        KioskCompactButton(
+                            text = "Xóa",
                             onClick = { 
                                 showConfirm = false
                                 frames.forEach { frame ->
@@ -600,13 +592,13 @@ fun EventAdminCard(
                                 java.nio.file.Files.deleteIfExists(coverPath)
                                 onRefresh() 
                             },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = androidx.compose.material.ButtonDefaults.buttonColors(backgroundColor = AccentRed, contentColor = Color.White)
-                        ) { Text("Xóa") }
+                            palette = DangerGlassPalette
+                        )
                     }
                 } else {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material.OutlinedButton(
+                        KioskCompactButton(
+                            text = "Đổi Ảnh Bìa",
                             onClick = {
                                 val parentFrame = java.awt.Window.getWindows().firstOrNull { it.isShowing && it is javax.swing.JFrame } as? java.awt.Frame
                                 val dialog = java.awt.FileDialog(parentFrame, "Chọn Ảnh Bìa (Cover)", java.awt.FileDialog.LOAD)
@@ -621,21 +613,20 @@ fun EventAdminCard(
                                     coverLastModified = java.nio.file.Files.getLastModifiedTime(coverPath).toMillis()
                                 }
                             },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralText)
-                        ) { Text("Đổi Ảnh Bìa") }
+                            palette = SecondaryGlassPalette
+                        )
                         
-                        androidx.compose.material.OutlinedButton(
+                        KioskCompactButton(
+                            text = if (isExpanded) "Thu gọn" else "Xem khung",
                             onClick = { isExpanded = !isExpanded },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = NeutralText)
-                        ) { Text(if (isExpanded) "Thu gọn" else "Xem khung") }
+                            palette = SecondaryGlassPalette
+                        )
                         
-                        androidx.compose.material.OutlinedButton(
+                        KioskCompactButton(
+                            text = "Xóa Sự kiện",
                             onClick = { showConfirm = true },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = androidx.compose.material.ButtonDefaults.outlinedButtonColors(contentColor = AccentRed)
-                        ) { Text("Xóa Sự kiện") }
+                            palette = DangerGlassPalette
+                        )
                     }
                 }
             }

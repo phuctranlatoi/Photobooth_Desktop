@@ -44,13 +44,6 @@ fun CaptureScreen(
     onRefreshCameraDevices: () -> Unit,
     onStartCapture: () -> Unit
 ) {
-    val shutterInteractionSource = remember { MutableInteractionSource() }
-    val shutterPressed by shutterInteractionSource.collectIsPressedAsState()
-    val shutterScale by animateFloatAsState(
-        targetValue = if (shutterPressed) 0.88f else 1f,
-        animationSpec = if (shutterPressed) tween(80) else spring(),
-        label = "Shutter press"
-    )
     Box(Modifier.fillMaxSize().background(CameraBlack)) {
         CaptureLiveView(state, layout, cameraDevices, liveViewStream)
 
@@ -87,30 +80,7 @@ fun CaptureScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(108.dp)
-                        .graphicsLayer { scaleX = shutterScale; scaleY = shutterScale }
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.13f))
-                        .border(2.dp, Color.White.copy(alpha = 0.74f), CircleShape)
-                        .clickable(
-                            interactionSource = shutterInteractionSource,
-                            indication = null,
-                            role = Role.Button,
-                            onClickLabel = "Chụp ảnh",
-                            onClick = onStartCapture
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(84.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.94f))
-                            .border(2.dp, AccentNude.copy(alpha = 0.8f), CircleShape)
-                    )
-                }
+                CameraShutterGlassButton(onClick = onStartCapture)
                 Text("Chạm để chụp", color = Color.White.copy(alpha = 0.86f), style = MaterialTheme.typography.subtitle1, fontWeight = FontWeight.Bold)
             }
         }

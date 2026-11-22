@@ -21,6 +21,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.services.NativeEosCaptureService
+import com.phuctran.photobooth.desktop.ui.components.KioskIconButton
+import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
+import com.phuctran.photobooth.desktop.ui.components.KioskSecondaryButton
+import com.phuctran.photobooth.desktop.ui.components.kioskHorizontalDrag
+import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import com.phuctran.photobooth.desktop.ui.theme.*
 import kotlinx.coroutines.delay
 import javax.swing.JFileChooser
@@ -35,11 +40,13 @@ fun SettingsTabContent(
     postCaptureTimeoutSeconds: Int, onPostCaptureTimeoutChange: (Int) -> Unit,
     photoSelectionTimeoutSeconds: Int, onPhotoSelectionTimeoutChange: (Int) -> Unit,
     frameSelectionTimeoutSeconds: Int, onFrameSelectionTimeoutChange: (Int) -> Unit,
+    isRentalMode: Boolean = false, onRentalModeChange: (Boolean) -> Unit = {},
     onSaveSettings: () -> Unit
 ) {
     var saved by remember { mutableStateOf(false) }
     LaunchedEffect(saved) { if (saved) { delay(3000); saved = false } }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    val scrollState = rememberScrollState()
+    Column(Modifier.fillMaxSize().verticalScroll(scrollState).kioskVerticalDrag(scrollState), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("VẬN HÀNH THIẾT BỊ", style = MaterialTheme.typography.overline, color = AccentNudeDark)
             Text("Cài đặt hệ thống Kiosk", style = MaterialTheme.typography.h5, color = NeutralText)
@@ -47,11 +54,49 @@ fun SettingsTabContent(
             Text("Khởi động lại ứng dụng sau khi lưu để áp dụng cấu hình.", style = MaterialTheme.typography.caption, color = AccentNudeDark,
                 modifier = Modifier.background(AccentNudeLight, RoundedCornerShape(50)).padding(horizontal = 14.dp, vertical = 9.dp))
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        val statusScroll = rememberScrollState()
+        Row(Modifier.fillMaxWidth().horizontalScroll(statusScroll).kioskHorizontalDrag(statusScroll), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatusCard("Chế độ Kiosk", if (isRentalMode) "Sự kiện (Gói thuê)" else "Thương mại (QR PayOS)")
             StatusCard("Nguồn Camera", if (useHotFolder) "Hot Folder" else if (nativeCamera != null) "Canon EDSDK" else "Webcam / DroidCam")
             StatusCard("Máy in Windows", if (enablePrint) "Đang bật" else "Đang tắt")
             StatusCard("Đồng bộ Đám mây", if (config.canUploadAlbum) "Sẵn sàng" else "Ngoại tuyến")
             StatusCard("Kiosk", "${config.boothId} · Port ${config.localServerPort}")
+        }
+        SettingsSection("Chế độ vận hành Kiosk") {
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Chế độ cho thuê sự kiện", style = MaterialTheme.typography.subtitle1, color = NeutralText)
+                    Text(
+                        if (isRentalMode) "Bỏ qua bước thanh toán PayOS. Khách chụp & in ảnh miễn phí theo gói thuê sự kiện."
+                        else "Kích hoạt thanh toán PayOS. Khách quét mã QR PayOS để thanh toán trước khi chụp.",
+                        style = MaterialTheme.typography.body2,
+                        color = NeutralSecondary
+                    )
+                }
+                Switch(
+                    checked = isRentalMode,
+                    onCheckedChange = onRentalModeChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = AccentNudeDark,
+                        checkedTrackAlpha = 1f,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = NeutralBorder,
+                        uncheckedTrackAlpha = 1f
+                    )
+                )
+            }
+            if (isRentalMode) {
+                Text(
+                    "✨ Đang bật chế độ sự kiện: Màn hình chọn số lượng sẽ hiển thị 'Miễn phí' và tự động bỏ qua bước thanh toán.",
+                    style = MaterialTheme.typography.caption,
+                    color = AccentNudeDark,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AccentNudeLight, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                )
+            }
         }
         SettingsSection("In ấn & Xuất ảnh") {
             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -63,7 +108,8 @@ fun SettingsTabContent(
                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = AccentNudeDark, checkedTrackAlpha = 1f))
             }
             if (config.printerNameStrip.isNotBlank() || config.printerNameFull.isNotBlank()) {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val chipsScroll = rememberScrollState()
+                Row(Modifier.horizontalScroll(chipsScroll).kioskHorizontalDrag(chipsScroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (config.printerNameStrip.isNotBlank()) InfoChip("Ảnh dải · ${config.printerNameStrip}")
                     if (config.printerNameFull.isNotBlank()) InfoChip("Ảnh đầy đủ · ${config.printerNameFull}")
                 }
@@ -81,13 +127,16 @@ fun SettingsTabContent(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(value = hotFolderPath, onValueChange = onHotFolderPathChange,
                             modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text("Chọn thư mục ảnh") })
-                        OutlinedButton(onClick = {
-                            val chooser = JFileChooser().apply {
-                                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-                                dialogTitle = "Chọn Hot Folder"
+                        KioskSecondaryButton(
+                            text = "Chọn thư mục",
+                            onClick = {
+                                val chooser = JFileChooser().apply {
+                                    fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                                    dialogTitle = "Chọn Hot Folder"
+                                }
+                                if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) onHotFolderPathChange(chooser.selectedFile.absolutePath)
                             }
-                            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) onHotFolderPathChange(chooser.selectedFile.absolutePath)
-                        }, modifier = Modifier.height(56.dp)) { Text("Chọn thư mục") }
+                        )
                     }
                     Text("Mẹo: Dùng digiCamControl chụp để ảnh rớt vào đây.", style = MaterialTheme.typography.caption, color = NeutralSecondary)
                 }
@@ -131,10 +180,10 @@ fun SettingsTabContent(
                     Text("Tên máy in, Booth ID và Port được cấu hình trong tệp .env.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
                     if (saved) Text("Đã lưu cài đặt", style = MaterialTheme.typography.caption, color = AccentMint)
                 }
-                Button(onClick = { onSaveSettings(); saved = true }, modifier = Modifier.height(56.dp),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = AccentNudeDark, contentColor = Color.White), shape = RoundedCornerShape(14.dp)) {
-                    Text("Lưu cài đặt", style = MaterialTheme.typography.button)
-                }
+                KioskPrimaryButton(
+                    text = "Lưu cài đặt",
+                    onClick = { onSaveSettings(); saved = true }
+                )
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -193,8 +242,13 @@ private fun TimeoutStepper(label: String, detail: String, value: Int, onValueCha
 
 @Composable
 private fun StepControl(symbol: String, enabled: Boolean, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(52.dp),
-        shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(0.dp), border = BorderStroke(1.dp, NeutralBorder)) {
-        Text(symbol, style = MaterialTheme.typography.h6)
+    KioskIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        size = 52.dp,
+        palette = SecondaryGlassPalette,
+        onClickLabel = symbol
+    ) {
+        Text(symbol, style = MaterialTheme.typography.h6, color = if (enabled) NeutralText else NeutralMuted)
     }
 }

@@ -1,7 +1,7 @@
 ﻿---
 description: Premium touch-first UI/UX designer for the LE SOUVENIR PhotoboothDesktop application.
 mode: subagent
-model: 9router/cx/gpt-6-sol
+model: omniroute/agentrouter/gpt-5.6-sol
 permissions:
   - action: edit
     resource: "*"

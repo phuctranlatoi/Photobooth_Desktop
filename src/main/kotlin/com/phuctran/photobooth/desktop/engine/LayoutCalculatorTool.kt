@@ -361,7 +361,7 @@ fun CalculatorApp(
         }
     }
 
-    Row(modifier = Modifier.fillMaxSize().background(NeutralBg).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         // Left Column (Controls & Preview)
         Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Công cụ bố cục", style = MaterialTheme.typography.h5, color = NeutralText)

@@ -133,9 +133,12 @@ fun PaymentScreen(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 26.dp)
-                    .clip(RoundedCornerShape(KioskControlTokens.floatingCornerRadius))
-                    .background(NeutralPanel)
-                    .border(1.dp, NeutralBorder, RoundedCornerShape(KioskControlTokens.floatingCornerRadius))
+                    .drawLiquidGlass(
+                        palette = SecondaryGlassPalette,
+                        cornerRadius = LiquidGlassMetrics.floatingDockCornerRadius,
+                        isPressed = false,
+                        enabled = true
+                    )
                     .clickable { onPaid() }
                     .padding(horizontal = 22.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,

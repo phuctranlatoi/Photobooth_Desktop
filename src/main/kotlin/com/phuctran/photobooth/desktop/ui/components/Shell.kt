@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.domain.SessionState
+import com.phuctran.photobooth.desktop.ui.theme.CameraBlack
 import com.phuctran.photobooth.desktop.ui.theme.NeutralBg
 import com.phuctran.photobooth.desktop.ui.theme.NeutralBorder
 import com.phuctran.photobooth.desktop.ui.theme.NeutralMuted
@@ -39,30 +40,15 @@ fun AppShell(
     val isFullscreen = state == SessionState.LIVE_VIEW || state == SessionState.COUNTDOWN || state == SessionState.CAPTURING
 
     if (isFullscreen) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(Modifier.fillMaxSize().background(CameraBlack)) {
             content()
         }
     } else if (state == SessionState.ADMIN) {
-        Box(Modifier.fillMaxSize().background(NeutralBg).padding(24.dp)) { content() }
+        KioskBackdrop(mode = KioskBackdropMode.Admin) {
+            Box(Modifier.fillMaxSize().padding(24.dp)) { content() }
+        }
     } else {
-        Box(Modifier.fillMaxSize().background(NeutralBg)) {
-            // Draw once behind the content, rather than layering blurred composables over media.
-            Canvas(Modifier.fillMaxSize()) {
-                drawRect(
-                    Brush.radialGradient(
-                        colors = listOf(Color(0xFFFFEDE4).copy(alpha = 0.24f), Color.Transparent),
-                        center = Offset.Zero,
-                        radius = size.maxDimension * 0.78f
-                    )
-                )
-                drawRect(
-                    Brush.radialGradient(
-                        colors = listOf(Color(0xFFE9EFF5).copy(alpha = 0.32f), Color.Transparent),
-                        center = Offset(size.width, size.height),
-                        radius = size.maxDimension * 0.78f
-                    )
-                )
-            }
+        KioskBackdrop(mode = KioskBackdropMode.Guest) {
             Box(Modifier.fillMaxSize().padding(24.dp)) { content() }
         }
     }

@@ -17,9 +17,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.phuctran.photobooth.desktop.model.EffectMode
 import com.phuctran.photobooth.desktop.ui.components.InfoPill
+import com.phuctran.photobooth.desktop.ui.components.KioskCompactButton
+import com.phuctran.photobooth.desktop.ui.components.KioskDangerButton
 import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
 import com.phuctran.photobooth.desktop.ui.components.KioskSecondaryButton
 import com.phuctran.photobooth.desktop.ui.components.SectionHeader
+import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import com.phuctran.photobooth.desktop.ui.theme.*
 import java.awt.FileDialog
 import java.io.File
@@ -72,7 +75,7 @@ fun FilterAdminView(
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Hủy") } }
     )
 
-    Row(modifier = Modifier.fillMaxSize().background(Color(0xFFFBF9F5)).padding(top = 16.dp)) {
+    Row(modifier = Modifier.fillMaxSize().padding(top = 16.dp)) {
         // Left Column: List of Filters
         Column(
             modifier = Modifier
@@ -128,11 +131,13 @@ fun FilterAdminView(
             )
             error?.let { Text(it, color = AccentRed) }
 
+            val filterListScroll = rememberScrollState()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(filterListScroll)
+                    .kioskVerticalDrag(filterListScroll),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 mutableEffects.forEach { effect ->
@@ -194,7 +199,8 @@ fun FilterAdminView(
                 .padding(start = 16.dp)
         ) {
             if (selectedEffect != null) {
-                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                val filterEditorScroll = rememberScrollState()
+                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(filterEditorScroll).kioskVerticalDrag(filterEditorScroll), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionHeader("Chỉnh sửa bộ lọc", selectedEffect.title, "Thay đổi thông số màu và lưu để áp dụng cho kiosk.")
                 
                 var title by remember(selectedEffect) { mutableStateOf(selectedEffect.title) }
@@ -296,7 +302,7 @@ fun FilterAdminView(
                     SliderControl("Cường độ ${(intensity * 100).toInt()}%", intensity, 0f..1f) { intensity = it; updateCurrentEffect() }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(.25f, .5f, .75f, 1f).forEach { amount ->
-                            OutlinedButton(onClick = { intensity = amount; updateCurrentEffect() }) { Text("${(amount * 100).toInt()}%") }
+                            KioskCompactButton(text = "${(amount * 100).toInt()}%", onClick = { intensity = amount; updateCurrentEffect() })
                         }
                     }
                 } else {
@@ -305,10 +311,13 @@ fun FilterAdminView(
                     SliderControl("Độ sáng (Brightness)", brightness, -1f..1f) { brightness = it; updateCurrentEffect() }
                     SliderControl("Độ ấm (Warmth)", warmth, -1f..1f) { warmth = it; updateCurrentEffect() }
                     SliderControl("Phủ màu (Tint)", tint, -1f..1f) { tint = it; updateCurrentEffect() }
-                    OutlinedButton(onClick = {
-                        saturation = 1f; contrast = 1f; brightness = 0f; warmth = 0f; tint = 0f
-                        updateCurrentEffect()
-                    }) { Text("Đặt lại thông số") }
+                    KioskCompactButton(
+                        text = "Đặt lại thông số",
+                        onClick = {
+                            saturation = 1f; contrast = 1f; brightness = 0f; warmth = 0f; tint = 0f
+                            updateCurrentEffect()
+                        }
+                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -322,7 +331,7 @@ fun FilterAdminView(
                 ) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (!selectedEffect.isSystemDefault) KioskSecondaryButton(
+                        if (!selectedEffect.isSystemDefault) KioskDangerButton(
                             text = "Xóa bộ lọc", onClick = { confirmDelete = true }, modifier = Modifier.width(150.dp)
                         ) else InfoPill("Mặc định hệ thống")
                         Text(

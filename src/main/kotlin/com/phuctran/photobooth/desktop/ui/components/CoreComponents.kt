@@ -49,12 +49,16 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
@@ -111,24 +115,26 @@ fun BouncyButton(
     colors: ButtonColors = ButtonDefaults.buttonColors(backgroundColor = InkSoft, contentColor = Color.White),
     content: @Composable RowScope.() -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (enabled && isPressed) KioskControlTokens.pressedScale else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium)
-    )
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(KioskControlTokens.buttonCornerRadius),
-        colors = colors,
-        elevation = ButtonDefaults.elevation(0.dp, 0.dp, 0.dp),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
-        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
-    ) {
-        content()
+    val bgColor by colors.backgroundColor(enabled = true)
+    val contentColor by colors.contentColor(enabled = enabled)
+    val basePalette = when {
+        bgColor == AccentRed || bgColor == Color(0xFFEF4444) -> DangerGlassPalette
+        bgColor == NeutralPanel || bgColor == Color.White -> SecondaryGlassPalette
+        bgColor == NeutralPanelAlt || bgColor == NeutralBg -> NeutralGlassPalette
+        else -> PrimaryGlassPalette
+    }.let { palette ->
+        if (enabled && contentColor != palette.contentColor) palette.copy(contentColor = contentColor) else palette
     }
+
+    LiquidGlassButtonSurface(
+        onClick = onClick,
+        palette = basePalette,
+        enabled = enabled,
+        cornerRadius = LiquidGlassMetrics.standardCornerRadius,
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+        modifier = modifier.heightIn(min = KioskControlTokens.buttonMinHeight),
+        content = content
+    )
 }
 
 @Composable
@@ -138,16 +144,21 @@ fun KioskPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    BouncyButton(
+    LiquidGlassButtonSurface(
         onClick = onClick,
+        palette = PrimaryGlassPalette,
         enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            backgroundColor = if (enabled) AccentNude else NeutralBorder,
-            contentColor = if (enabled) Color.White else NeutralMuted
-        ),
+        cornerRadius = LiquidGlassMetrics.standardCornerRadius,
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
         modifier = modifier.heightIn(min = KioskControlTokens.buttonMinHeight)
     ) {
-        Text(text, style = MaterialTheme.typography.button, maxLines = 1)
+        Text(
+            text = text,
+            color = if (enabled) PrimaryGlassPalette.contentColor else DisabledGlassPalette.contentColor,
+            style = MaterialTheme.typography.button,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -158,28 +169,178 @@ fun KioskSecondaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    LiquidGlassButtonSurface(
+        onClick = onClick,
+        palette = SecondaryGlassPalette,
+        enabled = enabled,
+        cornerRadius = LiquidGlassMetrics.standardCornerRadius,
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
+        modifier = modifier.heightIn(min = KioskControlTokens.buttonMinHeight)
+    ) {
+        Text(
+            text = text,
+            color = if (enabled) SecondaryGlassPalette.contentColor else DisabledGlassPalette.contentColor,
+            style = MaterialTheme.typography.button,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun KioskDangerButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    LiquidGlassButtonSurface(
+        onClick = onClick,
+        palette = DangerGlassPalette,
+        enabled = enabled,
+        cornerRadius = LiquidGlassMetrics.standardCornerRadius,
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
+        modifier = modifier.heightIn(min = KioskControlTokens.buttonMinHeight)
+    ) {
+        Text(
+            text = text,
+            color = if (enabled) DangerGlassPalette.contentColor else DisabledGlassPalette.contentColor,
+            style = MaterialTheme.typography.button,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun KioskCompactButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    palette: LiquidGlassPalette = SecondaryGlassPalette
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (enabled && isPressed) KioskControlTokens.pressedScale else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium)
+        targetValue = if (enabled && isPressed) LiquidGlassMotion.pressedScale else 1f,
+        animationSpec = spring(
+            dampingRatio = LiquidGlassMotion.pressDampingRatio,
+            stiffness = LiquidGlassMotion.pressStiffness
+        )
     )
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(KioskControlTokens.buttonCornerRadius),
-        colors = ButtonDefaults.outlinedButtonColors(
-            backgroundColor = NeutralPanel,
-            contentColor = NeutralText,
-            disabledContentColor = NeutralMuted
-        ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, NeutralBorder),
-        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
-        modifier = modifier.heightIn(min = KioskControlTokens.buttonMinHeight)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
+    val translateYFactor by animateFloatAsState(
+        targetValue = if (enabled && isPressed) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = LiquidGlassMotion.pressDampingRatio,
+            stiffness = LiquidGlassMotion.pressStiffness
+        )
+    )
+    val contentColor = if (enabled) palette.contentColor else DisabledGlassPalette.contentColor
+
+    Box(
+        modifier = modifier
+            .heightIn(min = KioskControlTokens.buttonMinHeight)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        Text(text, style = MaterialTheme.typography.button, maxLines = 1)
+        Row(
+            modifier = Modifier
+                .defaultMinSize(minHeight = LiquidGlassMetrics.compactButtonMinHeight)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationY = translateYFactor * LiquidGlassMotion.pressedTranslateY.toPx()
+                }
+                .drawLiquidGlass(
+                    palette = palette,
+                    cornerRadius = LiquidGlassMetrics.compactCornerRadius,
+                    isPressed = isPressed,
+                    enabled = enabled
+                )
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = text,
+                color = contentColor,
+                style = MaterialTheme.typography.button,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun KioskIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    size: Dp = LiquidGlassMetrics.iconButtonSize,
+    palette: LiquidGlassPalette = SecondaryGlassPalette,
+    onClickLabel: String? = null,
+    content: @Composable BoxScope.() -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (enabled && isPressed) LiquidGlassMotion.iconPressedScale else 1f,
+        animationSpec = spring(
+            dampingRatio = LiquidGlassMotion.pressDampingRatio,
+            stiffness = LiquidGlassMotion.pressStiffness
+        )
+    )
+    val translateYFactor by animateFloatAsState(
+        targetValue = if (enabled && isPressed) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = LiquidGlassMotion.pressDampingRatio,
+            stiffness = LiquidGlassMotion.pressStiffness
+        )
+    )
+    val contentColor = if (enabled) palette.contentColor else DisabledGlassPalette.contentColor
+
+    // Fixed touch hitbounds on outer container
+    Box(
+        modifier = modifier
+            .size(size)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Button,
+                onClickLabel = onClickLabel,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationY = translateYFactor * LiquidGlassMotion.pressedTranslateY.toPx()
+                }
+                .drawLiquidGlass(
+                    palette = palette,
+                    cornerRadius = LiquidGlassMetrics.pillCornerRadius,
+                    isPressed = isPressed,
+                    enabled = enabled
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.runtime.CompositionLocalProvider(LocalContentColor provides contentColor) {
+                content()
+            }
+        }
     }
 }
 
@@ -189,18 +350,185 @@ fun KioskBackButton(
     modifier: Modifier = Modifier,
     light: Boolean = false
 ) {
-    IconButton(
+    val palette = if (light) CrystalOnMediaGlassPalette else SecondaryGlassPalette
+    KioskIconButton(
         onClick = onClick,
-        modifier = modifier
-            .size(52.dp)
-            .clip(CircleShape)
-            .background(if (light) Color.White.copy(alpha = 0.22f) else NeutralPanel)
-            .border(1.dp, if (light) Color.White.copy(alpha = 0.35f) else NeutralBorder, CircleShape)
+        modifier = modifier,
+        size = LiquidGlassMetrics.iconButtonSize,
+        palette = palette,
+        onClickLabel = "Quay lại"
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "Quay lại",
-            tint = if (light) Color.White else NeutralText
+            tint = palette.contentColor
+        )
+    }
+}
+
+/**
+ * 108dp Optical Lens 3D Glass Camera Shutter Button.
+ * Keeps the exact 108dp outer touch hit target fixed and stable while animating
+ * the physical lens plunger and optical refraction ring on press.
+ */
+@Composable
+fun CameraShutterGlassButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (enabled && isPressed) LiquidGlassMotion.shutterPressedScale else 1f,
+        animationSpec = if (isPressed) tween(80) else spring(
+            dampingRatio = LiquidGlassMotion.pressDampingRatio,
+            stiffness = LiquidGlassMotion.pressStiffness
+        ),
+        label = "ShutterGlassPress"
+    )
+
+    Box(
+        modifier = modifier
+            .size(ShutterGlassTokens.totalHitSize)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Button,
+                onClickLabel = "Chụp ảnh",
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = pressScale
+                    scaleY = pressScale
+                }
+                .drawWithCache {
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val outerRadius = (ShutterGlassTokens.outerBezelDiameter.toPx() / 2f)
+                    val innerRadius = (ShutterGlassTokens.innerPlungerDiameter.toPx() / 2f)
+                    val outerStrokePx = ShutterGlassTokens.outerRingStroke.toPx()
+                    val innerStrokePx = ShutterGlassTokens.innerAccentStroke.toPx()
+
+                    // Outer crystal bezel housing
+                    val housingBrush = Brush.verticalGradient(
+                        colors = listOf(
+                            ShutterGlassTokens.outerHousingTop,
+                            ShutterGlassTokens.outerHousingBottom
+                        ),
+                        startY = center.y - outerRadius,
+                        endY = center.y + outerRadius
+                    )
+                    val outerRimBrush = Brush.linearGradient(
+                        colors = listOf(
+                            ShutterGlassTokens.outerRimTopLeft,
+                            Color.White.copy(alpha = 0.45f),
+                            ShutterGlassTokens.outerRimBottomRight
+                        ),
+                        start = Offset(center.x - outerRadius, center.y - outerRadius),
+                        end = Offset(center.x + outerRadius, center.y + outerRadius)
+                    )
+
+                    // Inner convex pearl lens plunger
+                    val plungerBodyBrush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.00f to ShutterGlassTokens.plungerTop,
+                            0.55f to ShutterGlassTokens.plungerMid,
+                            1.00f to ShutterGlassTokens.plungerBottom
+                        ),
+                        startY = center.y - innerRadius,
+                        endY = center.y + innerRadius
+                    )
+                    val plungerCausticBrush = Brush.radialGradient(
+                        colors = listOf(
+                            ShutterGlassTokens.plungerCaustic,
+                            Color.Transparent
+                        ),
+                        center = Offset(center.x, center.y + innerRadius * 0.52f),
+                        radius = innerRadius * 0.9f
+                    )
+                    val crownRadiusX = innerRadius * 0.72f
+                    val crownRadiusY = innerRadius * 0.36f
+                    val crownTopLeft = Offset(center.x - crownRadiusX, center.y - innerRadius * 0.84f)
+                    val crownSize = Size(crownRadiusX * 2f, crownRadiusY * 2f)
+                    val crownBrush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.95f),
+                            Color.White.copy(alpha = 0.05f)
+                        ),
+                        startY = crownTopLeft.y,
+                        endY = crownTopLeft.y + crownSize.height
+                    )
+                    val accentRimBrush = Brush.linearGradient(
+                        colors = listOf(
+                            AccentNude.copy(alpha = 0.95f),
+                            AccentNudeDark.copy(alpha = 0.85f)
+                        ),
+                        start = Offset(center.x - innerRadius, center.y - innerRadius),
+                        end = Offset(center.x + innerRadius, center.y + innerRadius)
+                    )
+
+                    onDrawBehind {
+                        // Soft outer drop halo
+                        drawCircle(
+                            color = Color.Black.copy(alpha = 0.32f),
+                            radius = outerRadius + 3.dp.toPx(),
+                            center = Offset(center.x, center.y + 3.dp.toPx())
+                        )
+
+                        // Outer translucent glass bezel
+                        drawCircle(
+                            brush = housingBrush,
+                            radius = outerRadius,
+                            center = center
+                        )
+                        drawCircle(
+                            brush = outerRimBrush,
+                            radius = outerRadius - outerStrokePx * 0.5f,
+                            center = center,
+                            style = Stroke(width = outerStrokePx)
+                        )
+
+                        // Inner plunger shadow
+                        drawCircle(
+                            color = Color.Black.copy(alpha = 0.22f),
+                            radius = innerRadius + 1.5.dp.toPx(),
+                            center = Offset(center.x, center.y + 2.dp.toPx())
+                        )
+
+                        // Inner 3D convex lens plunger
+                        drawCircle(
+                            brush = plungerBodyBrush,
+                            radius = innerRadius,
+                            center = center
+                        )
+                        drawCircle(
+                            brush = plungerCausticBrush,
+                            radius = innerRadius,
+                            center = center
+                        )
+
+                        // Top specular lens crown
+                        drawOval(
+                            brush = crownBrush,
+                            topLeft = crownTopLeft,
+                            size = crownSize
+                        )
+
+                        // Warm terracotta optical ring
+                        drawCircle(
+                            brush = accentRimBrush,
+                            radius = innerRadius - innerStrokePx,
+                            center = center,
+                            style = Stroke(width = innerStrokePx)
+                        )
+                    }
+                }
         )
     }
 }
@@ -375,7 +703,7 @@ private object ThumbnailCache {
     }
 }
 
-/** Stable, touch-sized actions on a lightly translucent floating surface. */
+/** Stable, touch-sized actions on a lightly translucent floating Liquid Glass surface. */
 @Composable
 fun BottomActionBar(
     primaryText: String,
@@ -385,13 +713,15 @@ fun BottomActionBar(
     modifier: Modifier = Modifier,
     primaryEnabled: Boolean = true
 ) {
-    val shape = RoundedCornerShape(KioskControlTokens.floatingCornerRadius)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(NeutralPanel.copy(alpha = 0.94f))
-            .border(1.dp, NeutralBorder.copy(alpha = 0.7f), shape)
+            .drawLiquidGlass(
+                palette = NeutralGlassPalette,
+                cornerRadius = LiquidGlassMetrics.floatingDockCornerRadius,
+                isPressed = false,
+                enabled = true
+            )
             .padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically

@@ -1,7 +1,7 @@
 ---
 description: Production implementation specialist for the LE SOUVENIR Kotlin PhotoboothDesktop application.
 mode: subagent
-model: 9router/cx/gpt-6-sol
+model: 9router/ag/gemini-4-argon-medium
 permissions:
   - action: edit
     resource: "*"

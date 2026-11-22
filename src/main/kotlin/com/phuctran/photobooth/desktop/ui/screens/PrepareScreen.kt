@@ -24,7 +24,7 @@ import com.phuctran.photobooth.desktop.ui.theme.*
 @Composable
 fun PrepareScreen(layout: LayoutMode, effect: EffectMode) {
     Row(
-        modifier = Modifier.fillMaxSize().background(NeutralSurface).padding(horizontal = 32.dp, vertical = 24.dp),
+        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Transparent).padding(horizontal = 32.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(36.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

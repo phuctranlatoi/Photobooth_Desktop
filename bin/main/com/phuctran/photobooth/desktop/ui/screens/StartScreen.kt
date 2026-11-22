@@ -54,7 +54,7 @@ fun StartScreen(
     Row(
         Modifier
             .fillMaxSize()
-            .background(NeutralBg)
+            .background(Color.Transparent)
             .padding(24.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp)
     ) {
@@ -205,12 +205,7 @@ fun StartScreen(
                             // SHOW FRAMES PAGE
                             Column(Modifier.fillMaxSize()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(
-                                        onClick = { selectedLayoutId = null },
-                                        modifier = Modifier.size(48.dp).clip(CircleShape).background(NeutralBg)
-                                    ) {
-                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = NeutralText)
-                                    }
+                                    KioskBackButton(onClick = { selectedLayoutId = null })
                                     Spacer(Modifier.width(16.dp))
                                     Column {
                                         Text("Chọn mẫu khung", color = NeutralText, style = MaterialTheme.typography.h5, fontWeight = FontWeight.Bold)

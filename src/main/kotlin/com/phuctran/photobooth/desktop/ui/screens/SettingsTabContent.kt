@@ -21,6 +21,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.services.NativeEosCaptureService
+import com.phuctran.photobooth.desktop.ui.components.KioskIconButton
+import com.phuctran.photobooth.desktop.ui.components.KioskPrimaryButton
+import com.phuctran.photobooth.desktop.ui.components.KioskSecondaryButton
 import com.phuctran.photobooth.desktop.ui.components.kioskHorizontalDrag
 import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import com.phuctran.photobooth.desktop.ui.theme.*
@@ -124,13 +127,16 @@ fun SettingsTabContent(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(value = hotFolderPath, onValueChange = onHotFolderPathChange,
                             modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text("Chọn thư mục ảnh") })
-                        OutlinedButton(onClick = {
-                            val chooser = JFileChooser().apply {
-                                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-                                dialogTitle = "Chọn Hot Folder"
+                        KioskSecondaryButton(
+                            text = "Chọn thư mục",
+                            onClick = {
+                                val chooser = JFileChooser().apply {
+                                    fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                                    dialogTitle = "Chọn Hot Folder"
+                                }
+                                if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) onHotFolderPathChange(chooser.selectedFile.absolutePath)
                             }
-                            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) onHotFolderPathChange(chooser.selectedFile.absolutePath)
-                        }, modifier = Modifier.height(56.dp)) { Text("Chọn thư mục") }
+                        )
                     }
                     Text("Mẹo: Dùng digiCamControl chụp để ảnh rớt vào đây.", style = MaterialTheme.typography.caption, color = NeutralSecondary)
                 }
@@ -174,10 +180,10 @@ fun SettingsTabContent(
                     Text("Tên máy in, Booth ID và Port được cấu hình trong tệp .env.", style = MaterialTheme.typography.body2, color = NeutralSecondary)
                     if (saved) Text("Đã lưu cài đặt", style = MaterialTheme.typography.caption, color = AccentMint)
                 }
-                Button(onClick = { onSaveSettings(); saved = true }, modifier = Modifier.height(56.dp),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = AccentNudeDark, contentColor = Color.White), shape = RoundedCornerShape(14.dp)) {
-                    Text("Lưu cài đặt", style = MaterialTheme.typography.button)
-                }
+                KioskPrimaryButton(
+                    text = "Lưu cài đặt",
+                    onClick = { onSaveSettings(); saved = true }
+                )
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -236,8 +242,13 @@ private fun TimeoutStepper(label: String, detail: String, value: Int, onValueCha
 
 @Composable
 private fun StepControl(symbol: String, enabled: Boolean, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(52.dp),
-        shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(0.dp), border = BorderStroke(1.dp, NeutralBorder)) {
-        Text(symbol, style = MaterialTheme.typography.h6)
+    KioskIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        size = 52.dp,
+        palette = SecondaryGlassPalette,
+        onClickLabel = symbol
+    ) {
+        Text(symbol, style = MaterialTheme.typography.h6, color = if (enabled) NeutralText else NeutralMuted)
     }
 }

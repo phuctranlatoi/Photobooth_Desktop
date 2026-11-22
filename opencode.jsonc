@@ -1,4 +1,12 @@
 ﻿{
   "$schema": "https://opencode.ai/config.json",
-  "default_agent": "orchestrator"
+  "plugins": [
+    {
+      "package": "@omniroute/opencode-plugin-v2",
+      "options": {
+        "providerId": "omniroute",
+        "baseURL": "http://127.0.0.1:20129"
+      }
+    }
+  ]
 }
