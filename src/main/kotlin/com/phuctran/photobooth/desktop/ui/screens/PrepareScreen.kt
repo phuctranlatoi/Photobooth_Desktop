@@ -18,6 +18,8 @@ import com.phuctran.photobooth.desktop.model.EffectMode
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.ui.components.CameraPoseGuide
 import com.phuctran.photobooth.desktop.ui.components.InfoPill
+import com.phuctran.photobooth.desktop.ui.components.LiquidGlassPlate
+import com.phuctran.photobooth.desktop.ui.components.liquidGlassPlate
 import com.phuctran.photobooth.desktop.ui.theme.*
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -29,7 +31,13 @@ fun PrepareScreen(layout: LayoutMode, effect: EffectMode) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         CameraPoseGuide(Modifier.weight(0.54f).fillMaxHeight(0.82f).shadow(14.dp, RoundedCornerShape(18.dp)))
-        Box(Modifier.weight(0.46f)) {
+        LiquidGlassPlate(
+            modifier = Modifier.weight(0.46f),
+            variant = LiquidGlassPlateVariant.Elevated,
+            cornerRadius = LiquidGlassPlateMetrics.majorCornerRadius,
+            elevation = LiquidGlassPlateMetrics.elevatedElevation,
+            contentPadding = PaddingValues(28.dp)
+        ) {
                 Column(verticalArrangement = Arrangement.Center) {
                     Text("Bước 5", modifier = Modifier.background(AccentNudeLight, RoundedCornerShape(50)).border(1.dp, NeutralBorder, RoundedCornerShape(50)).padding(horizontal = 14.dp, vertical = 7.dp), style = MaterialTheme.typography.caption, color = AccentNudeDark, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(16.dp))
@@ -49,8 +57,13 @@ fun PrepareScreen(layout: LayoutMode, effect: EffectMode) {
                     )
                     Spacer(Modifier.height(24.dp))
                     FlowRow(
-                        modifier = Modifier.fillMaxWidth().background(NeutralPanel.copy(alpha = 0.85f), RoundedCornerShape(16.dp))
-                            .border(1.dp, NeutralBorder.copy(alpha = 0.65f), RoundedCornerShape(16.dp))
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .liquidGlassPlate(
+                                variant = LiquidGlassPlateVariant.Standard,
+                                cornerRadius = 16.dp,
+                                elevation = LiquidGlassPlateMetrics.nestedRowElevation
+                            )
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)

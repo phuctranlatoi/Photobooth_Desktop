@@ -77,9 +77,11 @@ fun PaymentScreen(
                 Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(NeutralPanel.copy(alpha = 0.94f))
-                    .border(1.dp, NeutralBorder, RoundedCornerShape(16.dp))
+                    .liquidGlassPlate(
+                        variant = LiquidGlassPlateVariant.Elevated,
+                        cornerRadius = 16.dp,
+                        elevation = LiquidGlassPlateMetrics.elevatedElevation
+                    )
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center

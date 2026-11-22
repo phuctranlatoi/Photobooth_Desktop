@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.ui.Modifier
+import com.phuctran.photobooth.desktop.ui.theme.LiquidGlassPlateVariant
+import com.phuctran.photobooth.desktop.ui.theme.toPalette
 import org.junit.jupiter.api.Test
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -160,5 +162,15 @@ class KioskTouchInteractionsTest {
 
         assertTrue(abs(microFling) <= minFlingVelocity)
         assertTrue(abs(realFling) > minFlingVelocity)
+    }
+
+    @Test
+    fun testLiquidGlassPlateVariantsAndModifiers() {
+        for (variant in com.phuctran.photobooth.desktop.ui.theme.LiquidGlassPlateVariant.values()) {
+            val palette = variant.toPalette()
+            assertTrue(palette.bodyStops.isNotEmpty())
+            val mod = Modifier.liquidGlassPlate(variant = variant)
+            assertNotNull(mod)
+        }
     }
 }

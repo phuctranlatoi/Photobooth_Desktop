@@ -51,9 +51,11 @@ fun CaptureScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 34.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color.Black.copy(alpha = 0.42f))
-                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(999.dp))
+                .liquidGlassPlate(
+                    variant = LiquidGlassPlateVariant.Media,
+                    cornerRadius = LiquidGlassPlateMetrics.pillCornerRadius,
+                    elevation = 10.dp
+                )
                 .padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)

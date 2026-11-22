@@ -248,6 +248,164 @@ object ShutterGlassTokens {
     val plungerAccentRim = AccentNude.copy(alpha = 0.88f)
 }
 
+/**
+ * Optical plate variants for Liquid Glass content containers ("plate để đồ").
+ */
+enum class LiquidGlassPlateVariant {
+    Standard,
+    Elevated,
+    Selected,
+    Media
+}
+
+/**
+ * Color and optical refraction profile for a 3D Liquid Glass content plate.
+ */
+data class LiquidGlassPlatePalette(
+    val bodyStops: List<Pair<Float, Color>>,
+    val crownHighlightTop: Color,
+    val crownHighlightBottom: Color,
+    val causticGlow: Color,
+    val rimTopLeft: Color,
+    val rimMid: Color,
+    val rimBottomRight: Color,
+    val innerRimTop: Color,
+    val innerRimBottom: Color,
+    val shadowAmbient: Color,
+    val shadowSpot: Color,
+    val contentColor: Color,
+    val secondaryContentColor: Color
+)
+
+/**
+ * Standard Frosted Pearl Glass plate (`#FFFFFF @ 0.82` -> `#FFFBF7 @ 0.74` -> `#F1E8DF @ 0.64`),
+ * meniscus rim, crown reflection top 28%, soft caustic glow.
+ */
+val StandardPlatePalette = LiquidGlassPlatePalette(
+    bodyStops = listOf(
+        0.00f to Color(0xFFFFFFFF).copy(alpha = 0.82f),
+        0.52f to Color(0xFFFFFBF7).copy(alpha = 0.74f),
+        1.00f to Color(0xFFF1E8DF).copy(alpha = 0.64f)
+    ),
+    crownHighlightTop = Color.White.copy(alpha = 0.65f),
+    crownHighlightBottom = Color.White.copy(alpha = 0.04f),
+    causticGlow = Color(0xFFFFE6D6).copy(alpha = 0.28f),
+    rimTopLeft = Color.White.copy(alpha = 0.92f),
+    rimMid = Color(0xFFE5DDD4).copy(alpha = 0.68f),
+    rimBottomRight = Color(0xFFCBBFB2).copy(alpha = 0.56f),
+    innerRimTop = Color.White.copy(alpha = 0.70f),
+    innerRimBottom = Color.White.copy(alpha = 0.25f),
+    shadowAmbient = Color(0xFF3D352E).copy(alpha = 0.06f),
+    shadowSpot = Color(0xFF3D352E).copy(alpha = 0.11f),
+    contentColor = NeutralText,
+    secondaryContentColor = NeutralSecondary
+)
+
+/**
+ * Elevated Featured Neutral Glass plate for major containers
+ * (payment container, welcome/event panel, prepare instructions).
+ */
+val ElevatedPlatePalette = LiquidGlassPlatePalette(
+    bodyStops = listOf(
+        0.00f to Color(0xFFFFFFFF).copy(alpha = 0.90f),
+        0.52f to Color(0xFFFFFAF5).copy(alpha = 0.84f),
+        1.00f to Color(0xFFF3EAE1).copy(alpha = 0.78f)
+    ),
+    crownHighlightTop = Color.White.copy(alpha = 0.78f),
+    crownHighlightBottom = Color.White.copy(alpha = 0.05f),
+    causticGlow = Color(0xFFFFE5D4).copy(alpha = 0.36f),
+    rimTopLeft = Color.White.copy(alpha = 0.96f),
+    rimMid = Color(0xFFE6DDD3).copy(alpha = 0.76f),
+    rimBottomRight = Color(0xFFC5B8AA).copy(alpha = 0.62f),
+    innerRimTop = Color.White.copy(alpha = 0.82f),
+    innerRimBottom = Color(0xFFFFF2EA).copy(alpha = 0.34f),
+    shadowAmbient = Color(0xFF3D352E).copy(alpha = 0.08f),
+    shadowSpot = Color(0xFF3D352E).copy(alpha = 0.14f),
+    contentColor = NeutralText,
+    secondaryContentColor = NeutralSecondary
+)
+
+/**
+ * Selected Warm Optical Focus plate with terracotta meniscus rim (`AccentNude`)
+ * and subtle warm caustic glow.
+ */
+val SelectedPlatePalette = LiquidGlassPlatePalette(
+    bodyStops = listOf(
+        0.00f to Color(0xFFFFFBF8).copy(alpha = 0.92f),
+        0.52f to Color(0xFFFDF1EA).copy(alpha = 0.86f),
+        1.00f to Color(0xFFF7E2D7).copy(alpha = 0.80f)
+    ),
+    crownHighlightTop = Color.White.copy(alpha = 0.82f),
+    crownHighlightBottom = Color.White.copy(alpha = 0.06f),
+    causticGlow = AccentNude.copy(alpha = 0.24f),
+    rimTopLeft = AccentNude.copy(alpha = 0.96f),
+    rimMid = AccentNude.copy(alpha = 0.82f),
+    rimBottomRight = AccentNudeDark.copy(alpha = 0.88f),
+    innerRimTop = Color.White.copy(alpha = 0.85f),
+    innerRimBottom = AccentNudeLight.copy(alpha = 0.45f),
+    shadowAmbient = AccentNudeDark.copy(alpha = 0.12f),
+    shadowSpot = AccentNudeDark.copy(alpha = 0.20f),
+    contentColor = NeutralText,
+    secondaryContentColor = AccentNudeDark
+)
+
+/**
+ * Media Dark Translucent Crystal plate (`#28252A @ 0.78` -> `#0D0C0F @ 0.82`)
+ * for floating overlays on camera / live view and dark media cards.
+ */
+val MediaPlatePalette = LiquidGlassPlatePalette(
+    bodyStops = listOf(
+        0.00f to Color(0xFF28252A).copy(alpha = 0.78f),
+        0.52f to Color(0xFF1A181D).copy(alpha = 0.80f),
+        1.00f to Color(0xFF0D0C0F).copy(alpha = 0.82f)
+    ),
+    crownHighlightTop = Color.White.copy(alpha = 0.24f),
+    crownHighlightBottom = Color.White.copy(alpha = 0.02f),
+    causticGlow = AccentNude.copy(alpha = 0.18f),
+    rimTopLeft = Color.White.copy(alpha = 0.42f),
+    rimMid = Color.White.copy(alpha = 0.18f),
+    rimBottomRight = Color.Black.copy(alpha = 0.52f),
+    innerRimTop = Color.White.copy(alpha = 0.22f),
+    innerRimBottom = Color.White.copy(alpha = 0.08f),
+    shadowAmbient = Color.Black.copy(alpha = 0.24f),
+    shadowSpot = Color.Black.copy(alpha = 0.36f),
+    contentColor = Color.White,
+    secondaryContentColor = Color.White.copy(alpha = 0.78f)
+)
+
+fun LiquidGlassPlateVariant.toPalette(): LiquidGlassPlatePalette = when (this) {
+    LiquidGlassPlateVariant.Standard -> StandardPlatePalette
+    LiquidGlassPlateVariant.Elevated -> ElevatedPlatePalette
+    LiquidGlassPlateVariant.Selected -> SelectedPlatePalette
+    LiquidGlassPlateVariant.Media -> MediaPlatePalette
+}
+
+/**
+ * Geometric & optical metrics for Liquid Glass content plates.
+ */
+object LiquidGlassPlateMetrics {
+    val majorCornerRadius: Dp = 24.dp
+    val panelCornerRadius: Dp = 18.dp
+    val cardCornerRadius: Dp = 14.dp
+    val rowCornerRadius: Dp = 12.dp
+    val pillCornerRadius: Dp = 999.dp
+
+    val panelPadding: Dp = 24.dp
+    val cardPadding: Dp = 16.dp
+    val compactPadding: Dp = 12.dp
+
+    val defaultElevation: Dp = 10.dp
+    val elevatedElevation: Dp = 16.dp
+    val nestedRowElevation: Dp = 0.dp
+
+    val outerRimWidth: Dp = 1.25.dp
+    val selectedRimWidth: Dp = 1.5.dp
+    val innerRimInset: Dp = 1.5.dp
+    val innerRimWidth: Dp = 1.dp
+
+    const val crownHeightFraction: Float = 0.28f
+}
+
 private fun Color.compositeOver(background: Color): Color {
     val fgA = this.alpha
     val bgA = background.alpha * (1f - fgA)

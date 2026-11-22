@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -101,9 +102,12 @@ fun StartScreen(
             Modifier
                 .weight(1.2f)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(24.dp))
-                .background(NeutralPanel)
-                .border(1.dp, NeutralBorder, RoundedCornerShape(24.dp)),
+                .liquidGlassPlate(
+                    variant = LiquidGlassPlateVariant.Elevated,
+                    cornerRadius = LiquidGlassPlateMetrics.majorCornerRadius,
+                    elevation = LiquidGlassPlateMetrics.elevatedElevation
+                )
+                .clip(RoundedCornerShape(LiquidGlassPlateMetrics.majorCornerRadius)),
             contentAlignment = Alignment.Center
         ) {
             if (specialFrames.isNotEmpty()) {
@@ -279,8 +283,9 @@ fun StartScreen(
 
 @Composable
 fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.desktop.model.FramePack>, isSelected: Boolean, onClick: () -> Unit) {
-    var isHovered by remember { mutableStateOf(false) }
-    val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered && !isSelected) 1.02f else 1f)
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (isPressed) 0.98f else 1f)
     
     val coverPath = remember(eventName) {
         com.phuctran.photobooth.desktop.config.DesktopAppPaths.appDataDir().resolve("data").resolve("covers").resolve("$eventName.png")
@@ -289,22 +294,28 @@ fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.des
     val frameBitmap = rememberImageBitmap(frames.firstOrNull()?.customImagePath)
     val previewBitmap = coverBitmap ?: frameBitmap
     
-    Surface(
+    Box(
         modifier = Modifier
             .width(220.dp)
             .height(330.dp)
-            .graphicsLayer(scaleX = scale, scaleY = scale)
-            .clip(RoundedCornerShape(12.dp))
-            .border(
-                width = if (isSelected) 2.dp else 0.dp, 
-                color = if (isSelected) AccentNude else Color.Transparent, 
-                shape = RoundedCornerShape(12.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
             )
-            .clickable(onClick = onClick),
-        color = Color(0xFF2A2631),
-        elevation = if (isSelected || isHovered) 8.dp else 0.dp
     ) {
-        Box(Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(scaleX = scale, scaleY = scale)
+                .liquidGlassPlate(
+                    variant = if (isSelected) LiquidGlassPlateVariant.Selected else LiquidGlassPlateVariant.Elevated,
+                    cornerRadius = LiquidGlassPlateMetrics.cardCornerRadius,
+                    elevation = if (isSelected) 12.dp else 6.dp,
+                    rimWidth = if (isSelected) 2.dp else LiquidGlassPlateMetrics.outerRimWidth
+                )
+                .clip(RoundedCornerShape(LiquidGlassPlateMetrics.cardCornerRadius))
+        ) {
             if (previewBitmap != null) {
                 Image(
                     bitmap = previewBitmap,
@@ -318,17 +329,18 @@ fun SpecialEventItem(eventName: String, frames: List<com.phuctran.photobooth.des
                 }
             }
             
-            // Text overlay at the bottom
+            // Bottom title rail with Media LiquidGlassPlate
             Box(
                 Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha=0.8f))
-                        )
+                    .padding(8.dp)
+                    .liquidGlassPlate(
+                        variant = LiquidGlassPlateVariant.Media,
+                        cornerRadius = 10.dp,
+                        elevation = 0.dp
                     )
-                    .padding(12.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -356,16 +368,30 @@ fun LayoutSelectionCard(
     modifier: Modifier = Modifier.height(80.dp).width(180.dp),
     onClick: () -> Unit
 ) {
-    var isHovered by remember { mutableStateOf(false) }
-    
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) AccentNude else Color(0xFF2A2631),
-        border = if (isSelected) BorderStroke(1.dp, Color.White) else null,
-        modifier = modifier.clickable(onClick = onClick)
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (isPressed) 0.98f else 1f)
+    val plateVariant = if (isSelected) LiquidGlassPlateVariant.Selected else LiquidGlassPlateVariant.Standard
+
+    Box(
+        modifier = modifier
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(scaleX = scale, scaleY = scale)
+                .liquidGlassPlate(
+                    variant = plateVariant,
+                    cornerRadius = LiquidGlassPlateMetrics.rowCornerRadius,
+                    elevation = if (isSelected) 8.dp else 2.dp,
+                    rimWidth = if (isSelected) LiquidGlassPlateMetrics.selectedRimWidth else LiquidGlassPlateMetrics.outerRimWidth
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier = Modifier.fillMaxHeight().aspectRatio(layout.printAspectRatio), contentAlignment = Alignment.Center) {
@@ -379,7 +405,7 @@ fun LayoutSelectionCard(
             Column(verticalArrangement = Arrangement.Center, modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Bố cục ${layout.selectCount} ảnh",
-                    color = Color.White,
+                    color = NeutralText,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.subtitle2,
                     maxLines = 1,
@@ -388,7 +414,7 @@ fun LayoutSelectionCard(
                 val cleanSize = layout.printSizeLabel.split("_").firstOrNull() ?: layout.printSizeLabel
                 Text(
                     text = "Khổ $cleanSize",
-                    color = NeutralMuted,
+                    color = if (isSelected) AccentNudeDark else NeutralSecondary,
                     style = MaterialTheme.typography.caption,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -400,25 +426,32 @@ fun LayoutSelectionCard(
 
 @Composable
 fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, targetLayout: com.phuctran.photobooth.desktop.model.LayoutMode?, modifier: Modifier = Modifier.height(240.dp), onClick: () -> Unit) {
-    var isHovered by remember { mutableStateOf(false) }
-    val scale by androidx.compose.animation.core.animateFloatAsState(if (isHovered) 1.02f else 1f)
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (isPressed) 0.98f else 1f)
     
     val bitmap = rememberImageBitmap(frame.customImagePath)
     val aspectRatio = targetLayout?.printAspectRatio ?: 0.66f
     
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (isHovered) AccentNude else Color(0xFF2A2631),
+    Box(
         modifier = modifier
             .aspectRatio(aspectRatio)
-            .graphicsLayer(scaleX = scale, scaleY = scale)
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
     ) {
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(4.dp)
-                .background(Color.White),
+                .graphicsLayer(scaleX = scale, scaleY = scale)
+                .liquidGlassPlate(
+                    variant = LiquidGlassPlateVariant.Standard,
+                    cornerRadius = LiquidGlassPlateMetrics.cardCornerRadius,
+                    elevation = 8.dp
+                )
+                .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
             if (bitmap != null) {
@@ -429,7 +462,7 @@ fun SpecialBundleItem(frame: com.phuctran.photobooth.desktop.model.FramePack, ta
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                Text("No Image", color = Color.Gray)
+                Text("No Image", color = NeutralMuted)
             }
         }
     }

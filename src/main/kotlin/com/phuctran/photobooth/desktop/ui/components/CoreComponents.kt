@@ -535,16 +535,14 @@ fun CameraShutterGlassButton(
 
 @Composable
 fun PanelBox(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = modifier
-            .shadow(18.dp, RoundedCornerShape(16.dp), ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.08f))
-            .border(1.dp, NeutralBorder.copy(alpha = 0.8f), RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        color = NeutralPanel,
-        contentColor = NeutralText,
-        elevation = 0.dp
+    LiquidGlassPlate(
+        modifier = modifier,
+        variant = LiquidGlassPlateVariant.Standard,
+        cornerRadius = 16.dp,
+        elevation = LiquidGlassPlateMetrics.defaultElevation,
+        contentPadding = PaddingValues(24.dp)
     ) {
-        Column(Modifier.padding(24.dp)) {
+        Column {
             content()
         }
     }
@@ -939,31 +937,43 @@ fun MomentTile(moment: CapturedMoment, selectedOrder: Int?, aspectRatio: Float, 
 
 @Composable
 fun ChoiceRow(title: String, subtitle: String, selected: Boolean, accent: Color, onClick: () -> Unit, trailing: String? = null) {
-    val scale by animateFloatAsState(if (selected) 1.01f else 1f)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (isPressed) 0.985f else 1f, animationSpec = tween(100))
+    val plateVariant = if (selected) LiquidGlassPlateVariant.Selected else LiquidGlassPlateVariant.Standard
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) accent.copy(alpha = 0.12f) else NeutralPanel)
-            .border(if (selected) 2.dp else 1.dp, if (selected) accent else NeutralBorder, RoundedCornerShape(14.dp))
-            .bouncyClickable(onClick = onClick)
-            .padding(16.dp)
+            .bouncyClickable(interactionSource = interactionSource, onClick = onClick)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(title, color = NeutralText, style = MaterialTheme.typography.h6, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                Text(subtitle, color = NeutralSecondary, style = MaterialTheme.typography.body2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-            if (trailing != null) {
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (selected) Color.White else NeutralPanelAlt)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(trailing, color = if (selected) accent else NeutralSecondary, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Black)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+                .liquidGlassPlate(
+                    variant = plateVariant,
+                    cornerRadius = LiquidGlassPlateMetrics.cardCornerRadius,
+                    elevation = if (selected) 8.dp else 2.dp,
+                    rimWidth = if (selected) LiquidGlassPlateMetrics.selectedRimWidth else LiquidGlassPlateMetrics.outerRimWidth
+                )
+                .padding(16.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(title, color = NeutralText, style = MaterialTheme.typography.h6, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(subtitle, color = NeutralSecondary, style = MaterialTheme.typography.body2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                if (trailing != null) {
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(if (selected) Color.White else NeutralPanelAlt)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(trailing, color = if (selected) accent else NeutralSecondary, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Black)
+                    }
                 }
             }
         }
@@ -993,46 +1003,52 @@ fun FrameChoice(frame: FramePack, selected: Boolean, onClick: () -> Unit) {
                 loadFrameThumbnail(frame.customImagePath!!)
             }
         }
-        
+        val plateVariant = if (selected) LiquidGlassPlateVariant.Selected else LiquidGlassPlateVariant.Standard
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-                .clip(RoundedCornerShape(14.dp))
-                .background(NeutralPanel)
-                .border(
-                    if (selected) 3.dp else 1.dp,
-                    if (selected) Color(frame.accentColor) else NeutralBorder,
-                    RoundedCornerShape(14.dp)
-                )
                 .bouncyClickable(interactionSource = interactionSource, onClick = onClick)
-                .padding(12.dp),
-            contentAlignment = Alignment.Center
         ) {
-            val bmp = imageBitmap
-            if (bmp != null) {
-                Image(
-                    bitmap = bmp,
-                    contentDescription = frame.title,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 250.dp),
-                    contentScale = ContentScale.Fit
-                )
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.size(42.dp).clip(CircleShape).background(NeutralPanelAlt))
-                    Text("Đang tải khung", color = NeutralMuted, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+                    .liquidGlassPlate(
+                        variant = plateVariant,
+                        cornerRadius = LiquidGlassPlateMetrics.cardCornerRadius,
+                        elevation = if (selected) 8.dp else 4.dp,
+                        rimWidth = if (selected) LiquidGlassPlateMetrics.selectedRimWidth else LiquidGlassPlateMetrics.outerRimWidth
+                    )
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val bmp = imageBitmap
+                if (bmp != null) {
+                    Image(
+                        bitmap = bmp,
+                        contentDescription = frame.title,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 250.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.size(42.dp).clip(CircleShape).background(NeutralPanelAlt))
+                        Text("Đang tải khung", color = NeutralMuted, style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
+                    }
                 }
-            }
-            if (selected) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(AccentNude),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Check, contentDescription = "Đã chọn", tint = Color.White, modifier = Modifier.size(19.dp))
+                if (selected) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(AccentNude)
+                            .border(1.5.dp, Color.White, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Check, contentDescription = "Đã chọn", tint = Color.White, modifier = Modifier.size(19.dp))
+                    }
                 }
             }
         }
@@ -1053,9 +1069,11 @@ fun OutputRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(NeutralPanelAlt.copy(alpha = 0.75f))
-            .border(1.dp, NeutralBorder, RoundedCornerShape(12.dp))
+            .liquidGlassPlate(
+                variant = LiquidGlassPlateVariant.Standard,
+                cornerRadius = LiquidGlassPlateMetrics.rowCornerRadius,
+                elevation = LiquidGlassPlateMetrics.nestedRowElevation
+            )
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

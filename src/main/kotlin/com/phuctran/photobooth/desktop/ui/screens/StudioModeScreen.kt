@@ -140,17 +140,15 @@ fun Step1Layout(
                 modifier = Modifier.fillMaxSize().kioskPagerDrag(pagerState)
             ) { page ->
                 val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                val absoluteOffset = kotlin.math.abs(pageOffset)
-                val scale = androidx.compose.ui.util.lerp(
-                    start = 0.8f,
-                    stop = 1f,
-                    fraction = 1f - absoluteOffset.coerceIn(0f, 1f)
-                )
-                val alpha = androidx.compose.ui.util.lerp(
-                    start = 0.3f,
-                    stop = 1f,
-                    fraction = 1f - absoluteOffset.coerceIn(0f, 1f)
-                )
+                val proximity = 1f - kotlin.math.abs(pageOffset).coerceIn(0f, 1f)
+                val focus = proximity * proximity * (3f - 2f * proximity) // smoothstep
+                val scale = androidx.compose.ui.util.lerp(0.84f, 1f, focus)
+                val contentAlpha = androidx.compose.ui.util.lerp(0.55f, 1f, focus)
+                val isCenterFocused = focus >= 0.55f
+                val plateVariant = if (isCenterFocused) LiquidGlassPlateVariant.Selected else LiquidGlassPlateVariant.Standard
+                val plateOutset = androidx.compose.ui.unit.lerp(2.dp, 6.dp, focus)
+                val plateElevation = androidx.compose.ui.unit.lerp(6.dp, 16.dp, focus)
+                val plateRimWidth = androidx.compose.ui.unit.lerp(1.1.dp, 1.65.dp, focus)
                 
                 val actualPage = page % layouts.size.coerceAtLeast(1)
                 val layout = layouts[actualPage]
@@ -158,10 +156,12 @@ fun Step1Layout(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .zIndex(focus)
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
-                            this.alpha = alpha
+                            alpha = contentAlpha
+                            translationY = androidx.compose.ui.util.lerp(10.dp.toPx(), 0f, focus)
                         }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -179,7 +179,15 @@ fun Step1Layout(
                         layout = layout,
                         moments = emptyList(),
                         frame = FramePack("preview", "Preview", "", layout.accentColor),
-                        modifier = Modifier.fillMaxHeight(0.9f)
+                        modifier = Modifier
+                            .fillMaxHeight(0.9f)
+                            .liquidGlassPlate(
+                                variant = plateVariant,
+                                cornerRadius = 12.dp,
+                                elevation = plateElevation,
+                                rimWidth = plateRimWidth,
+                                visualOutset = plateOutset
+                            )
                     )
                 }
             }
@@ -215,9 +223,11 @@ fun Step2Effect(
             Row(
                 modifier = Modifier
                     .widthIn(max = maxDockWidth)
-                    .shadow(12.dp, RoundedCornerShape(24.dp))
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xE6262528))
+                    .liquidGlassPlate(
+                        variant = LiquidGlassPlateVariant.Media,
+                        cornerRadius = 24.dp,
+                        elevation = 14.dp
+                    )
                     .padding(8.dp)
                     .horizontalScroll(dockScrollState)
                     .kioskHorizontalDrag(dockScrollState),
@@ -272,8 +282,11 @@ fun Step2Effect(
 
         Row(
             Modifier.align(Alignment.TopStart).padding(24.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xD9262528))
+                .liquidGlassPlate(
+                    variant = LiquidGlassPlateVariant.Media,
+                    cornerRadius = 24.dp,
+                    elevation = 12.dp
+                )
                 .padding(start = 8.dp, end = 24.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
