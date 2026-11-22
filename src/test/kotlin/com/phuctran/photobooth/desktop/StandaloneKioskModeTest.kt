@@ -66,10 +66,14 @@ class StandaloneKioskModeTest {
 
     private class SpyTelegramService : TelegramNotificationService() {
         var paidCalls = 0
+        var completedCalls = 0
         var lastOrderCode: String? = null
+        var lastSessionId: String? = null
         var lastLayoutTitle: String? = null
         var lastCopies: Int = 0
         var lastAmountVnd: Long = 0L
+        var lastPaymentMethod: String? = null
+        var lastPrintStatus: String? = null
 
         override fun sendOrderPaid(
             config: DesktopBoothConfig,
@@ -77,12 +81,35 @@ class StandaloneKioskModeTest {
             layoutTitle: String,
             copies: Int,
             amountVnd: Long
-        ) {
+        ): CompletableFuture<Boolean> {
             paidCalls++
             lastOrderCode = orderCode
             lastLayoutTitle = layoutTitle
             lastCopies = copies
             lastAmountVnd = amountVnd
+            return CompletableFuture.completedFuture(true)
+        }
+
+        override fun sendOrderCompleted(
+            config: DesktopBoothConfig,
+            sessionId: String,
+            orderCode: String,
+            layoutTitle: String,
+            copies: Int,
+            amountVnd: Long,
+            qrUrl: String?,
+            paymentMethod: String,
+            printStatus: String
+        ): CompletableFuture<Boolean> {
+            completedCalls++
+            lastSessionId = sessionId
+            lastOrderCode = orderCode
+            lastLayoutTitle = layoutTitle
+            lastCopies = copies
+            lastAmountVnd = amountVnd
+            lastPaymentMethod = paymentMethod
+            lastPrintStatus = printStatus
+            return CompletableFuture.completedFuture(true)
         }
 
         override fun sendTestMessage(token: String, chatId: String): CompletableFuture<Boolean> {
@@ -219,7 +246,7 @@ class StandaloneKioskModeTest {
     }
 
     @Test
-    fun testTelegramNotificationSentOnlyInStandaloneModeWhenConfigured() {
+    fun testTelegramNotificationSentOnlyInStandaloneModeWhenConfigured() = runBlocking {
         val standaloneConfig = DesktopBoothConfig(
             isStandaloneKioskMode = true,
             enableTelegramAlerts = true,
@@ -232,21 +259,48 @@ class StandaloneKioskModeTest {
         val (standaloneController, standaloneTelegram) = createController(standaloneConfig)
         standaloneController.setQuantityAndStartPayment(2)
         standaloneController.completePayment("QR PayOS")
-        assertEquals(1, standaloneTelegram.paidCalls, "Telegram alert must be sent in STANDALONE_KIOSK mode")
+        assertEquals(1, standaloneTelegram.paidCalls, "Telegram paid alert must be sent in STANDALONE_KIOSK mode")
         assertEquals(2, standaloneTelegram.lastCopies)
         assertTrue(standaloneTelegram.lastAmountVnd > 0L)
+
+        seedCapturedSession(standaloneController, sessionId = "standalone-completed-session")
+        standaloneController.toggleMoment(standaloneController.capturedMoments.value.single())
+        standaloneController.confirmSelection()
+        standaloneController.startPrinting(userConfirmed = true)
+        withTimeout(5_000) {
+            while (standaloneTelegram.completedCalls == 0) {
+                delay(20)
+            }
+        }
+        assertEquals(1, standaloneTelegram.completedCalls, "Telegram completed alert must be sent after printing")
+        assertEquals("standalone-completed-session", standaloneTelegram.lastSessionId)
+        assertEquals("QR PayOS", standaloneTelegram.lastPaymentMethod)
 
         val commercialConfig = standaloneConfig.copy(isStandaloneKioskMode = false)
         val (commercialController, commercialTelegram) = createController(commercialConfig)
         commercialController.setQuantityAndStartPayment(2)
         commercialController.completePayment("QR PayOS")
-        assertEquals(1, commercialTelegram.paidCalls, "Telegram alert must be sent in COMMERCIAL mode when configured")
+        assertEquals(1, commercialTelegram.paidCalls, "Telegram paid alert must be sent in COMMERCIAL mode when configured")
 
         val rentalConfig = standaloneConfig.copy(isStandaloneKioskMode = false, isRentalMode = true)
         val (rentalController, rentalTelegram) = createController(rentalConfig)
         rentalController.setQuantityAndStartPayment(2)
         rentalController.completePayment("Miễn phí (Event)")
-        assertEquals(0, rentalTelegram.paidCalls, "Telegram alert must NOT be sent in RENTAL mode")
+        assertEquals(0, rentalTelegram.paidCalls, "Telegram paid alert must NOT be sent in RENTAL mode")
+
+        seedCapturedSession(rentalController, sessionId = "rental-completed-session")
+        rentalController.toggleMoment(rentalController.capturedMoments.value.single())
+        rentalController.confirmSelection()
+        rentalController.confirmFrameSelection()
+        rentalController.startPrinting(userConfirmed = true)
+        withTimeout(5_000) {
+            while (rentalTelegram.completedCalls == 0) {
+                delay(20)
+            }
+        }
+        assertEquals(1, rentalTelegram.completedCalls, "Telegram completed alert must be sent in RENTAL mode when configured")
+        assertEquals(0L, rentalTelegram.lastAmountVnd)
+        assertEquals("Gói thuê sự kiện", rentalTelegram.lastPaymentMethod)
     }
 
     @Test
@@ -338,5 +392,65 @@ class StandaloneKioskModeTest {
             assertEquals(fulfillmentState, controller.sessionState.value, "Should not abort in $fulfillmentState")
             assertTrue(Files.isDirectory(sessionDir), "Session directory must remain intact in $fulfillmentState")
         }
+    }
+
+    @Test
+    fun testStartPrintingAutoTimeoutSendsTelegramOrderCompletedWhenReachingDelivery() = runBlocking {
+        val config = DesktopBoothConfig(
+            isStandaloneKioskMode = false,
+            enableTelegramAlerts = true,
+            telegramBotToken = "token_auto_print",
+            telegramChatId = "chat_auto_print",
+            enableSystemPrint = false,
+            enableLocalServer = false,
+            useNativeSdk = false
+        )
+        val (controller, telegram) = createController(config)
+        controller.setQuantityAndStartPayment(2)
+        controller.completePayment("Tiền mặt")
+        assertEquals(1, telegram.paidCalls)
+
+        seedCapturedSession(controller, sessionId = "auto-timeout-session")
+        controller.toggleMoment(controller.capturedMoments.value.single())
+        controller.confirmSelection()
+        controller.confirmFrameSelection()
+
+        // Simulate decision timer timeout calling startPrinting(userConfirmed = false)
+        controller.startPrinting(userConfirmed = false)
+        withTimeout(5_000) {
+            while (controller.sessionState.value != SessionState.DELIVERY || telegram.completedCalls == 0) {
+                delay(20)
+            }
+        }
+        assertEquals(SessionState.DELIVERY, controller.sessionState.value)
+        assertEquals(1, telegram.completedCalls, "sendOrderCompleted must be sent even when userConfirmed = false")
+        assertEquals("auto-timeout-session", telegram.lastSessionId)
+        assertEquals("Tiền mặt", telegram.lastPaymentMethod)
+    }
+
+    @Test
+    fun testTelegramAlertsDefaultToEnabledWhenCredentialsPresentAndRespectExplicitFalse() {
+        val implicitEnabled = DesktopBoothConfig.fromEnvironment(
+            mapOf(
+                "TELEGRAM_BOT_TOKEN" to "123456:ABCDEF",
+                "TELEGRAM_CHAT_ID" to "-100999"
+            )
+        )
+        assertTrue(implicitEnabled.enableTelegramAlerts, "Absent ENABLE_TELEGRAM_ALERTS with credentials present must default to true")
+        assertTrue(implicitEnabled.telegramAlertsConfigured)
+
+        val explicitDisabled = DesktopBoothConfig.fromEnvironment(
+            mapOf(
+                "ENABLE_TELEGRAM_ALERTS" to "false",
+                "TELEGRAM_BOT_TOKEN" to "123456:ABCDEF",
+                "TELEGRAM_CHAT_ID" to "-100999"
+            )
+        )
+        assertFalse(explicitDisabled.enableTelegramAlerts, "Explicit ENABLE_TELEGRAM_ALERTS=false must disable alerts")
+        assertFalse(explicitDisabled.telegramAlertsConfigured)
+
+        val missingCredentials = DesktopBoothConfig.fromEnvironment(emptyMap())
+        assertFalse(missingCredentials.enableTelegramAlerts)
+        assertFalse(missingCredentials.telegramAlertsConfigured)
     }
 }

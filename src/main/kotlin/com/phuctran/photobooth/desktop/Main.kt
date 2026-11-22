@@ -181,6 +181,7 @@ fun main() = application {
                             printCopies = printCopies,
                             paymentQrData = paymentQrData,
                             isPaymentConfigured = controller.isPaymentConfigured,
+                            staffCashPin = currentConfig.staffCashPin,
                             onPaid = { controller.completePayment() },
                             onBack = { controller.goBack() }
                         )

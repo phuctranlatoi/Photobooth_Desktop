@@ -172,114 +172,108 @@ fun SettingsTabContent(
             }
         }
 
-        AnimatedVisibility(
-            visible = operatingMode == BoothOperatingMode.STANDALONE_KIOSK,
-            enter = expandVertically(),
-            exit = shrinkVertically()
-        ) {
-            SettingsSection("Cảnh báo Telegram Bot (Kiosk cố định)") {
-                Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Bật cảnh báo Telegram", style = MaterialTheme.typography.subtitle1, color = NeutralText)
-                        Text(
-                            "Tự động gửi thông báo đơn hàng đã thanh toán (mã đơn, bố cục, số bản in, doanh thu) về nhóm Telegram quản lý.",
-                            style = MaterialTheme.typography.body2,
-                            color = NeutralSecondary
-                        )
+        SettingsSection("Cảnh báo Telegram") {
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Bật cảnh báo Telegram", style = MaterialTheme.typography.subtitle1, color = NeutralText)
+                    Text(
+                        "Tự động gửi thông báo đơn hàng đã thanh toán và hoàn tất lượt chụp & in ảnh (mã đơn, bố cục, số bản in, doanh thu, trạng thái in) về nhóm Telegram quản lý.",
+                        style = MaterialTheme.typography.body2,
+                        color = NeutralSecondary
+                    )
+                }
+                Switch(
+                    checked = enableTelegramAlerts,
+                    onCheckedChange = onEnableTelegramAlertsChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = AccentNudeDark,
+                        checkedTrackAlpha = 1f,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = NeutralBorder,
+                        uncheckedTrackAlpha = 1f
+                    )
+                )
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = telegramBotToken,
+                    onValueChange = {
+                        onTelegramBotTokenChange(it)
+                        telegramTestStatus = TelegramTestStatus.IDLE
+                    },
+                    modifier = Modifier.weight(1.3f),
+                    singleLine = true,
+                    label = { Text("Bot Token") },
+                    placeholder = { Text("123456789:ABCdefGHIjklMNOpqrSTUvwxYZ") },
+                    visualTransformation = if (showTokenPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        TextButton(onClick = { showTokenPlaintext = !showTokenPlaintext }) {
+                            Text(if (showTokenPlaintext) "Ẩn" else "Hiện", style = MaterialTheme.typography.caption, color = AccentNudeDark)
+                        }
                     }
-                    Switch(
-                        checked = enableTelegramAlerts,
-                        onCheckedChange = onEnableTelegramAlertsChange,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = AccentNudeDark,
-                            checkedTrackAlpha = 1f,
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = NeutralBorder,
-                            uncheckedTrackAlpha = 1f
+                )
+                OutlinedTextField(
+                    value = telegramChatId,
+                    onValueChange = {
+                        onTelegramChatIdChange(it)
+                        telegramTestStatus = TelegramTestStatus.IDLE
+                    },
+                    modifier = Modifier.weight(0.9f),
+                    singleLine = true,
+                    label = { Text("Chat ID") },
+                    placeholder = { Text("-1001234567890") }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                KioskSecondaryButton(
+                    text = "Gửi tin nhắn thử nghiệm",
+                    enabled = telegramTestStatus != TelegramTestStatus.SENDING &&
+                        telegramBotToken.isNotBlank() &&
+                        telegramChatId.isNotBlank(),
+                    onClick = {
+                        telegramTestStatus = TelegramTestStatus.SENDING
+                        coroutineScope.launch {
+                            val ok = withContext(Dispatchers.IO) {
+                                runCatching { onTestTelegramAlert(telegramBotToken, telegramChatId).get() }.getOrDefault(false)
+                            }
+                            telegramTestStatus = if (ok) TelegramTestStatus.SUCCESS else TelegramTestStatus.FAILED
+                        }
+                    }
+                )
+
+                Box(modifier = Modifier.weight(1f)) {
+                    when (telegramTestStatus) {
+                        TelegramTestStatus.IDLE -> Unit
+                        TelegramTestStatus.SENDING -> Text(
+                            text = "Đang gửi tin nhắn thử nghiệm...",
+                            style = MaterialTheme.typography.body2,
+                            color = NeutralSecondary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    )
-                }
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = telegramBotToken,
-                        onValueChange = {
-                            onTelegramBotTokenChange(it)
-                            telegramTestStatus = TelegramTestStatus.IDLE
-                        },
-                        modifier = Modifier.weight(1.3f),
-                        singleLine = true,
-                        label = { Text("Bot Token") },
-                        placeholder = { Text("123456789:ABCdefGHIjklMNOpqrSTUvwxYZ") },
-                        visualTransformation = if (showTokenPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TextButton(onClick = { showTokenPlaintext = !showTokenPlaintext }) {
-                                Text(if (showTokenPlaintext) "Ẩn" else "Hiện", style = MaterialTheme.typography.caption, color = AccentNudeDark)
-                            }
-                        }
-                    )
-                    OutlinedTextField(
-                        value = telegramChatId,
-                        onValueChange = {
-                            onTelegramChatIdChange(it)
-                            telegramTestStatus = TelegramTestStatus.IDLE
-                        },
-                        modifier = Modifier.weight(0.9f),
-                        singleLine = true,
-                        label = { Text("Chat ID") },
-                        placeholder = { Text("-1001234567890") }
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    KioskSecondaryButton(
-                        text = "Gửi tin nhắn thử nghiệm",
-                        enabled = telegramTestStatus != TelegramTestStatus.SENDING &&
-                            telegramBotToken.isNotBlank() &&
-                            telegramChatId.isNotBlank(),
-                        onClick = {
-                            telegramTestStatus = TelegramTestStatus.SENDING
-                            coroutineScope.launch {
-                                val ok = withContext(Dispatchers.IO) {
-                                    runCatching { onTestTelegramAlert(telegramBotToken, telegramChatId).get() }.getOrDefault(false)
-                                }
-                                telegramTestStatus = if (ok) TelegramTestStatus.SUCCESS else TelegramTestStatus.FAILED
-                            }
-                        }
-                    )
-
-                    Box(modifier = Modifier.weight(1f)) {
-                        when (telegramTestStatus) {
-                            TelegramTestStatus.IDLE -> Unit
-                            TelegramTestStatus.SENDING -> Text(
-                                text = "Đang gửi tin nhắn thử nghiệm...",
-                                style = MaterialTheme.typography.body2,
-                                color = NeutralSecondary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            TelegramTestStatus.SUCCESS -> Text(
-                                text = "✓ Đã gửi tin nhắn thử nghiệm thành công!",
-                                style = MaterialTheme.typography.body2,
-                                color = AccentMint,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            TelegramTestStatus.FAILED -> Text(
-                                text = "✗ Gửi thất bại. Vui lòng kiểm tra Bot Token và Chat ID.",
-                                style = MaterialTheme.typography.body2,
-                                color = AccentRed,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        TelegramTestStatus.SUCCESS -> Text(
+                            text = "✓ Đã gửi tin nhắn thử nghiệm thành công!",
+                            style = MaterialTheme.typography.body2,
+                            color = AccentMint,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        TelegramTestStatus.FAILED -> Text(
+                            text = "✗ Gửi thất bại. Vui lòng kiểm tra Bot Token và Chat ID.",
+                            style = MaterialTheme.typography.body2,
+                            color = AccentRed,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

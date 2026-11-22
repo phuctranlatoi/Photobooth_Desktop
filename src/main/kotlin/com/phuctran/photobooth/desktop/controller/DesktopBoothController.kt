@@ -174,6 +174,7 @@ class DesktopBoothController(
     private var currentSessionId: String? = null
     private var lastOrderCode: String? = null
     private var paymentMethod: String = "Tiền mặt"
+    private val isCompletingPayment = java.util.concurrent.atomic.AtomicBoolean(false)
     private var frozenPricingSnapshot: PricingSnapshot? = null
 
     private val _paymentQrData = MutableStateFlow<String?>(null)
@@ -433,9 +434,12 @@ class DesktopBoothController(
     }
 
     fun setQuantityAndStartPayment(quantity: Int) {
+        isCompletingPayment.set(false)
         val safeQuantity = PricingCalculator.sanitizeQuantity(_selectedLayout.value.printSizeLabel, quantity)
         val pricing = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, safeQuantity)
         _printCopies.value = safeQuantity
+        val orderCode = System.currentTimeMillis()
+        lastOrderCode = orderCode.toString()
 
         if (activeConfig.value.isRentalMode) {
             paymentMethod = "Cho thuê"
@@ -462,8 +466,6 @@ class DesktopBoothController(
         frozenPricingSnapshot = pricing
         _totalPrice.value = pricing.totalAmount
         paymentMethod = "Tiền mặt"
-        val orderCode = System.currentTimeMillis()
-        lastOrderCode = orderCode.toString()
         transitionTo(SessionState.PAYMENT_PENDING)
         
         paymentPollingJob?.cancel()
@@ -489,12 +491,14 @@ class DesktopBoothController(
     }
 
     fun completePayment(method: String = "Tiền mặt") {
+        if (!isCompletingPayment.compareAndSet(false, true)) return
         paymentMethod = method
         paymentPollingJob?.cancel()
         paymentPollingJob = null
         val cfg = activeConfig.value
         if (cfg.telegramAlertsConfigured && cfg.operatingMode != BoothOperatingMode.RENTAL) {
             val orderCode = lastOrderCode ?: System.currentTimeMillis().toString()
+            println("INFO [DesktopBoothController]: Kích hoạt cảnh báo Telegram thanh toán đơn #$orderCode ($method)")
             telegramNotificationService.sendOrderPaid(
                 config = cfg,
                 orderCode = orderCode,
@@ -957,7 +961,9 @@ class DesktopBoothController(
                 totalAmount = salePricing.totalAmount, paymentMethod = paymentMethod,
                 createdAt = System.currentTimeMillis()
             )
-            if (userConfirmed && printJob.await() && currentSessionId == sessionId) {
+            val printAccepted = printJob.await()
+            val sessionConfirmedAndCompleted = userConfirmed && currentSessionId == sessionId
+            if (sessionConfirmedAndCompleted && printAccepted) {
                 withContext(Dispatchers.IO) {
                     runCatching { salesRepository.recordSale(sale) }
                         .onSuccess {
@@ -968,13 +974,38 @@ class DesktopBoothController(
                         .onFailure { println("Could not save local sale for $sessionId: ${it.message}") }
                 }
             }
+            val sameSession = currentSessionId == sessionId
+            val currentConfig = activeConfig.value
+            val capturedOrderCode = lastOrderCode ?: sessionId
+            val capturedAmount = if (currentConfig.operatingMode == BoothOperatingMode.RENTAL) 0L else salePricing.totalAmount
+            val capturedMethod = if (currentConfig.operatingMode == BoothOperatingMode.RENTAL) "Gói thuê sự kiện" else paymentMethod
+            val currentPrintStatus = printStatusMessage
+            val currentLayoutTitle = saleLayout.title
+            val currentCopies = salePricing.quantity
             transitionTo(SessionState.DELIVERY)
+            if (sameSession && currentConfig.telegramAlertsConfigured) {
+                runCatching {
+                    telegramNotificationService.sendOrderCompleted(
+                        config = currentConfig,
+                        sessionId = sessionId,
+                        orderCode = capturedOrderCode,
+                        layoutTitle = currentLayoutTitle,
+                        copies = currentCopies,
+                        amountVnd = capturedAmount,
+                        qrUrl = finalQrUrl,
+                        paymentMethod = capturedMethod,
+                        printStatus = currentPrintStatus
+                    )
+                }.onFailure {
+                    println("WARNING [DesktopBoothController]: Không thể kích hoạt Telegram: ${it.message}")
+                }
+            }
 
             // 6. Các tác vụ nặng còn lại chạy ngầm (Tạo Video)
             scope.launch(Dispatchers.IO) {
                 // Đợi chắc chắn lệnh in đã vào hàng đợi của OS
                 printJob.join()
-                _exportSummary.value = _exportSummary.value.copy(printStatus = printStatusMessage)
+                _exportSummary.value = _exportSummary.value.copy(printStatus = currentPrintStatus)
 
                 // Bước 2: Tạo Video
                 _videoEncodingJobs.forEach { it.join() }
@@ -1069,6 +1100,7 @@ class DesktopBoothController(
         when (sessionState.value) {
             SessionState.SELECTING_QUANTITY -> transitionTo(SessionState.SELECTING)
             SessionState.PAYMENT_PENDING -> {
+                isCompletingPayment.set(false)
                 paymentPollingJob?.cancel()
                 paymentPollingJob = null
                 transitionTo(SessionState.SELECTING_QUANTITY)
@@ -1088,6 +1120,7 @@ class DesktopBoothController(
     fun resetSession() {
         cancelBeautyJobs()
         frozenPricingSnapshot = null
+        isCompletingPayment.set(false)
         captureJob?.cancel()
         deliveryJob?.cancel()
         paymentPollingJob?.cancel()
