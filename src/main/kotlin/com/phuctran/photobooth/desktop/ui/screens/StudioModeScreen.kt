@@ -194,7 +194,6 @@ private fun Step2UpfrontFrame(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .shadow(10.dp, RoundedCornerShape(8.dp), clip = false)
                 )
             }
 
