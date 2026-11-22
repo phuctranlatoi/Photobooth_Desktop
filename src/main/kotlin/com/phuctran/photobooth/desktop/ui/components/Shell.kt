@@ -14,6 +14,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,21 +37,32 @@ fun AppShell(
     paymentConfigured: Boolean = false,
     inactivityTimeLeft: Int? = null,
     inactivityTimeout: Int = 90,
+    onUserInteraction: () -> Unit = {},
     content: @Composable BoxScope.() -> Unit
 ) {
     val isFullscreen = state == SessionState.LIVE_VIEW || state == SessionState.COUNTDOWN || state == SessionState.CAPTURING
+    val interactionModifier = Modifier.pointerInput(onUserInteraction) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.changes.any { it.pressed }) {
+                    onUserInteraction()
+                }
+            }
+        }
+    }
 
     if (isFullscreen) {
-        Box(Modifier.fillMaxSize().background(CameraBlack)) {
+        Box(Modifier.fillMaxSize().then(interactionModifier).background(CameraBlack)) {
             content()
         }
     } else if (state == SessionState.ADMIN) {
         KioskBackdrop(mode = KioskBackdropMode.Admin) {
-            Box(Modifier.fillMaxSize().padding(24.dp)) { content() }
+            Box(Modifier.fillMaxSize().then(interactionModifier).padding(24.dp)) { content() }
         }
     } else {
         KioskBackdrop(mode = KioskBackdropMode.Guest) {
-            Box(Modifier.fillMaxSize().padding(24.dp)) { content() }
+            Box(Modifier.fillMaxSize().then(interactionModifier).padding(24.dp)) { content() }
         }
     }
 }

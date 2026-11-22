@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -17,8 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.phuctran.photobooth.desktop.config.BoothOperatingMode
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.services.NativeEosCaptureService
 import com.phuctran.photobooth.desktop.ui.components.KioskIconButton
@@ -27,8 +31,19 @@ import com.phuctran.photobooth.desktop.ui.components.KioskSecondaryButton
 import com.phuctran.photobooth.desktop.ui.components.kioskHorizontalDrag
 import com.phuctran.photobooth.desktop.ui.components.kioskVerticalDrag
 import com.phuctran.photobooth.desktop.ui.theme.*
+import java.util.concurrent.CompletableFuture
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.swing.JFileChooser
+
+private enum class TelegramTestStatus {
+    IDLE,
+    SENDING,
+    SUCCESS,
+    FAILED
+}
 
 @Composable
 fun SettingsTabContent(
@@ -40,11 +55,34 @@ fun SettingsTabContent(
     postCaptureTimeoutSeconds: Int, onPostCaptureTimeoutChange: (Int) -> Unit,
     photoSelectionTimeoutSeconds: Int, onPhotoSelectionTimeoutChange: (Int) -> Unit,
     frameSelectionTimeoutSeconds: Int, onFrameSelectionTimeoutChange: (Int) -> Unit,
-    isRentalMode: Boolean = false, onRentalModeChange: (Boolean) -> Unit = {},
+    operatingMode: BoothOperatingMode = config.operatingMode,
+    onOperatingModeChange: (BoothOperatingMode) -> Unit = {},
+    maxVisibleFilters: Int = config.maxVisibleFilters,
+    onMaxVisibleFiltersChange: (Int) -> Unit = {},
+    standaloneInactivityTimeoutSeconds: Int = config.standaloneInactivityTimeoutSeconds,
+    onStandaloneInactivityTimeoutChange: (Int) -> Unit = {},
+    enableTelegramAlerts: Boolean = config.enableTelegramAlerts,
+    onEnableTelegramAlertsChange: (Boolean) -> Unit = {},
+    telegramBotToken: String = config.telegramBotToken,
+    onTelegramBotTokenChange: (String) -> Unit = {},
+    telegramChatId: String = config.telegramChatId,
+    onTelegramChatIdChange: (String) -> Unit = {},
+    onTestTelegramAlert: (String, String) -> CompletableFuture<Boolean> = { _, _ -> CompletableFuture.completedFuture(false) },
     onSaveSettings: () -> Unit
 ) {
     var saved by remember { mutableStateOf(false) }
+    var showTokenPlaintext by remember { mutableStateOf(false) }
+    var telegramTestStatus by remember { mutableStateOf(TelegramTestStatus.IDLE) }
+    val coroutineScope = rememberCoroutineScope()
+
     LaunchedEffect(saved) { if (saved) { delay(3000); saved = false } }
+
+    val modeDisplayLabel = when (operatingMode) {
+        BoothOperatingMode.COMMERCIAL -> "Thương mại (QR PayOS)"
+        BoothOperatingMode.RENTAL -> "Sự kiện (Gói thuê miễn phí)"
+        BoothOperatingMode.STANDALONE_KIOSK -> "Kiosk cố định (Tự vận hành)"
+    }
+
     val scrollState = rememberScrollState()
     Column(Modifier.fillMaxSize().verticalScroll(scrollState).kioskVerticalDrag(scrollState), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -56,37 +94,43 @@ fun SettingsTabContent(
         }
         val statusScroll = rememberScrollState()
         Row(Modifier.fillMaxWidth().horizontalScroll(statusScroll).kioskHorizontalDrag(statusScroll), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatusCard("Chế độ Kiosk", if (isRentalMode) "Sự kiện (Gói thuê)" else "Thương mại (QR PayOS)")
+            StatusCard("Chế độ Kiosk", modeDisplayLabel)
             StatusCard("Nguồn Camera", if (useHotFolder) "Hot Folder" else if (nativeCamera != null) "Canon EDSDK" else "Webcam / DroidCam")
             StatusCard("Máy in Windows", if (enablePrint) "Đang bật" else "Đang tắt")
             StatusCard("Đồng bộ Đám mây", if (config.canUploadAlbum) "Sẵn sàng" else "Ngoại tuyến")
             StatusCard("Kiosk", "${config.boothId} · Port ${config.localServerPort}")
         }
         SettingsSection("Chế độ vận hành Kiosk") {
-            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Chế độ cho thuê sự kiện", style = MaterialTheme.typography.subtitle1, color = NeutralText)
-                    Text(
-                        if (isRentalMode) "Bỏ qua bước thanh toán PayOS. Khách chụp & in ảnh miễn phí theo gói thuê sự kiện."
-                        else "Kích hoạt thanh toán PayOS. Khách quét mã QR PayOS để thanh toán trước khi chụp.",
-                        style = MaterialTheme.typography.body2,
-                        color = NeutralSecondary
-                    )
-                }
-                Switch(
-                    checked = isRentalMode,
-                    onCheckedChange = onRentalModeChange,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = AccentNudeDark,
-                        checkedTrackAlpha = 1f,
-                        uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = NeutralBorder,
-                        uncheckedTrackAlpha = 1f
-                    )
+            Text(
+                "Chọn mô hình vận hành phù hợp với địa điểm đặt máy. Chế độ Kiosk cố định sẽ đẩy bước chọn khung trang trí lên đầu quy trình và bật bộ đếm tự động thu hồi phiên.",
+                style = MaterialTheme.typography.body2,
+                color = NeutralSecondary
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OperatingModeOption(
+                    title = "Thương mại (QR PayOS)",
+                    detail = "Chọn Bố cục & Màu -> Thanh toán PayOS -> Chụp -> Chọn ảnh & Khung.",
+                    selected = operatingMode == BoothOperatingMode.COMMERCIAL,
+                    onClick = { onOperatingModeChange(BoothOperatingMode.COMMERCIAL) },
+                    modifier = Modifier.weight(1f)
+                )
+                OperatingModeOption(
+                    title = "Sự kiện (Gói thuê miễn phí)",
+                    detail = "Bỏ qua thanh toán PayOS. Khách chụp & in ảnh miễn phí tại sự kiện.",
+                    selected = operatingMode == BoothOperatingMode.RENTAL,
+                    onClick = { onOperatingModeChange(BoothOperatingMode.RENTAL) },
+                    modifier = Modifier.weight(1f)
+                )
+                OperatingModeOption(
+                    title = "Kiosk cố định (Tự vận hành)",
+                    detail = "Chọn Bố cục -> Khung -> Màu ngay từ đầu, cảnh báo Telegram & tự reset khi vắng khách.",
+                    selected = operatingMode == BoothOperatingMode.STANDALONE_KIOSK,
+                    onClick = { onOperatingModeChange(BoothOperatingMode.STANDALONE_KIOSK) },
+                    modifier = Modifier.weight(1f)
                 )
             }
-            if (isRentalMode) {
+
+            if (operatingMode == BoothOperatingMode.RENTAL) {
                 Text(
                     "✨ Đang bật chế độ sự kiện: Màn hình chọn số lượng sẽ hiển thị 'Miễn phí' và tự động bỏ qua bước thanh toán.",
                     style = MaterialTheme.typography.caption,
@@ -97,6 +141,145 @@ fun SettingsTabContent(
                         .padding(horizontal = 14.dp, vertical = 10.dp)
                 )
             }
+
+            AnimatedVisibility(
+                visible = operatingMode == BoothOperatingMode.STANDALONE_KIOSK,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        "✨ Đang bật chế độ Kiosk cố định: Khách xem & chọn mẫu khung trang trí trước khi thanh toán; sau khi chọn ảnh sẽ chuyển thẳng sang màn hình xác nhận in.",
+                        style = MaterialTheme.typography.caption,
+                        color = AccentNudeDark,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(AccentNudeLight, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    )
+                    Divider(color = NeutralBorder)
+                    StandaloneTimeoutStepper(
+                        label = "Tự động thu hồi phiên khi không tương tác",
+                        detail = "Nếu khách rời đi hoặc không chạm màn hình trong khoảng thời gian này (30–300 giây), Kiosk tự quay về màn hình chờ và xóa dữ liệu tạm.",
+                        value = standaloneInactivityTimeoutSeconds,
+                        onValueChange = { onStandaloneInactivityTimeoutChange(it.coerceIn(30, 300)) }
+                    )
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = operatingMode == BoothOperatingMode.STANDALONE_KIOSK,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            SettingsSection("Cảnh báo Telegram Bot (Kiosk cố định)") {
+                Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Bật cảnh báo Telegram", style = MaterialTheme.typography.subtitle1, color = NeutralText)
+                        Text(
+                            "Tự động gửi thông báo đơn hàng đã thanh toán (mã đơn, bố cục, số bản in, doanh thu) về nhóm Telegram quản lý.",
+                            style = MaterialTheme.typography.body2,
+                            color = NeutralSecondary
+                        )
+                    }
+                    Switch(
+                        checked = enableTelegramAlerts,
+                        onCheckedChange = onEnableTelegramAlertsChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = AccentNudeDark,
+                            checkedTrackAlpha = 1f,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = NeutralBorder,
+                            uncheckedTrackAlpha = 1f
+                        )
+                    )
+                }
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = telegramBotToken,
+                        onValueChange = {
+                            onTelegramBotTokenChange(it)
+                            telegramTestStatus = TelegramTestStatus.IDLE
+                        },
+                        modifier = Modifier.weight(1.3f),
+                        singleLine = true,
+                        label = { Text("Bot Token") },
+                        placeholder = { Text("123456789:ABCdefGHIjklMNOpqrSTUvwxYZ") },
+                        visualTransformation = if (showTokenPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(onClick = { showTokenPlaintext = !showTokenPlaintext }) {
+                                Text(if (showTokenPlaintext) "Ẩn" else "Hiện", style = MaterialTheme.typography.caption, color = AccentNudeDark)
+                            }
+                        }
+                    )
+                    OutlinedTextField(
+                        value = telegramChatId,
+                        onValueChange = {
+                            onTelegramChatIdChange(it)
+                            telegramTestStatus = TelegramTestStatus.IDLE
+                        },
+                        modifier = Modifier.weight(0.9f),
+                        singleLine = true,
+                        label = { Text("Chat ID") },
+                        placeholder = { Text("-1001234567890") }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    KioskSecondaryButton(
+                        text = "Gửi tin nhắn thử nghiệm",
+                        enabled = telegramTestStatus != TelegramTestStatus.SENDING &&
+                            telegramBotToken.isNotBlank() &&
+                            telegramChatId.isNotBlank(),
+                        onClick = {
+                            telegramTestStatus = TelegramTestStatus.SENDING
+                            coroutineScope.launch {
+                                val ok = withContext(Dispatchers.IO) {
+                                    runCatching { onTestTelegramAlert(telegramBotToken, telegramChatId).get() }.getOrDefault(false)
+                                }
+                                telegramTestStatus = if (ok) TelegramTestStatus.SUCCESS else TelegramTestStatus.FAILED
+                            }
+                        }
+                    )
+
+                    when (telegramTestStatus) {
+                        TelegramTestStatus.IDLE -> Unit
+                        TelegramTestStatus.SENDING -> Text(
+                            text = "Đang gửi tin nhắn thử nghiệm...",
+                            style = MaterialTheme.typography.body2,
+                            color = NeutralSecondary
+                        )
+                        TelegramTestStatus.SUCCESS -> Text(
+                            text = "✓ Đã gửi tin nhắn thử nghiệm thành công!",
+                            style = MaterialTheme.typography.body2,
+                            color = AccentMint,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TelegramTestStatus.FAILED -> Text(
+                            text = "✗ Gửi thất bại. Vui lòng kiểm tra Bot Token và Chat ID.",
+                            style = MaterialTheme.typography.body2,
+                            color = AccentRed,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        SettingsSection("Giới hạn bộ lọc màu hiển thị") {
+            FilterCountStepper(
+                label = "Số lượng bộ lọc hiển thị cho khách",
+                detail = "Giới hạn số lượng bộ lọc màu đang bật được hiển thị trên thanh chọn màu (tối đa từ 1 đến 10 bộ lọc, mặc định 3).",
+                value = maxVisibleFilters.coerceIn(1, 10),
+                onValueChange = { onMaxVisibleFiltersChange(it.coerceIn(1, 10)) }
+            )
         }
         SettingsSection("In ấn & Xuất ảnh") {
             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -217,12 +400,83 @@ private fun InfoChip(text: String) {
 }
 
 @Composable
+private fun OperatingModeOption(title: String, detail: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    val shape = RoundedCornerShape(14.dp)
+    Column(
+        modifier = modifier
+            .background(if (selected) AccentNudeLight else NeutralPanelAlt, shape)
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) AccentNude else NeutralBorder,
+                shape = shape
+            )
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = if (selected) "●  $title" else "○  $title",
+            style = MaterialTheme.typography.subtitle2,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) AccentNudeDark else NeutralText
+        )
+        Text(detail, style = MaterialTheme.typography.body2, color = NeutralSecondary)
+    }
+}
+
+@Composable
 private fun CameraOption(title: String, detail: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
     val shape = RoundedCornerShape(14.dp)
     Column(modifier.background(if (selected) AccentNudeLight else NeutralPanelAlt, shape)
         .clickable(onClick = onClick).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(if (selected) "●  $title" else "○  $title", style = MaterialTheme.typography.subtitle2, color = if (selected) AccentNudeDark else NeutralText)
         Text(detail, style = MaterialTheme.typography.body2, color = NeutralSecondary)
+    }
+}
+
+@Composable
+private fun StandaloneTimeoutStepper(label: String, detail: String, value: Int, onValueChange: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.subtitle2)
+            Text(detail, style = MaterialTheme.typography.body2, color = NeutralSecondary)
+        }
+        Spacer(Modifier.width(12.dp))
+        StepControl("−", value > 30) { onValueChange((value - 15).coerceAtLeast(30)) }
+        Text(
+            text = "$value giây",
+            style = MaterialTheme.typography.subtitle1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .width(120.dp)
+                .padding(horizontal = 6.dp)
+                .background(NeutralPanelAlt, RoundedCornerShape(10.dp))
+                .padding(vertical = 14.dp)
+        )
+        StepControl("+", value < 300) { onValueChange((value + 15).coerceAtMost(300)) }
+    }
+}
+
+@Composable
+private fun FilterCountStepper(label: String, detail: String, value: Int, onValueChange: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.subtitle2)
+            Text(detail, style = MaterialTheme.typography.body2, color = NeutralSecondary)
+        }
+        Spacer(Modifier.width(12.dp))
+        StepControl("−", value > 1) { onValueChange((value - 1).coerceAtLeast(1)) }
+        Text(
+            text = "$value bộ lọc",
+            style = MaterialTheme.typography.subtitle1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .width(120.dp)
+                .padding(horizontal = 6.dp)
+                .background(NeutralPanelAlt, RoundedCornerShape(10.dp))
+                .padding(vertical = 14.dp)
+        )
+        StepControl("+", value < 10) { onValueChange((value + 1).coerceAtMost(10)) }
     }
 }
 

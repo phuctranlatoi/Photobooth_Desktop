@@ -1,5 +1,6 @@
 package com.phuctran.photobooth.desktop.controller
 
+import com.phuctran.photobooth.desktop.config.BoothOperatingMode
 import com.phuctran.photobooth.desktop.config.DesktopAppPaths
 import com.phuctran.photobooth.desktop.data.SalesRepository
 import com.phuctran.photobooth.desktop.data.SaleTransaction
@@ -26,6 +27,7 @@ import com.phuctran.photobooth.desktop.services.LocalFileServer
 import com.phuctran.photobooth.desktop.services.PrinterService
 import com.phuctran.photobooth.desktop.services.StillCaptureService
 import com.phuctran.photobooth.desktop.services.SystemPrinterService
+import com.phuctran.photobooth.desktop.services.TelegramNotificationService
 import com.phuctran.photobooth.desktop.services.WebcamStillCaptureService
 import com.phuctran.photobooth.desktop.storage.DesktopSessionStore
 import com.phuctran.photobooth.desktop.storage.FrameStore
@@ -70,7 +72,8 @@ class DesktopBoothController(
     private val webAlbumClient: com.phuctran.photobooth.desktop.remote.DesktopWebAlbumClient = com.phuctran.photobooth.desktop.remote.DesktopWebAlbumClient(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val salesRepository: SalesRepository = SalesRepository(projectDir),
-    private val revenueClient: DesktopRevenueClient = DesktopRevenueClient()
+    private val revenueClient: DesktopRevenueClient = DesktopRevenueClient(),
+    private val telegramNotificationService: TelegramNotificationService = TelegramNotificationService()
 ) {
     init { imageProcessor.appDataDir = config.appDataDir }
 
@@ -167,7 +170,9 @@ class DesktopBoothController(
     private var captureJob: Job? = null
     private var deliveryJob: Job? = null
     private var paymentPollingJob: Job? = null
+    private var standaloneWatchdogJob: Job? = null
     private var currentSessionId: String? = null
+    private var lastOrderCode: String? = null
     private var paymentMethod: String = "Tiền mặt"
     private var frozenPricingSnapshot: PricingSnapshot? = null
 
@@ -221,6 +226,7 @@ class DesktopBoothController(
 
     fun transitionTo(newState: SessionState) {
         stateMachine.transitionTo(newState)
+        refreshStandaloneWatchdog(newState)
         
         // Handle inactivity timer
         when (newState) {
@@ -238,6 +244,79 @@ class DesktopBoothController(
             }
             else -> {
                 stopInactivityTimer()
+            }
+        }
+    }
+
+    fun recordUserInteraction() {
+        resetInactivityTimer()
+        if (activeConfig.value.operatingMode == BoothOperatingMode.STANDALONE_KIOSK) {
+            refreshStandaloneWatchdog(stateMachine.currentState.value)
+        }
+    }
+
+    private fun refreshStandaloneWatchdog(state: SessionState) {
+        standaloneWatchdogJob?.cancel()
+        standaloneWatchdogJob = null
+        if (activeConfig.value.operatingMode != BoothOperatingMode.STANDALONE_KIOSK) return
+        val shouldWatch = when (state) {
+            SessionState.SELECTING,
+            SessionState.SELECTING_QUANTITY,
+            SessionState.PAYMENT_PENDING,
+            SessionState.SELECTING_PHOTOS,
+            SessionState.EDITING -> true
+            SessionState.LIVE_VIEW -> captureJob == null || !captureJob!!.isActive
+            SessionState.PRINT_PENDING,
+            SessionState.PRINTING,
+            SessionState.DELIVERY,
+            SessionState.PREPARING,
+            SessionState.COUNTDOWN,
+            SessionState.CAPTURING,
+            SessionState.IDLE,
+            SessionState.ADMIN -> false
+            else -> false
+        }
+        if (!shouldWatch) return
+        val timeoutSeconds = activeConfig.value.standaloneInactivityTimeoutSeconds.coerceIn(30, 300)
+        standaloneWatchdogJob = scope.launch {
+            delay(timeoutSeconds * 1000L)
+            handleStandaloneInactivityTimeout()
+        }
+    }
+
+    internal fun handleStandaloneInactivityTimeout() {
+        if (activeConfig.value.operatingMode != BoothOperatingMode.STANDALONE_KIOSK) return
+        val currentState = stateMachine.currentState.value
+        if (currentState == SessionState.PRINT_PENDING ||
+            currentState == SessionState.PRINTING ||
+            currentState == SessionState.DELIVERY
+        ) {
+            return
+        }
+        cancelBeautyJobs()
+        frozenPricingSnapshot = null
+        val sessionId = currentSessionId
+        captureJob?.cancel()
+        paymentPollingJob?.cancel()
+        inactivityJob?.cancel()
+        standaloneWatchdogJob?.cancel()
+        standaloneWatchdogJob = null
+        val encodingJobs = _videoEncodingJobs.toList()
+        encodingJobs.forEach { it.cancel() }
+        _videoEncodingJobs.clear()
+        resetSession()
+        if (sessionId != null) {
+            scope.launch(Dispatchers.IO) {
+                encodingJobs.forEach { it.join() }
+                val sessionsRoot = projectDir.resolve("data").resolve("sessions").toAbsolutePath().normalize()
+                val target = sessionsRoot.resolve(sessionId).normalize()
+                if (target.parent == sessionsRoot && Files.isDirectory(target)) {
+                    runCatching {
+                        Files.walk(target).use { paths ->
+                            paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+                        }
+                    }.onFailure { println("Could not clean expired standalone session: ${it.message}") }
+                }
             }
         }
     }
@@ -356,16 +435,40 @@ class DesktopBoothController(
     fun setQuantityAndStartPayment(quantity: Int) {
         val safeQuantity = PricingCalculator.sanitizeQuantity(_selectedLayout.value.printSizeLabel, quantity)
         val pricing = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, safeQuantity)
-        frozenPricingSnapshot = pricing
         _printCopies.value = safeQuantity
+
+        if (activeConfig.value.isRentalMode) {
+            paymentMethod = "Cho thuê"
+            _totalPrice.value = 0L
+            frozenPricingSnapshot = pricing.copy(
+                basePrice = 0L,
+                extraUnitPrice = 0L,
+                extraAmount = 0L,
+                totalAmount = 0L
+            )
+            paymentPollingJob?.cancel()
+            paymentPollingJob = null
+            _paymentQrData.value = null
+
+            scope.launch {
+                transitionTo(SessionState.PREPARING)
+                cameraService.startLiveView(_selectedEffect.value.id)
+                delay(1600)
+                transitionTo(SessionState.LIVE_VIEW)
+            }
+            return
+        }
+
+        frozenPricingSnapshot = pricing
         _totalPrice.value = pricing.totalAmount
         paymentMethod = "Tiền mặt"
+        val orderCode = System.currentTimeMillis()
+        lastOrderCode = orderCode.toString()
         transitionTo(SessionState.PAYMENT_PENDING)
         
         paymentPollingJob?.cancel()
         _paymentQrData.value = null
         if (paymentService.isConfigured) {
-            val orderCode = System.currentTimeMillis()
             val amount = _totalPrice.value.toInt()
             scope.launch(Dispatchers.IO) {
                 val qr = paymentService.createPaymentLink(orderCode, amount, "Le Souvenir $orderCode")
@@ -389,6 +492,17 @@ class DesktopBoothController(
         paymentMethod = method
         paymentPollingJob?.cancel()
         paymentPollingJob = null
+        val cfg = activeConfig.value
+        if (cfg.operatingMode == BoothOperatingMode.STANDALONE_KIOSK && cfg.telegramAlertsConfigured) {
+            val orderCode = lastOrderCode ?: System.currentTimeMillis().toString()
+            telegramNotificationService.sendOrderPaid(
+                config = cfg,
+                orderCode = orderCode,
+                layoutTitle = _selectedLayout.value.title,
+                copies = _printCopies.value,
+                amountVnd = _totalPrice.value
+            )
+        }
         scope.launch {
             transitionTo(SessionState.PREPARING)
             cameraService.startLiveView(_selectedEffect.value.id)
@@ -682,7 +796,11 @@ class DesktopBoothController(
     fun confirmSelection() {
         if (_selectedMoments.value.size == _selectedLayout.value.selectCount) {
             refreshFramesForLayout(_selectedLayout.value, preserveSelection = true)
-            transitionTo(SessionState.EDITING)
+            if (activeConfig.value.operatingMode == BoothOperatingMode.STANDALONE_KIOSK) {
+                confirmFrameSelection()
+            } else {
+                transitionTo(SessionState.EDITING)
+            }
         } else {
             _statusMessage.value = "Cần chọn đủ ${_selectedLayout.value.selectCount} ảnh."
         }
@@ -956,7 +1074,13 @@ class DesktopBoothController(
                 transitionTo(SessionState.SELECTING_QUANTITY)
             }
             SessionState.EDITING -> transitionTo(SessionState.SELECTING_PHOTOS)
-            SessionState.PRINT_PENDING -> transitionTo(SessionState.EDITING)
+            SessionState.PRINT_PENDING -> {
+                if (activeConfig.value.operatingMode == BoothOperatingMode.STANDALONE_KIOSK) {
+                    transitionTo(SessionState.SELECTING_PHOTOS)
+                } else {
+                    transitionTo(SessionState.EDITING)
+                }
+            }
             else -> Unit
         }
     }
@@ -967,9 +1091,12 @@ class DesktopBoothController(
         captureJob?.cancel()
         deliveryJob?.cancel()
         paymentPollingJob?.cancel()
+        standaloneWatchdogJob?.cancel()
+        standaloneWatchdogJob = null
         remainingPhotoTime = null
         remainingFrameTime = null
         currentSessionId = null
+        lastOrderCode = null
         cameraService.stopLiveView()
         _capturedMoments.value = emptyList()
         _selectedMoments.value = emptyList()
@@ -996,14 +1123,56 @@ class DesktopBoothController(
 
     val activeConfig = MutableStateFlow(config)
 
+    fun sendTelegramTestAlert(token: String, chatId: String): java.util.concurrent.CompletableFuture<Boolean> {
+        return telegramNotificationService.sendTestMessage(token, chatId)
+    }
+
     fun saveDeviceSettings(
         enablePrint: Boolean,
         useHotFolder: Boolean,
         hotFolderPath: String,
         postCaptureTimeoutSeconds: Int,
         photoSelectionTimeoutSeconds: Int,
-        frameSelectionTimeoutSeconds: Int
+        frameSelectionTimeoutSeconds: Int,
+        isRentalMode: Boolean = false
     ) {
+        val mode = if (isRentalMode) BoothOperatingMode.RENTAL else BoothOperatingMode.COMMERCIAL
+        saveDeviceSettings(
+            enablePrint = enablePrint,
+            useHotFolder = useHotFolder,
+            hotFolderPath = hotFolderPath,
+            postCaptureTimeoutSeconds = postCaptureTimeoutSeconds,
+            photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds,
+            frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds,
+            operatingMode = mode,
+            maxVisibleFilters = activeConfig.value.maxVisibleFilters,
+            standaloneInactivityTimeoutSeconds = activeConfig.value.standaloneInactivityTimeoutSeconds,
+            enableTelegramAlerts = activeConfig.value.enableTelegramAlerts,
+            telegramBotToken = activeConfig.value.telegramBotToken,
+            telegramChatId = activeConfig.value.telegramChatId
+        )
+    }
+
+    fun saveDeviceSettings(
+        enablePrint: Boolean,
+        useHotFolder: Boolean,
+        hotFolderPath: String,
+        postCaptureTimeoutSeconds: Int,
+        photoSelectionTimeoutSeconds: Int,
+        frameSelectionTimeoutSeconds: Int,
+        operatingMode: BoothOperatingMode,
+        maxVisibleFilters: Int = activeConfig.value.maxVisibleFilters,
+        standaloneInactivityTimeoutSeconds: Int = activeConfig.value.standaloneInactivityTimeoutSeconds,
+        enableTelegramAlerts: Boolean = activeConfig.value.enableTelegramAlerts,
+        telegramBotToken: String = activeConfig.value.telegramBotToken,
+        telegramChatId: String = activeConfig.value.telegramChatId
+    ) {
+        val safeMaxFilters = maxVisibleFilters.coerceIn(1, 10)
+        val safeStandaloneTimeout = standaloneInactivityTimeoutSeconds.coerceIn(30, 300)
+        val isRentalMode = operatingMode == BoothOperatingMode.RENTAL
+        val isStandaloneKioskMode = operatingMode == BoothOperatingMode.STANDALONE_KIOSK
+        val cleanToken = telegramBotToken.trim()
+        val cleanChatId = telegramChatId.trim()
         val envFile = config.envSource ?: DesktopAppPaths.workingDir().resolve(".env")
         val updates = mapOf(
             "ENABLE_SYSTEM_PRINT" to enablePrint.toString(),
@@ -1011,20 +1180,36 @@ class DesktopBoothController(
             "HOT_FOLDER_PATH" to hotFolderPath,
             "POST_CAPTURE_TIMEOUT_SECONDS" to postCaptureTimeoutSeconds.toString(),
             "PHOTO_SELECTION_TIMEOUT_SECONDS" to photoSelectionTimeoutSeconds.toString(),
-            "FRAME_SELECTION_TIMEOUT_SECONDS" to frameSelectionTimeoutSeconds.toString()
+            "FRAME_SELECTION_TIMEOUT_SECONDS" to frameSelectionTimeoutSeconds.toString(),
+            "RENTAL_MODE" to isRentalMode.toString(),
+            "STANDALONE_KIOSK_MODE" to isStandaloneKioskMode.toString(),
+            "BOOTH_OPERATING_MODE" to operatingMode.name,
+            "MAX_VISIBLE_FILTERS" to safeMaxFilters.toString(),
+            "STANDALONE_INACTIVITY_TIMEOUT_SECONDS" to safeStandaloneTimeout.toString(),
+            "ENABLE_TELEGRAM_ALERTS" to enableTelegramAlerts.toString(),
+            "TELEGRAM_BOT_TOKEN" to cleanToken,
+            "TELEGRAM_CHAT_ID" to cleanChatId
         )
         runCatching {
             com.phuctran.photobooth.desktop.config.SettingsManager.updateSettings(envFile, updates)
         }.onSuccess {
             _statusMessage.value = "Đã lưu cài đặt. Khởi động lại ứng dụng để áp dụng."
-            activeConfig.value = config.copy(
+            activeConfig.value = activeConfig.value.copy(
                 enableSystemPrint = enablePrint,
                 useHotFolder = useHotFolder,
                 hotFolderPath = hotFolderPath,
                 postCaptureTimeoutSeconds = postCaptureTimeoutSeconds,
                 photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds,
-                frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds
+                frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds,
+                isRentalMode = isRentalMode,
+                isStandaloneKioskMode = isStandaloneKioskMode,
+                maxVisibleFilters = safeMaxFilters,
+                standaloneInactivityTimeoutSeconds = safeStandaloneTimeout,
+                enableTelegramAlerts = enableTelegramAlerts,
+                telegramBotToken = cleanToken,
+                telegramChatId = cleanChatId
             )
+            refreshStandaloneWatchdog(stateMachine.currentState.value)
         }.onFailure { e ->
             _statusMessage.value = "Lỗi lưu cài đặt: ${e.message}"
         }

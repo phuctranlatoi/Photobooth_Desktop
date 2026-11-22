@@ -38,9 +38,11 @@ import kotlinx.coroutines.Dispatchers
 import com.phuctran.photobooth.desktop.model.DefaultLayoutModes
 import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.model.FramePack
+import com.phuctran.photobooth.desktop.config.BoothOperatingMode
 import com.phuctran.photobooth.desktop.config.DesktopBoothConfig
 import com.phuctran.photobooth.desktop.data.SalesRepository
 import androidx.compose.ui.layout.ContentScale
+import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -54,7 +56,21 @@ fun AdminScreen(
     onAddFrame: (String) -> Unit,
     onSaveLayoutConfig: (String, Long, Int, Int) -> Unit = { _, _, _, _ -> },
     onDeleteLayout: (String) -> Unit,
-    onSaveSettings: (Boolean, Boolean, String, Int, Int, Int, Boolean) -> Unit,
+    onSaveSettings: (
+        enablePrint: Boolean,
+        useHotFolder: Boolean,
+        hotFolderPath: String,
+        postCaptureTimeoutSeconds: Int,
+        photoSelectionTimeoutSeconds: Int,
+        frameSelectionTimeoutSeconds: Int,
+        operatingMode: BoothOperatingMode,
+        maxVisibleFilters: Int,
+        standaloneInactivityTimeoutSeconds: Int,
+        enableTelegramAlerts: Boolean,
+        telegramBotToken: String,
+        telegramChatId: String
+    ) -> Unit,
+    onTestTelegramAlert: (String, String) -> CompletableFuture<Boolean> = { _, _ -> CompletableFuture.completedFuture(false) },
     onSaveEffects: (List<com.phuctran.photobooth.desktop.model.EffectMode>) -> Unit,
     onImportLut: (java.nio.file.Path) -> String,
     onPreviewEffect: (com.phuctran.photobooth.desktop.model.EffectMode, java.awt.image.BufferedImage) -> java.awt.image.BufferedImage,
@@ -81,10 +97,28 @@ fun AdminScreen(
     var postCaptureTimeoutSeconds by remember { mutableIntStateOf(config.postCaptureTimeoutSeconds) }
     var photoSelectionTimeoutSeconds by remember { mutableIntStateOf(config.photoSelectionTimeoutSeconds) }
     var frameSelectionTimeoutSeconds by remember { mutableIntStateOf(config.frameSelectionTimeoutSeconds) }
-    var isRentalMode by remember { mutableStateOf(config.isRentalMode) }
+    var operatingMode by remember { mutableStateOf(config.operatingMode) }
+    var maxVisibleFilters by remember { mutableIntStateOf(config.maxVisibleFilters.coerceIn(1, 10)) }
+    var standaloneInactivityTimeoutSeconds by remember { mutableIntStateOf(config.standaloneInactivityTimeoutSeconds.coerceIn(30, 300)) }
+    var enableTelegramAlerts by remember { mutableStateOf(config.enableTelegramAlerts) }
+    var telegramBotToken by remember { mutableStateOf(config.telegramBotToken) }
+    var telegramChatId by remember { mutableStateOf(config.telegramChatId) }
 
     fun saveSettings() {
-        onSaveSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, isRentalMode)
+        onSaveSettings(
+            enablePrint,
+            useHotFolder,
+            hotFolderPath,
+            postCaptureTimeoutSeconds,
+            photoSelectionTimeoutSeconds,
+            frameSelectionTimeoutSeconds,
+            operatingMode,
+            maxVisibleFilters.coerceIn(1, 10),
+            standaloneInactivityTimeoutSeconds.coerceIn(30, 300),
+            enableTelegramAlerts,
+            telegramBotToken,
+            telegramChatId
+        )
     }
 
     Column(
@@ -230,7 +264,13 @@ fun AdminScreen(
                     postCaptureTimeoutSeconds = postCaptureTimeoutSeconds, onPostCaptureTimeoutChange = { postCaptureTimeoutSeconds = it },
                     photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds, onPhotoSelectionTimeoutChange = { photoSelectionTimeoutSeconds = it },
                     frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds, onFrameSelectionTimeoutChange = { frameSelectionTimeoutSeconds = it },
-                    isRentalMode = isRentalMode, onRentalModeChange = { isRentalMode = it },
+                    operatingMode = operatingMode, onOperatingModeChange = { operatingMode = it },
+                    maxVisibleFilters = maxVisibleFilters, onMaxVisibleFiltersChange = { maxVisibleFilters = it },
+                    standaloneInactivityTimeoutSeconds = standaloneInactivityTimeoutSeconds, onStandaloneInactivityTimeoutChange = { standaloneInactivityTimeoutSeconds = it },
+                    enableTelegramAlerts = enableTelegramAlerts, onEnableTelegramAlertsChange = { enableTelegramAlerts = it },
+                    telegramBotToken = telegramBotToken, onTelegramBotTokenChange = { telegramBotToken = it },
+                    telegramChatId = telegramChatId, onTelegramChatIdChange = { telegramChatId = it },
+                    onTestTelegramAlert = onTestTelegramAlert,
                     onSaveSettings = { saveSettings() }
                 )
             } else if (selectedTab == 3) {

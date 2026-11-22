@@ -4,6 +4,12 @@ import com.phuctran.photobooth.desktop.beauty.BeautyPreset
 import java.nio.file.Files
 import java.nio.file.Path
 
+enum class BoothOperatingMode {
+    COMMERCIAL,
+    RENTAL,
+    STANDALONE_KIOSK
+}
+
 data class DesktopBoothConfig(
     val boothId: String = "booth_1",
     val boothApiKey: String = "",
@@ -32,7 +38,14 @@ data class DesktopBoothConfig(
     val printerNameStrip: String = "",
     val printerNameFull: String = "",
     val isBeautyEnabled: Boolean = false,
-    val beautyPreset: BeautyPreset = BeautyPreset.BRIGHT
+    val beautyPreset: BeautyPreset = BeautyPreset.BRIGHT,
+    val isRentalMode: Boolean = false,
+    val isStandaloneKioskMode: Boolean = false,
+    val maxVisibleFilters: Int = 3,
+    val standaloneInactivityTimeoutSeconds: Int = 120,
+    val enableTelegramAlerts: Boolean = false,
+    val telegramBotToken: String = "",
+    val telegramChatId: String = ""
 ) {
     val authHeader: String get() = "Bearer $boothApiKey"
     val canUploadAlbum: Boolean
@@ -40,6 +53,24 @@ data class DesktopBoothConfig(
             cloudinaryCloudName.isNotBlank() &&
             cloudinaryUploadPreset.isNotBlank() &&
             webAlbumBaseUrl.isNotBlank()
+
+    val operatingMode: BoothOperatingMode
+        get() = when {
+            isStandaloneKioskMode -> BoothOperatingMode.STANDALONE_KIOSK
+            isRentalMode -> BoothOperatingMode.RENTAL
+            else -> BoothOperatingMode.COMMERCIAL
+        }
+
+    val telegramAlertsConfigured: Boolean
+        get() = enableTelegramAlerts && telegramBotToken.isNotBlank() && telegramChatId.isNotBlank()
+
+    companion object {
+        fun fromEnvironment(
+            env: Map<String, String>,
+            appDataDir: Path? = null,
+            envSource: Path? = null
+        ): DesktopBoothConfig = DesktopConfigLoader.fromEnvironment(env, appDataDir, envSource)
+    }
 }
 
 object DesktopConfigLoader {
@@ -52,10 +83,33 @@ object DesktopConfigLoader {
             Files.isRegularFile(workingEnv) -> workingEnv
             else -> null
         }
+        return fromEnvironment(env, appDataDir, envSource)
+    }
+
+    fun fromEnvironment(
+        env: Map<String, String>,
+        appDataDir: Path? = null,
+        envSource: Path? = null
+    ): DesktopBoothConfig {
         val webAlbumBaseUrl = (env["WEB_ALBUM_BASE_URL"]
             ?: env["ALBUM_BASE_URL"]
             ?: "https://web-photobooth-pink.vercel.app/")
             .toWebAlbumApiBaseUrl()
+
+        val explicitMode = BoothOperatingMode.entries.firstOrNull {
+            it.name.equals(env["BOOTH_OPERATING_MODE"]?.trim(), ignoreCase = true)
+        }
+        val standaloneFlag = env["STANDALONE_KIOSK_MODE"]?.takeIf { it.isNotBlank() }?.toBooleanFlag(default = false)
+        val rentalFlag = env["RENTAL_MODE"]?.takeIf { it.isNotBlank() }?.toBooleanFlag(default = false)
+        val resolvedMode = when {
+            standaloneFlag == true -> BoothOperatingMode.STANDALONE_KIOSK
+            rentalFlag == true -> BoothOperatingMode.RENTAL
+            explicitMode == BoothOperatingMode.STANDALONE_KIOSK && standaloneFlag != false -> BoothOperatingMode.STANDALONE_KIOSK
+            explicitMode == BoothOperatingMode.RENTAL && rentalFlag != false -> BoothOperatingMode.RENTAL
+            explicitMode == BoothOperatingMode.COMMERCIAL -> BoothOperatingMode.COMMERCIAL
+            else -> BoothOperatingMode.COMMERCIAL
+        }
+
         return DesktopBoothConfig(
             boothId = env["BOOTH_ID"].orDefault("booth_1"),
             boothApiKey = env["BOOTH_API_KEY"].orEmpty(),
@@ -84,7 +138,14 @@ object DesktopConfigLoader {
             printerNameStrip = env["PRINTER_NAME_STRIP"].orEmpty(),
             printerNameFull = env["PRINTER_NAME_FULL"].orEmpty(),
             isBeautyEnabled = env["BEAUTY_ENABLED"].toBooleanFlag(default = false),
-            beautyPreset = BeautyPreset.entries.firstOrNull { it.name.equals(env["BEAUTY_PRESET"], ignoreCase = true) } ?: BeautyPreset.BRIGHT
+            beautyPreset = BeautyPreset.entries.firstOrNull { it.name.equals(env["BEAUTY_PRESET"], ignoreCase = true) } ?: BeautyPreset.BRIGHT,
+            isRentalMode = resolvedMode == BoothOperatingMode.RENTAL,
+            isStandaloneKioskMode = resolvedMode == BoothOperatingMode.STANDALONE_KIOSK,
+            maxVisibleFilters = (env["MAX_VISIBLE_FILTERS"]?.toIntOrNull() ?: 3).coerceIn(1, 10),
+            standaloneInactivityTimeoutSeconds = (env["STANDALONE_INACTIVITY_TIMEOUT_SECONDS"]?.toIntOrNull() ?: 120).coerceIn(30, 300),
+            enableTelegramAlerts = env["ENABLE_TELEGRAM_ALERTS"].toBooleanFlag(default = false),
+            telegramBotToken = env["TELEGRAM_BOT_TOKEN"].orEmpty().trim(),
+            telegramChatId = env["TELEGRAM_CHAT_ID"].orEmpty().trim()
         )
     }
 

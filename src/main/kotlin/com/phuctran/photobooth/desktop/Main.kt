@@ -73,6 +73,7 @@ fun main() = application {
                 albumEnabled = currentConfig.canUploadAlbum,
                 printerEnabled = currentConfig.enableSystemPrint,
                 paymentConfigured = controller.isPaymentConfigured,
+                onUserInteraction = { controller.recordUserInteraction() }
             ) {
                 if (!isAppReady) {
                     var loadingTimeout by remember { mutableStateOf(false) }
@@ -137,27 +138,32 @@ fun main() = application {
                             val specialFrames by controller.specialFrames.collectAsState()
                             val allStandardFrames by controller.allStandardFrames.collectAsState()
                             StudioModeScreen(
-                            layouts = availableLayouts.filter { l -> 
-                                // A layout is considered special if any special frame targets it (by Layout ID or Print Size due to user typo).
-                                val isSpecialLayout = specialFrames.any { it.targetLayoutId == l.id || it.targetPrintSize == l.id }
-                                // It can still appear in normal mode if it ALSO has standard frames targeting it.
-                                val hasStandardFrames = allStandardFrames.any { it.targetLayoutId == l.id || it.targetPrintSize == l.id }
-                                
-                                if (isSpecialLayout) {
-                                    hasStandardFrames
-                                } else {
-                                    true
-                                }
-                            }.sortedBy { it.id },
-                            effects = availableEffects,
-                            selectedLayout = layout,
-                            selectedEffect = effect,
-                            liveViewStream = controller.liveViewStream,
-                            onLayoutSelected = { controller.chooseLayout(it) },
-                            onEffectSelected = { controller.chooseEffect(it) },
-                            onConfirm = { controller.confirmStudioSetup() },
-                            onBack = { controller.transitionTo(SessionState.IDLE) }
-                        )
+                                layouts = availableLayouts.filter { l -> 
+                                    // A layout is considered special if any special frame targets it (by Layout ID or Print Size due to user typo).
+                                    val isSpecialLayout = specialFrames.any { it.targetLayoutId == l.id || it.targetPrintSize == l.id }
+                                    // It can still appear in normal mode if it ALSO has standard frames targeting it.
+                                    val hasStandardFrames = allStandardFrames.any { it.targetLayoutId == l.id || it.targetPrintSize == l.id }
+                                    
+                                    if (isSpecialLayout) {
+                                        hasStandardFrames
+                                    } else {
+                                        true
+                                    }
+                                }.sortedBy { it.id },
+                                effects = availableEffects,
+                                selectedLayout = layout,
+                                selectedEffect = effect,
+                                liveViewStream = controller.liveViewStream,
+                                onLayoutSelected = { controller.chooseLayout(it) },
+                                onEffectSelected = { controller.chooseEffect(it) },
+                                onConfirm = { controller.confirmStudioSetup() },
+                                onBack = { controller.transitionTo(SessionState.IDLE) },
+                                operatingMode = currentConfig.operatingMode,
+                                frames = availableFrames,
+                                selectedFrame = frame,
+                                onFrameSelected = { controller.chooseFrame(it) },
+                                maxVisibleFilters = currentConfig.maxVisibleFilters
+                            )
                         }
                     SessionState.SELECTING_QUANTITY -> QuantityScreen(
                         layout = layout,
@@ -276,8 +282,24 @@ fun main() = application {
                             onDeleteLayout = { layoutId ->
                                 controller.deleteLayout(layoutId)
                             },
-                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, isRentalMode ->
-                                controller.saveDeviceSettings(enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, isRentalMode)
+                            onSaveSettings = { enablePrint, useHotFolder, hotFolderPath, postCaptureTimeoutSeconds, photoSelectionTimeoutSeconds, frameSelectionTimeoutSeconds, operatingMode, maxVisibleFilters, standaloneInactivityTimeoutSeconds, enableTelegramAlerts, telegramBotToken, telegramChatId ->
+                                controller.saveDeviceSettings(
+                                    enablePrint = enablePrint,
+                                    useHotFolder = useHotFolder,
+                                    hotFolderPath = hotFolderPath,
+                                    postCaptureTimeoutSeconds = postCaptureTimeoutSeconds,
+                                    photoSelectionTimeoutSeconds = photoSelectionTimeoutSeconds,
+                                    frameSelectionTimeoutSeconds = frameSelectionTimeoutSeconds,
+                                    operatingMode = operatingMode,
+                                    maxVisibleFilters = maxVisibleFilters,
+                                    standaloneInactivityTimeoutSeconds = standaloneInactivityTimeoutSeconds,
+                                    enableTelegramAlerts = enableTelegramAlerts,
+                                    telegramBotToken = telegramBotToken,
+                                    telegramChatId = telegramChatId
+                                )
+                            },
+                            onTestTelegramAlert = { token, chatId ->
+                                controller.sendTelegramTestAlert(token, chatId)
                             },
                             onSaveEffects = { effects ->
                                 controller.saveEffects(effects)
