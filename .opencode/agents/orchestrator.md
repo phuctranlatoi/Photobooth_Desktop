@@ -1,7 +1,7 @@
 ---
 description: Lead coordinator for the existing LE SOUVENIR Kotlin PhotoboothDesktop application.
 mode: primary
-model: 9router/ag/gemini-3.8-flash-high
+model: 9router/ag/gemini-4-neon
 permissions:
   - action: edit
     resource: "*"
