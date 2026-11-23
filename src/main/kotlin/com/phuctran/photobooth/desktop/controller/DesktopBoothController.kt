@@ -800,11 +800,7 @@ class DesktopBoothController(
     fun confirmSelection() {
         if (_selectedMoments.value.size == _selectedLayout.value.selectCount) {
             refreshFramesForLayout(_selectedLayout.value, preserveSelection = true)
-            if (activeConfig.value.operatingMode == BoothOperatingMode.STANDALONE_KIOSK) {
-                confirmFrameSelection()
-            } else {
-                transitionTo(SessionState.EDITING)
-            }
+            transitionTo(SessionState.EDITING)
         } else {
             _statusMessage.value = "Cần chọn đủ ${_selectedLayout.value.selectCount} ảnh."
         }
@@ -1106,13 +1102,7 @@ class DesktopBoothController(
                 transitionTo(SessionState.SELECTING_QUANTITY)
             }
             SessionState.EDITING -> transitionTo(SessionState.SELECTING_PHOTOS)
-            SessionState.PRINT_PENDING -> {
-                if (activeConfig.value.operatingMode == BoothOperatingMode.STANDALONE_KIOSK) {
-                    transitionTo(SessionState.SELECTING_PHOTOS)
-                } else {
-                    transitionTo(SessionState.EDITING)
-                }
-            }
+            SessionState.PRINT_PENDING -> transitionTo(SessionState.EDITING)
             else -> Unit
         }
     }

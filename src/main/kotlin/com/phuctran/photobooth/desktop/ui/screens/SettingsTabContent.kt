@@ -106,7 +106,7 @@ fun SettingsTabContent(
         }
         SettingsSection("Chế độ vận hành Kiosk") {
             Text(
-                "Chọn mô hình vận hành phù hợp với địa điểm đặt máy. Chế độ Kiosk cố định sẽ đẩy bước chọn khung trang trí lên đầu quy trình và bật bộ đếm tự động thu hồi phiên.",
+                "Chọn mô hình vận hành phù hợp với địa điểm đặt máy. Ở Kiosk cố định, khách chỉ xem trước các mẫu khung ở đầu quy trình; khung chính thức được chọn sau khi chụp và chọn ảnh.",
                 style = MaterialTheme.typography.body2,
                 color = NeutralSecondary
             )
@@ -130,7 +130,7 @@ fun SettingsTabContent(
                 )
                 OperatingModeOption(
                     title = "Kiosk cố định (Tự vận hành)",
-                    detail = "Chọn Bố cục -> Khung -> Màu ngay từ đầu, cảnh báo Telegram & tự reset khi vắng khách.",
+                    detail = "Xem trước khung trước khi thanh toán; chọn khung chính thức sau khi chụp và chọn ảnh. Có cảnh báo Telegram và tự thu hồi phiên.",
                     selected = operatingMode == BoothOperatingMode.STANDALONE_KIOSK,
                     onClick = { onOperatingModeChange(BoothOperatingMode.STANDALONE_KIOSK) },
                     modifier = Modifier.weight(1f)
@@ -156,7 +156,7 @@ fun SettingsTabContent(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
-                        "✨ Đang bật chế độ Kiosk cố định: Khách xem & chọn mẫu khung trang trí trước khi thanh toán; sau khi chọn ảnh sẽ chuyển thẳng sang màn hình xác nhận in.",
+                        "✨ Kiosk cố định: Khách chỉ xem trước các mẫu khung trước khi thanh toán. Sau khi chụp và chọn ảnh, khách chọn khung chính thức trên bản xem trước với ảnh vừa chọn, rồi mới xác nhận in.",
                         style = MaterialTheme.typography.caption,
                         color = AccentNudeDark,
                         modifier = Modifier

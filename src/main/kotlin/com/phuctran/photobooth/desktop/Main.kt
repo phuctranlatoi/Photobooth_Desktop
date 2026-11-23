@@ -160,8 +160,6 @@ fun main() = application {
                                 onBack = { controller.transitionTo(SessionState.IDLE) },
                                 operatingMode = currentConfig.operatingMode,
                                 frames = availableFrames,
-                                selectedFrame = frame,
-                                onFrameSelected = { controller.chooseFrame(it) },
                                 maxVisibleFilters = currentConfig.maxVisibleFilters
                             )
                         }

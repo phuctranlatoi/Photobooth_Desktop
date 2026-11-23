@@ -13,6 +13,8 @@ import com.phuctran.photobooth.desktop.model.LayoutMode
 import com.phuctran.photobooth.desktop.services.PrinterService
 import com.phuctran.photobooth.desktop.services.StillCaptureService
 import com.phuctran.photobooth.desktop.services.TelegramNotificationService
+import com.phuctran.photobooth.desktop.ui.screens.filterPreviewFrames
+import com.phuctran.photobooth.desktop.ui.screens.resolveActivePreviewFrame
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.nio.file.Files
@@ -33,6 +35,7 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class StandaloneKioskModeTest {
@@ -224,9 +227,10 @@ class StandaloneKioskModeTest {
     }
 
     @Test
-    fun testStandaloneModeSkipsPostCaptureFrameEditingAndGoesBackToSelectingPhotos() {
+    fun testStandaloneModeEntersPostCaptureFrameEditingAndGoesBackThroughEditing() {
         val config = DesktopBoothConfig(
             isStandaloneKioskMode = true,
+            frameSelectionTimeoutSeconds = 45,
             enableSystemPrint = false,
             enableLocalServer = false,
             useNativeSdk = false
@@ -236,11 +240,20 @@ class StandaloneKioskModeTest {
         seedCapturedSession(controller)
         controller.toggleMoment(controller.capturedMoments.value.single())
 
-        // In STANDALONE_KIOSK mode, confirmSelection() must skip EDITING and go straight to PRINT_PENDING
+        // In STANDALONE_KIOSK mode, confirmSelection() must enter EDITING for post-capture frame selection
         controller.confirmSelection()
+        assertEquals(SessionState.EDITING, controller.sessionState.value)
+        assertNotNull(controller.inactivityTimeLeft.value)
+        assertEquals(45, controller.inactivityTimeLeft.value)
+
+        // confirmFrameSelection() transitions from EDITING to PRINT_PENDING
+        controller.confirmFrameSelection()
         assertEquals(SessionState.PRINT_PENDING, controller.sessionState.value)
 
-        // And goBack() from PRINT_PENDING must return to SELECTING_PHOTOS (not EDITING)
+        // goBack() from PRINT_PENDING returns to EDITING, then back to SELECTING_PHOTOS
+        controller.goBack()
+        assertEquals(SessionState.EDITING, controller.sessionState.value)
+
         controller.goBack()
         assertEquals(SessionState.SELECTING_PHOTOS, controller.sessionState.value)
     }
@@ -266,6 +279,9 @@ class StandaloneKioskModeTest {
         seedCapturedSession(standaloneController, sessionId = "standalone-completed-session")
         standaloneController.toggleMoment(standaloneController.capturedMoments.value.single())
         standaloneController.confirmSelection()
+        assertEquals(SessionState.EDITING, standaloneController.sessionState.value)
+        standaloneController.confirmFrameSelection()
+        assertEquals(SessionState.PRINT_PENDING, standaloneController.sessionState.value)
         standaloneController.startPrinting(userConfirmed = true)
         withTimeout(5_000) {
             while (standaloneTelegram.completedCalls == 0) {
@@ -452,5 +468,138 @@ class StandaloneKioskModeTest {
         val missingCredentials = DesktopBoothConfig.fromEnvironment(emptyMap())
         assertFalse(missingCredentials.enableTelegramAlerts)
         assertFalse(missingCredentials.telegramAlertsConfigured)
+    }
+
+    @Test
+    fun testStandaloneInactivityTimeoutInEditingResetsSessionAndCleansDirectory() = runBlocking {
+        val config = DesktopBoothConfig(
+            isStandaloneKioskMode = true,
+            standaloneInactivityTimeoutSeconds = 120,
+            enableSystemPrint = false,
+            enableLocalServer = false,
+            useNativeSdk = false
+        )
+        val (controller, _) = createController(config)
+        val photo = seedCapturedSession(controller, sessionId = "expired-standalone-editing-session")
+        val sessionDir = photo.parent.parent
+        assertTrue(Files.isDirectory(sessionDir))
+
+        controller.toggleMoment(controller.capturedMoments.value.single())
+        controller.confirmSelection()
+        assertEquals(SessionState.EDITING, controller.sessionState.value)
+
+        controller.handleStandaloneInactivityTimeout()
+        assertEquals(SessionState.IDLE, controller.sessionState.value)
+
+        withTimeout(5_000) {
+            while (Files.exists(sessionDir)) {
+                delay(30)
+            }
+        }
+        assertFalse(Files.exists(sessionDir), "Temporary session directory must be cleaned up when standalone times out in EDITING")
+    }
+
+    @Test
+    fun testSelectSpecialBundleInStandaloneModeTransitionsToQuantityAndPreservesSpecialFrameInEditing() = runBlocking {
+        val layout = DefaultLayoutModes.first()
+        val sourceDir = tempDir.resolve("frame-sources")
+        Files.createDirectories(sourceDir)
+        val standardSrc = sourceDir.resolve("a_standard.png")
+        val specialSrc = sourceDir.resolve("z_special.png")
+        listOf(standardSrc, specialSrc).forEach { target ->
+            ImageIO.write(BufferedImage(16, 24, BufferedImage.TYPE_INT_ARGB).apply {
+                createGraphics().apply { color = Color.BLUE; fillRect(0, 0, 16, 24); dispose() }
+            }, "png", target.toFile())
+        }
+
+        val frameStore = com.phuctran.photobooth.desktop.storage.FrameStore(tempDir)
+        frameStore.addCustomFrame(standardSrc, layout.printSizeLabel, layout.id, isSpecial = false)
+        val specialFrame = frameStore.addCustomFrame(
+            specialSrc,
+            layout.printSizeLabel,
+            layout.id,
+            isSpecial = true,
+            specialEventName = "Event2026"
+        )
+
+        val config = DesktopBoothConfig(
+            isStandaloneKioskMode = true,
+            enableSystemPrint = false,
+            enableLocalServer = false,
+            useNativeSdk = false
+        )
+        val (controller, _) = createController(config)
+        withTimeout(5_000) {
+            while (!controller.isAppReady.value) {
+                delay(20)
+            }
+        }
+
+        controller.selectSpecialBundle(specialFrame)
+        assertEquals(SessionState.SELECTING_QUANTITY, controller.sessionState.value)
+        assertEquals(specialFrame.id, controller.selectedFrame.value.id)
+
+        seedCapturedSession(controller, sessionId = "special-bundle-standalone-session")
+        controller.toggleMoment(controller.capturedMoments.value.single())
+        controller.confirmSelection()
+
+        assertEquals(SessionState.EDITING, controller.sessionState.value)
+        assertEquals(specialFrame.id, controller.selectedFrame.value.id)
+    }
+
+    @Test
+    fun testFilterPreviewFramesExcludesSyntheticEmptyFrameAndPreservesRealFrames() {
+        val emptyFrame = FramePack(id = "empty", title = "Không khung", description = "", accentColor = 0xFF000000)
+        val classicFrame = FramePack(id = "classic_1", title = "Classic 1", description = "Clean", accentColor = 0xFF112233)
+        val pastelFrame = FramePack(id = "pastel_2", title = "Pastel 2", description = "Soft", accentColor = 0xFF445566)
+
+        val filtered = filterPreviewFrames(listOf(emptyFrame, classicFrame, pastelFrame))
+        assertEquals(listOf(classicFrame, pastelFrame), filtered)
+
+        val onlyEmpty = filterPreviewFrames(listOf(emptyFrame))
+        assertTrue(onlyEmpty.isEmpty())
+    }
+
+    @Test
+    fun testResolveActivePreviewFrameHandlesFallbackNullStaleAndPresentPreview() {
+        val layout = DefaultLayoutModes.first()
+        val firstFrame = FramePack(id = "frame_a", title = "Khung A", description = "", accentColor = 0xFF111111)
+        val secondFrame = FramePack(id = "frame_b", title = "Khung B", description = "", accentColor = 0xFF222222)
+        val otherLayoutFrame = FramePack(id = "other_layout_frame", title = "Khác", description = "", accentColor = 0xFF333333)
+        val previewFrames = listOf(firstFrame, secondFrame)
+
+        // Empty list falls back to synthetic default frame
+        val fallback = resolveActivePreviewFrame(
+            previewFrames = emptyList(),
+            currentPreview = secondFrame,
+            layout = layout
+        )
+        assertEquals("preview_default_${layout.id}", fallback.id)
+        assertEquals("Khung mặc định", fallback.title)
+        assertEquals(layout.accentColor, fallback.accentColor)
+
+        // Null currentPreview picks the first available preview frame
+        val fromNull = resolveActivePreviewFrame(
+            previewFrames = previewFrames,
+            currentPreview = null,
+            layout = layout
+        )
+        assertEquals(firstFrame, fromNull)
+
+        // Stale currentPreview from a different layout falls back to the first available preview frame
+        val fromStale = resolveActivePreviewFrame(
+            previewFrames = previewFrames,
+            currentPreview = otherLayoutFrame,
+            layout = layout
+        )
+        assertEquals(firstFrame, fromStale)
+
+        // Matching currentPreview is preserved
+        val preserved = resolveActivePreviewFrame(
+            previewFrames = previewFrames,
+            currentPreview = secondFrame,
+            layout = layout
+        )
+        assertEquals(secondFrame, preserved)
     }
 }
