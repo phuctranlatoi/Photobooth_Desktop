@@ -45,7 +45,8 @@ data class DesktopBoothConfig(
     val standaloneInactivityTimeoutSeconds: Int = 120,
     val enableTelegramAlerts: Boolean = false,
     val telegramBotToken: String = "",
-    val telegramChatId: String = ""
+    val telegramChatId: String = "",
+    val staffCashPin: String = "1234"
 ) {
     val authHeader: String get() = "Bearer $boothApiKey"
     val canUploadAlbum: Boolean
@@ -110,6 +111,14 @@ object DesktopConfigLoader {
             else -> BoothOperatingMode.COMMERCIAL
         }
 
+        val token = env["TELEGRAM_BOT_TOKEN"].orEmpty().trim()
+        val chatId = env["TELEGRAM_CHAT_ID"].orEmpty().trim()
+        val credentialsPresent = token.isNotBlank() && chatId.isNotBlank()
+        val enabled = env["ENABLE_TELEGRAM_ALERTS"]
+            ?.takeIf { it.isNotBlank() }
+            ?.toBooleanFlag(default = false)
+            ?: credentialsPresent
+
         return DesktopBoothConfig(
             boothId = env["BOOTH_ID"].orDefault("booth_1"),
             boothApiKey = env["BOOTH_API_KEY"].orEmpty(),
@@ -143,9 +152,10 @@ object DesktopConfigLoader {
             isStandaloneKioskMode = resolvedMode == BoothOperatingMode.STANDALONE_KIOSK,
             maxVisibleFilters = (env["MAX_VISIBLE_FILTERS"]?.toIntOrNull() ?: 3).coerceIn(1, 10),
             standaloneInactivityTimeoutSeconds = (env["STANDALONE_INACTIVITY_TIMEOUT_SECONDS"]?.toIntOrNull() ?: 120).coerceIn(30, 300),
-            enableTelegramAlerts = env["ENABLE_TELEGRAM_ALERTS"].toBooleanFlag(default = false),
-            telegramBotToken = env["TELEGRAM_BOT_TOKEN"].orEmpty().trim(),
-            telegramChatId = env["TELEGRAM_CHAT_ID"].orEmpty().trim()
+            enableTelegramAlerts = enabled,
+            telegramBotToken = token,
+            telegramChatId = chatId,
+            staffCashPin = env["STAFF_CASH_PIN"]?.trim()?.takeIf { it.length == 4 && it.all { c -> c in '0'..'9' } } ?: "1234"
         )
     }
 

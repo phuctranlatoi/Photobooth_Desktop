@@ -1,26 +1,58 @@
 package com.phuctran.photobooth.desktop.ui.components
 
 import androidx.compose.foundation.*
-import kotlin.math.ceil
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
-import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.phuctran.photobooth.desktop.model.*
 import com.phuctran.photobooth.desktop.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private val PreviewPaperShape = RoundedCornerShape(4.dp)
+private val EmptyPhotoSlotShape = RoundedCornerShape(0.dp)
+
+private val PreviewPaperEdge = Color(0x18000000)
+private val PreviewPaperSpotShadow = Color(0x2E1E1A18)
+private val PreviewPaperAmbientShadow = Color(0x1A1E1A18)
+private val EmptyPhotoSlotFill = Color(0xFFFAF8F5)
+
+@Composable
+private fun PreviewPhotoSlot(
+    moment: CapturedMoment?,
+    modifier: Modifier
+) {
+    val bitmap = rememberImageBitmap(moment?.photoPath)
+
+    Box(modifier = modifier) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(EmptyPhotoSlotFill)
+                    .border(
+                        width = 0.75.dp,
+                        color = NeutralBorder.copy(alpha = 0.45f),
+                        shape = EmptyPhotoSlotShape
+                    )
+            )
+        }
+    }
+}
 
 @Composable
 fun PrintPreview(
@@ -46,111 +78,92 @@ fun PrintPreview(
                     .fillMaxHeight()
                     .aspectRatio(layout.printAspectRatio, matchHeightConstraintsFirst = false)
             })
-                .clip(RoundedCornerShape(8.dp))
-                .background(NeutralPanel)
-                .border(width = 1.dp, color = NeutralBorder, shape = RoundedCornerShape(8.dp))
+                .shadow(
+                    elevation = 14.dp,
+                    shape = PreviewPaperShape,
+                    clip = false,
+                    spotColor = PreviewPaperSpotShadow,
+                    ambientColor = PreviewPaperAmbientShadow
+                )
+                .background(
+                    color = Color.White,
+                    shape = PreviewPaperShape
+                )
+                .border(
+                    width = 0.75.dp,
+                    color = PreviewPaperEdge,
+                    shape = PreviewPaperShape
+                )
         ) {
-        val columns = layout.gridColumns.coerceAtLeast(1)
-        val rows = ceil(layout.selectCount / columns.toFloat()).toInt().coerceAtLeast(1)
-        val top = maxWidth * layout.paddingTopRatio
-        val left = maxWidth * layout.paddingLeftRatio
-        val right = maxWidth * layout.paddingRightRatio
-        val gapX = maxWidth * layout.gapHorizontalRatio
-        val gapY = maxWidth * layout.gapVerticalRatio
-        val slotWidth = (maxWidth - left - right - gapX * (columns - 1).toFloat()) / columns.toFloat()
-        val slotHeight = slotWidth / layout.photoAspectRatio
+            val columns = layout.gridColumns.coerceAtLeast(1)
+            val top = maxWidth * layout.paddingTopRatio
+            val left = maxWidth * layout.paddingLeftRatio
+            val right = maxWidth * layout.paddingRightRatio
+            val gapX = maxWidth * layout.gapHorizontalRatio
+            val gapY = maxWidth * layout.gapVerticalRatio
+            val slotWidth = (maxWidth - left - right - gapX * (columns - 1).toFloat()) / columns.toFloat()
+            val slotHeight = slotWidth / layout.photoAspectRatio
 
-        if (layout.absoluteSlots.isNotEmpty()) {
-            layout.absoluteSlots.forEach { slot ->
-                val x = maxWidth * slot.x
-                val y = maxHeight * slot.y
-                val slotW = maxWidth * slot.width
-                val slotH = maxHeight * slot.height
-                val moment = moments.getOrNull(slot.index)
-                val bitmap = rememberImageBitmap(moment?.photoPath)
-                
-                Box(
-                    modifier = Modifier
-                        .offset(x, y)
-                        .width(slotW)
-                        .height(slotH)
-                        .clip(RoundedCornerShape(0.dp))
-                        .background(NeutralPanelAlt)
-                        .border(1.dp, NeutralBorder.copy(alpha = 0.75f), RoundedCornerShape(0.dp))
-                ) {
-                    if (bitmap != null) {
-                        Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    }
-                    Text(
-                        text = moment?.photoLabel ?: "Ảnh ${slot.index + 1}",
-                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.9f), RoundedCornerShape(6.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
-                        color = accent,
-                        style = MaterialTheme.typography.caption,
-                        fontWeight = FontWeight.Bold
+            if (layout.absoluteSlots.isNotEmpty()) {
+                layout.absoluteSlots.forEach { slot ->
+                    val x = maxWidth * slot.x
+                    val y = maxHeight * slot.y
+                    val slotW = maxWidth * slot.width
+                    val slotH = maxHeight * slot.height
+                    val moment = moments.getOrNull(slot.index)
+
+                    PreviewPhotoSlot(
+                        moment = moment,
+                        modifier = Modifier
+                            .offset(x, y)
+                            .width(slotW)
+                            .height(slotH)
+                            .clip(EmptyPhotoSlotShape)
+                    )
+                }
+            } else {
+                repeat(layout.selectCount) { index ->
+                    val row = index / columns
+                    val column = index % columns
+                    val x = left + (slotWidth + gapX) * column.toFloat()
+                    val y = top + (slotHeight + gapY) * row.toFloat()
+                    val moment = moments.getOrNull(index)
+
+                    PreviewPhotoSlot(
+                        moment = moment,
+                        modifier = Modifier
+                            .offset(x, y)
+                            .width(slotWidth)
+                            .height(slotHeight)
+                            .clip(EmptyPhotoSlotShape)
                     )
                 }
             }
-        } else {
-            repeat(layout.selectCount) { index ->
-                val row = index / columns
-                val column = index % columns
-                val x = left + (slotWidth + gapX) * column.toFloat()
-                val y = top + (slotHeight + gapY) * row.toFloat()
-                val moment = moments.getOrNull(index)
-                val bitmap = rememberImageBitmap(moment?.photoPath)
-                Box(
-                    modifier = Modifier
-                        .offset(x, y)
-                        .width(slotWidth)
-                        .height(slotHeight)
-                        .clip(RoundedCornerShape(0.dp))
-                        .background(NeutralPanelAlt)
-                        .border(1.dp, NeutralBorder.copy(alpha = 0.75f), RoundedCornerShape(0.dp))
-                ) {
-                    if (bitmap != null) {
-                        Image(bitmap, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    }
-                    Text(
-                        text = moment?.photoLabel ?: "Ảnh ${index + 1}",
-                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(NeutralPanel.copy(alpha = 0.9f), RoundedCornerShape(6.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
-                        color = accent,
-                        style = MaterialTheme.typography.caption,
-                        fontWeight = FontWeight.Bold
+
+            if (frame.isCustom && frame.customImagePath != null) {
+                val framePath = frame.customImagePath
+                val overlay by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, framePath) {
+                    // The on-screen preview only needs a thumbnail. The compositor still reads the
+                    // original PNG for printing; the shared cache keeps decoded previews bounded.
+                    value = withContext(Dispatchers.IO) { loadFrameThumbnail(framePath) }
+                }
+                val overlayBitmap = overlay
+                if (overlayBitmap != null) {
+                    Image(
+                        bitmap = overlayBitmap,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                        filterQuality = FilterQuality.High
                     )
                 }
-            }
-        }
-
-        if (frame.isCustom && frame.customImagePath != null) {
-            val framePath = frame.customImagePath
-            val overlay by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, framePath) {
-                // The on-screen preview only needs a thumbnail. The compositor still reads the
-                // original PNG for printing; the shared cache keeps decoded previews bounded.
-                value = withContext(Dispatchers.IO) { loadFrameThumbnail(framePath) }
-            }
-            val overlayBitmap = overlay
-            if (overlayBitmap != null) {
-                Image(
-                    bitmap = overlayBitmap,
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                    filterQuality = androidx.compose.ui.graphics.FilterQuality.High
+            } else {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .border(2.dp, accent.copy(alpha = 0.7f), PreviewPaperShape)
                 )
             }
-        } else {
-            Box(Modifier.fillMaxSize().border(5.dp, accent, RoundedCornerShape(8.dp)))
-            val footerHeight = maxHeight - (top + slotHeight * rows.toFloat() + gapY * (rows - 1).toFloat())
-            if (footerHeight > 38.dp) {
-                Text(
-                    text = frame.title.uppercase(),
-                    modifier = Modifier.align(Alignment.BottomStart).padding(14.dp).background(NeutralPanel.copy(alpha = 0.88f), RoundedCornerShape(6.dp)).padding(horizontal = 9.dp, vertical = 5.dp),
-                    color = accent,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.caption
-                )
-            }
-        }
         }
     }
 }

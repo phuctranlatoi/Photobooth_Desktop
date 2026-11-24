@@ -91,7 +91,18 @@ fun StartScreen(
             KioskPrimaryButton(
                 text = "CHẠM ĐỂ BẮT ĐẦU",
                 onClick = onStart,
-                modifier = Modifier.widthIn(min = 300.dp).heightIn(min = 80.dp)
+                modifier = Modifier
+                    .widthIn(min = 320.dp)
+                    .heightIn(min = 76.dp),
+                textStyle = MaterialTheme.typography.h5.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                ),
+                contentPadding = PaddingValues(
+                    horizontal = 36.dp,
+                    vertical = 20.dp
+                ),
+                cornerRadius = 22.dp
             )
             
             Spacer(Modifier.height(28.dp))

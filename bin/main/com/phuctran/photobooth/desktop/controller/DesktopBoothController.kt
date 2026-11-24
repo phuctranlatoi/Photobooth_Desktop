@@ -104,9 +104,11 @@ class DesktopBoothController(
 
     private val _inactivityTimeLeft = MutableStateFlow<Int?>(null)
     val inactivityTimeLeft = _inactivityTimeLeft.asStateFlow()
+    private val inactivityTimerLock = Any()
     private var inactivityJob: kotlinx.coroutines.Job? = null
-    private var remainingPhotoTime: Int? = null
-    private var remainingFrameTime: Int? = null
+    private var inactivityTimerGeneration: Long = 0L
+    @Volatile private var remainingPhotoTime: Int? = null
+    @Volatile private var remainingFrameTime: Int? = null
 
     private val _isAppReady = MutableStateFlow(false)
     val isAppReady = _isAppReady.asStateFlow()
@@ -174,6 +176,7 @@ class DesktopBoothController(
     private var currentSessionId: String? = null
     private var lastOrderCode: String? = null
     private var paymentMethod: String = "Tiền mặt"
+    private val isCompletingPayment = java.util.concurrent.atomic.AtomicBoolean(false)
     private var frozenPricingSnapshot: PricingSnapshot? = null
 
     private val _paymentQrData = MutableStateFlow<String?>(null)
@@ -225,26 +228,19 @@ class DesktopBoothController(
     }
 
     fun transitionTo(newState: SessionState) {
-        stateMachine.transitionTo(newState)
+        synchronized(inactivityTimerLock) {
+            inactivityTimerGeneration++
+            stateMachine.transitionTo(newState)
+            when (newState) {
+                SessionState.SELECTING_PHOTOS,
+                SessionState.EDITING,
+                SessionState.PRINT_PENDING -> startInactivityTimerLocked(newState)
+                else -> stopInactivityTimerLocked()
+            }
+        }
         refreshStandaloneWatchdog(newState)
-        
-        // Handle inactivity timer
-        when (newState) {
-            SessionState.SELECTING_PHOTOS, SessionState.EDITING -> {
-                startInactivityTimer()
-            }
-            SessionState.PRINT_PENDING -> {
-                if (inactivityJob == null) {
-                    startInactivityTimer()
-                }
-            }
-            SessionState.IDLE -> {
-                stopInactivityTimer()
-                _availableEffects.value.firstOrNull { it.enabled }?.let { chooseEffect(it.id) }
-            }
-            else -> {
-                stopInactivityTimer()
-            }
+        if (newState == SessionState.IDLE) {
+            _availableEffects.value.firstOrNull { it.enabled }?.let { chooseEffect(it.id) }
         }
     }
 
@@ -298,7 +294,7 @@ class DesktopBoothController(
         val sessionId = currentSessionId
         captureJob?.cancel()
         paymentPollingJob?.cancel()
-        inactivityJob?.cancel()
+        stopInactivityTimer()
         standaloneWatchdogJob?.cancel()
         standaloneWatchdogJob = null
         val encodingJobs = _videoEncodingJobs.toList()
@@ -321,49 +317,79 @@ class DesktopBoothController(
         }
     }
 
-    private fun startInactivityTimer() {
-        inactivityJob?.cancel()
-        val timerState = stateMachine.currentState.value
+    private fun startInactivityTimerLocked(timerState: SessionState) {
         val timeoutSeconds = when (timerState) {
-            SessionState.SELECTING_PHOTOS -> (remainingPhotoTime ?: activeConfig.value.photoSelectionTimeoutSeconds).also {
-                remainingPhotoTime = it
-            }
-            SessionState.EDITING -> (remainingFrameTime ?: activeConfig.value.frameSelectionTimeoutSeconds).also {
-                remainingFrameTime = it
-            }
-            else -> activeConfig.value.postCaptureTimeoutSeconds
+            SessionState.SELECTING_PHOTOS -> remainingPhotoTime ?: activeConfig.value.photoSelectionTimeoutSeconds
+            SessionState.EDITING -> remainingFrameTime ?: activeConfig.value.frameSelectionTimeoutSeconds
+            SessionState.PRINT_PENDING -> activeConfig.value.postCaptureTimeoutSeconds
+            else -> return
+        }.coerceAtLeast(0)
+
+        val generation = ++inactivityTimerGeneration
+        inactivityJob?.cancel()
+
+        when (timerState) {
+            SessionState.SELECTING_PHOTOS -> remainingPhotoTime = timeoutSeconds
+            SessionState.EDITING -> remainingFrameTime = timeoutSeconds
+            else -> Unit
         }
         _inactivityTimeLeft.value = timeoutSeconds
+
         inactivityJob = scope.launch {
             for (i in timeoutSeconds downTo 1) {
-                delay(1000)
-                _inactivityTimeLeft.value = i - 1
-                when (timerState) {
-                    SessionState.SELECTING_PHOTOS -> remainingPhotoTime = i - 1
-                    SessionState.EDITING -> remainingFrameTime = i - 1
-                    else -> Unit
+                delay(1_000)
+                val stillActive = synchronized(inactivityTimerLock) {
+                    if (generation != inactivityTimerGeneration || stateMachine.currentState.value != timerState) {
+                        false
+                    } else {
+                        val remaining = i - 1
+                        _inactivityTimeLeft.value = remaining
+                        when (timerState) {
+                            SessionState.SELECTING_PHOTOS -> remainingPhotoTime = remaining
+                            SessionState.EDITING -> remainingFrameTime = remaining
+                            else -> Unit
+                        }
+                        true
+                    }
+                }
+                if (!stillActive) return@launch
+            }
+            val timedOut = synchronized(inactivityTimerLock) {
+                if (generation == inactivityTimerGeneration && stateMachine.currentState.value == timerState) {
+                    inactivityTimerGeneration++
+                    inactivityJob = null
+                    _inactivityTimeLeft.value = null
+                    stateMachine.transitionTo(SessionState.PRINTING)
+                    handleInactivityTimeout()
+                    true
+                } else {
+                    false
                 }
             }
-            // Timeout reached!
-            handleInactivityTimeout()
+            if (timedOut) {
+                refreshStandaloneWatchdog(SessionState.PRINTING)
+            }
         }
     }
 
-    private fun stopInactivityTimer() {
+    private fun stopInactivityTimerLocked() {
+        inactivityTimerGeneration++
         inactivityJob?.cancel()
         inactivityJob = null
         _inactivityTimeLeft.value = null
     }
 
+    private fun stopInactivityTimer() {
+        synchronized(inactivityTimerLock) {
+            stopInactivityTimerLocked()
+        }
+    }
+
     fun resetInactivityTimer() {
-        // Only reset if we are currently running the timer
-        if (_inactivityTimeLeft.value != null) {
-            when (stateMachine.currentState.value) {
-                SessionState.SELECTING_PHOTOS -> remainingPhotoTime = null
-                SessionState.EDITING -> remainingFrameTime = null
-                else -> Unit
+        synchronized(inactivityTimerLock) {
+            if (stateMachine.currentState.value == SessionState.PRINT_PENDING && _inactivityTimeLeft.value != null) {
+                startInactivityTimerLocked(SessionState.PRINT_PENDING)
             }
-            startInactivityTimer()
         }
     }
 
@@ -433,9 +459,12 @@ class DesktopBoothController(
     }
 
     fun setQuantityAndStartPayment(quantity: Int) {
+        isCompletingPayment.set(false)
         val safeQuantity = PricingCalculator.sanitizeQuantity(_selectedLayout.value.printSizeLabel, quantity)
         val pricing = PricingCalculator.calculatePrice(_selectedLayout.value.printSizeLabel, safeQuantity)
         _printCopies.value = safeQuantity
+        val orderCode = System.currentTimeMillis()
+        lastOrderCode = orderCode.toString()
 
         if (activeConfig.value.isRentalMode) {
             paymentMethod = "Cho thuê"
@@ -462,8 +491,6 @@ class DesktopBoothController(
         frozenPricingSnapshot = pricing
         _totalPrice.value = pricing.totalAmount
         paymentMethod = "Tiền mặt"
-        val orderCode = System.currentTimeMillis()
-        lastOrderCode = orderCode.toString()
         transitionTo(SessionState.PAYMENT_PENDING)
         
         paymentPollingJob?.cancel()
@@ -489,12 +516,14 @@ class DesktopBoothController(
     }
 
     fun completePayment(method: String = "Tiền mặt") {
+        if (!isCompletingPayment.compareAndSet(false, true)) return
         paymentMethod = method
         paymentPollingJob?.cancel()
         paymentPollingJob = null
         val cfg = activeConfig.value
-        if (cfg.operatingMode == BoothOperatingMode.STANDALONE_KIOSK && cfg.telegramAlertsConfigured) {
+        if (cfg.telegramAlertsConfigured && cfg.operatingMode != BoothOperatingMode.RENTAL) {
             val orderCode = lastOrderCode ?: System.currentTimeMillis().toString()
+            println("INFO [DesktopBoothController]: Kích hoạt cảnh báo Telegram thanh toán đơn #$orderCode ($method)")
             telegramNotificationService.sendOrderPaid(
                 config = cfg,
                 orderCode = orderCode,
@@ -796,11 +825,7 @@ class DesktopBoothController(
     fun confirmSelection() {
         if (_selectedMoments.value.size == _selectedLayout.value.selectCount) {
             refreshFramesForLayout(_selectedLayout.value, preserveSelection = true)
-            if (activeConfig.value.operatingMode == BoothOperatingMode.STANDALONE_KIOSK) {
-                confirmFrameSelection()
-            } else {
-                transitionTo(SessionState.EDITING)
-            }
+            transitionTo(SessionState.EDITING)
         } else {
             _statusMessage.value = "Cần chọn đủ ${_selectedLayout.value.selectCount} ảnh."
         }
@@ -957,7 +982,9 @@ class DesktopBoothController(
                 totalAmount = salePricing.totalAmount, paymentMethod = paymentMethod,
                 createdAt = System.currentTimeMillis()
             )
-            if (userConfirmed && printJob.await() && currentSessionId == sessionId) {
+            val printAccepted = printJob.await()
+            val sessionConfirmedAndCompleted = userConfirmed && currentSessionId == sessionId
+            if (sessionConfirmedAndCompleted && printAccepted) {
                 withContext(Dispatchers.IO) {
                     runCatching { salesRepository.recordSale(sale) }
                         .onSuccess {
@@ -968,13 +995,38 @@ class DesktopBoothController(
                         .onFailure { println("Could not save local sale for $sessionId: ${it.message}") }
                 }
             }
+            val sameSession = currentSessionId == sessionId
+            val currentConfig = activeConfig.value
+            val capturedOrderCode = lastOrderCode ?: sessionId
+            val capturedAmount = if (currentConfig.operatingMode == BoothOperatingMode.RENTAL) 0L else salePricing.totalAmount
+            val capturedMethod = if (currentConfig.operatingMode == BoothOperatingMode.RENTAL) "Gói thuê sự kiện" else paymentMethod
+            val currentPrintStatus = printStatusMessage
+            val currentLayoutTitle = saleLayout.title
+            val currentCopies = salePricing.quantity
             transitionTo(SessionState.DELIVERY)
+            if (sameSession && currentConfig.telegramAlertsConfigured) {
+                runCatching {
+                    telegramNotificationService.sendOrderCompleted(
+                        config = currentConfig,
+                        sessionId = sessionId,
+                        orderCode = capturedOrderCode,
+                        layoutTitle = currentLayoutTitle,
+                        copies = currentCopies,
+                        amountVnd = capturedAmount,
+                        qrUrl = finalQrUrl,
+                        paymentMethod = capturedMethod,
+                        printStatus = currentPrintStatus
+                    )
+                }.onFailure {
+                    println("WARNING [DesktopBoothController]: Không thể kích hoạt Telegram: ${it.message}")
+                }
+            }
 
             // 6. Các tác vụ nặng còn lại chạy ngầm (Tạo Video)
             scope.launch(Dispatchers.IO) {
                 // Đợi chắc chắn lệnh in đã vào hàng đợi của OS
                 printJob.join()
-                _exportSummary.value = _exportSummary.value.copy(printStatus = printStatusMessage)
+                _exportSummary.value = _exportSummary.value.copy(printStatus = currentPrintStatus)
 
                 // Bước 2: Tạo Video
                 _videoEncodingJobs.forEach { it.join() }
@@ -1047,7 +1099,7 @@ class DesktopBoothController(
         frozenPricingSnapshot = null
         val sessionId = currentSessionId
         captureJob?.cancel()
-        inactivityJob?.cancel()
+        stopInactivityTimer()
         val encodingJobs = _videoEncodingJobs.toList()
         encodingJobs.forEach { it.cancel() }
         _videoEncodingJobs.clear()
@@ -1069,18 +1121,13 @@ class DesktopBoothController(
         when (sessionState.value) {
             SessionState.SELECTING_QUANTITY -> transitionTo(SessionState.SELECTING)
             SessionState.PAYMENT_PENDING -> {
+                isCompletingPayment.set(false)
                 paymentPollingJob?.cancel()
                 paymentPollingJob = null
                 transitionTo(SessionState.SELECTING_QUANTITY)
             }
             SessionState.EDITING -> transitionTo(SessionState.SELECTING_PHOTOS)
-            SessionState.PRINT_PENDING -> {
-                if (activeConfig.value.operatingMode == BoothOperatingMode.STANDALONE_KIOSK) {
-                    transitionTo(SessionState.SELECTING_PHOTOS)
-                } else {
-                    transitionTo(SessionState.EDITING)
-                }
-            }
+            SessionState.PRINT_PENDING -> transitionTo(SessionState.EDITING)
             else -> Unit
         }
     }
@@ -1088,13 +1135,20 @@ class DesktopBoothController(
     fun resetSession() {
         cancelBeautyJobs()
         frozenPricingSnapshot = null
+        isCompletingPayment.set(false)
         captureJob?.cancel()
         deliveryJob?.cancel()
         paymentPollingJob?.cancel()
         standaloneWatchdogJob?.cancel()
         standaloneWatchdogJob = null
-        remainingPhotoTime = null
-        remainingFrameTime = null
+        synchronized(inactivityTimerLock) {
+            inactivityTimerGeneration++
+            inactivityJob?.cancel()
+            inactivityJob = null
+            _inactivityTimeLeft.value = null
+            remainingPhotoTime = null
+            remainingFrameTime = null
+        }
         currentSessionId = null
         lastOrderCode = null
         cameraService.stopLiveView()
@@ -1134,7 +1188,8 @@ class DesktopBoothController(
         postCaptureTimeoutSeconds: Int,
         photoSelectionTimeoutSeconds: Int,
         frameSelectionTimeoutSeconds: Int,
-        isRentalMode: Boolean = false
+        isRentalMode: Boolean = false,
+        staffCashPin: String = activeConfig.value.staffCashPin
     ) {
         val mode = if (isRentalMode) BoothOperatingMode.RENTAL else BoothOperatingMode.COMMERCIAL
         saveDeviceSettings(
@@ -1149,7 +1204,8 @@ class DesktopBoothController(
             standaloneInactivityTimeoutSeconds = activeConfig.value.standaloneInactivityTimeoutSeconds,
             enableTelegramAlerts = activeConfig.value.enableTelegramAlerts,
             telegramBotToken = activeConfig.value.telegramBotToken,
-            telegramChatId = activeConfig.value.telegramChatId
+            telegramChatId = activeConfig.value.telegramChatId,
+            staffCashPin = staffCashPin
         )
     }
 
@@ -1165,7 +1221,8 @@ class DesktopBoothController(
         standaloneInactivityTimeoutSeconds: Int = activeConfig.value.standaloneInactivityTimeoutSeconds,
         enableTelegramAlerts: Boolean = activeConfig.value.enableTelegramAlerts,
         telegramBotToken: String = activeConfig.value.telegramBotToken,
-        telegramChatId: String = activeConfig.value.telegramChatId
+        telegramChatId: String = activeConfig.value.telegramChatId,
+        staffCashPin: String = activeConfig.value.staffCashPin
     ) {
         val safeMaxFilters = maxVisibleFilters.coerceIn(1, 10)
         val safeStandaloneTimeout = standaloneInactivityTimeoutSeconds.coerceIn(30, 300)
@@ -1173,6 +1230,9 @@ class DesktopBoothController(
         val isStandaloneKioskMode = operatingMode == BoothOperatingMode.STANDALONE_KIOSK
         val cleanToken = telegramBotToken.trim()
         val cleanChatId = telegramChatId.trim()
+        val cleanStaffCashPin = staffCashPin.trim().takeIf {
+            it.length == 4 && it.all { c -> c in '0'..'9' }
+        } ?: activeConfig.value.staffCashPin
         val envFile = config.envSource ?: DesktopAppPaths.workingDir().resolve(".env")
         val updates = mapOf(
             "ENABLE_SYSTEM_PRINT" to enablePrint.toString(),
@@ -1188,7 +1248,8 @@ class DesktopBoothController(
             "STANDALONE_INACTIVITY_TIMEOUT_SECONDS" to safeStandaloneTimeout.toString(),
             "ENABLE_TELEGRAM_ALERTS" to enableTelegramAlerts.toString(),
             "TELEGRAM_BOT_TOKEN" to cleanToken,
-            "TELEGRAM_CHAT_ID" to cleanChatId
+            "TELEGRAM_CHAT_ID" to cleanChatId,
+            "STAFF_CASH_PIN" to cleanStaffCashPin
         )
         runCatching {
             com.phuctran.photobooth.desktop.config.SettingsManager.updateSettings(envFile, updates)
@@ -1207,7 +1268,8 @@ class DesktopBoothController(
                 standaloneInactivityTimeoutSeconds = safeStandaloneTimeout,
                 enableTelegramAlerts = enableTelegramAlerts,
                 telegramBotToken = cleanToken,
-                telegramChatId = cleanChatId
+                telegramChatId = cleanChatId,
+                staffCashPin = cleanStaffCashPin
             )
             refreshStandaloneWatchdog(stateMachine.currentState.value)
         }.onFailure { e ->

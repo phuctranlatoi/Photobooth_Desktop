@@ -1,5 +1,8 @@
 package com.phuctran.photobooth.desktop.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -8,8 +11,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
@@ -23,27 +24,45 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phuctran.photobooth.desktop.config.BoothOperatingMode
-import com.phuctran.photobooth.desktop.domain.SessionState
 import com.phuctran.photobooth.desktop.model.*
 import com.phuctran.photobooth.desktop.ui.components.*
 import com.phuctran.photobooth.desktop.ui.theme.*
 
-
-import java.nio.file.Path
 import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.flow.StateFlow
 
 private enum class StudioStep {
     LAYOUT,
-    FRAME,
+    FRAME_PREVIEW,
     EFFECT
 }
+
+internal fun filterPreviewFrames(frames: List<FramePack>): List<FramePack> =
+    frames.filterNot { it.id == "empty" }
+
+internal fun resolveActivePreviewFrame(
+    previewFrames: List<FramePack>,
+    currentPreview: FramePack?,
+    layout: LayoutMode
+): FramePack =
+    currentPreview?.takeIf { candidate -> previewFrames.any { it.id == candidate.id } }
+        ?: previewFrames.firstOrNull()
+        ?: FramePack(
+            id = "preview_default_${layout.id}",
+            title = "Khung mặc định",
+            description = "",
+            accentColor = layout.accentColor
+        )
 
 @Composable
 fun StudioModeScreen(
@@ -58,13 +77,23 @@ fun StudioModeScreen(
     onBack: () -> Unit,
     operatingMode: BoothOperatingMode = BoothOperatingMode.COMMERCIAL,
     frames: List<FramePack> = emptyList(),
-    selectedFrame: FramePack = FramePack("preview", "Preview", "", 0xFF475569),
-    onFrameSelected: (String) -> Unit = {},
     maxVisibleFilters: Int = 3
 ) {
     val isStandaloneKiosk = operatingMode == BoothOperatingMode.STANDALONE_KIOSK
     val totalSteps = if (isStandaloneKiosk) 3 else 2
     var step by remember(isStandaloneKiosk) { mutableStateOf(StudioStep.LAYOUT) }
+
+    val previewFrames = remember(frames) { filterPreviewFrames(frames) }
+    var previewFrame by remember(selectedLayout.id, previewFrames) {
+        mutableStateOf(previewFrames.firstOrNull())
+    }
+    val activePreviewFrame = remember(previewFrames, previewFrame, selectedLayout.id, selectedLayout.accentColor) {
+        resolveActivePreviewFrame(
+            previewFrames = previewFrames,
+            currentPreview = previewFrame,
+            layout = selectedLayout
+        )
+    }
 
     when (step) {
         StudioStep.LAYOUT -> {
@@ -80,18 +109,18 @@ fun StudioModeScreen(
                     selectedLayout = selectedLayout,
                     onLayoutSelect = {
                         onLayoutSelected(it.id)
-                        step = if (isStandaloneKiosk) StudioStep.FRAME else StudioStep.EFFECT
+                        step = if (isStandaloneKiosk) StudioStep.FRAME_PREVIEW else StudioStep.EFFECT
                     },
                     onBack = onBack
                 )
             }
         }
-        StudioStep.FRAME -> {
-            Step2UpfrontFrame(
+        StudioStep.FRAME_PREVIEW -> {
+            Step2FramePreview(
                 layout = selectedLayout,
-                frames = frames,
-                selectedFrame = selectedFrame,
-                onFrameSelect = onFrameSelected,
+                previewFrames = previewFrames,
+                activePreviewFrame = activePreviewFrame,
+                onFramePreview = { previewFrame = it },
                 onBack = { step = StudioStep.LAYOUT },
                 onContinue = { step = StudioStep.EFFECT }
             )
@@ -103,7 +132,7 @@ fun StudioModeScreen(
                 selectedLayout = selectedLayout,
                 liveViewStream = liveViewStream,
                 onEffectSelect = onEffectSelected,
-                onBack = { step = if (isStandaloneKiosk) StudioStep.FRAME else StudioStep.LAYOUT },
+                onBack = { step = if (isStandaloneKiosk) StudioStep.FRAME_PREVIEW else StudioStep.LAYOUT },
                 onConfirm = onConfirm,
                 maxVisibleFilters = maxVisibleFilters,
                 stepLabel = if (isStandaloneKiosk) "Bước 3 / 3" else "Bước 2 / 2"
@@ -113,11 +142,11 @@ fun StudioModeScreen(
 }
 
 @Composable
-private fun Step2UpfrontFrame(
+private fun Step2FramePreview(
     layout: LayoutMode,
-    frames: List<FramePack>,
-    selectedFrame: FramePack,
-    onFrameSelect: (String) -> Unit,
+    previewFrames: List<FramePack>,
+    activePreviewFrame: FramePack,
+    onFramePreview: (FramePack) -> Unit,
     onBack: () -> Unit,
     onContinue: () -> Unit
 ) {
@@ -126,7 +155,7 @@ private fun Step2UpfrontFrame(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 68.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -136,26 +165,28 @@ private fun Step2UpfrontFrame(
             ) {
                 KioskBackButton(onClick = onBack)
                 Spacer(Modifier.width(20.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     Text(
-                        text = "STEP 02 · CHỌN MẪU KHUNG",
+                        text = "BƯỚC 2 · XEM TRƯỚC KHUNG",
                         style = MaterialTheme.typography.overline,
-                        color = AccentNudeDark,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.6.sp
+                        color = AccentNudeDark
                     )
                     Text(
-                        text = "Chọn khung trang trí",
+                        text = "Xem trước khung trang trí",
                         style = MaterialTheme.typography.h4,
                         color = NeutralText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Chạm vào một mẫu để xem ngay trên bản in.",
+                        text = "Chạm vào từng mẫu để xem trước. Bạn sẽ chọn khung chính thức sau khi chụp và chọn ảnh.",
                         style = MaterialTheme.typography.body2,
                         color = NeutralSecondary,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
@@ -167,38 +198,46 @@ private fun Step2UpfrontFrame(
             ) {
                 MinimalStepIndicator(currentStep = 2, totalSteps = 3)
                 KioskPrimaryButton(
-                    text = "Tiếp tục",
+                    text = "Tiếp tục chọn màu",
                     onClick = onContinue,
-                    modifier = Modifier.widthIn(min = 180.dp)
+                    modifier = Modifier.widthIn(min = 208.dp)
                 )
             }
         }
 
         Row(
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(28.dp)
+            horizontalArrangement = Arrangement.spacedBy(32.dp)
         ) {
             Column(
-                modifier = Modifier.weight(0.45f).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                modifier = Modifier.weight(1.1f).fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 SectionHeader(
-                    badge = "",
-                    title = "Bản in xem trước",
-                    subtitle = "${selectedFrame.title} · ${layout.printSizeLabel}"
+                    badge = "XEM TRƯỚC",
+                    title = "Bản in minh họa",
+                    subtitle = "${activePreviewFrame.title} · ${layout.printSizeLabel}"
                 )
                 PrintPreview(
                     layout = layout,
                     moments = emptyList(),
-                    frame = selectedFrame,
-                    modifier = Modifier.weight(1f).fillMaxWidth()
+                    frame = activePreviewFrame,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
                 )
             }
 
             Column(
-                modifier = Modifier.weight(0.55f).fillMaxHeight()
+                modifier = Modifier.weight(0.9f).fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (frames.isEmpty()) {
+                SectionHeader(
+                    badge = "",
+                    title = "Các mẫu khung",
+                    subtitle = "Chạm một mẫu để đổi bản xem trước bên trái."
+                )
+                if (previewFrames.isEmpty()) {
                     Box(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         contentAlignment = Alignment.Center
@@ -208,14 +247,17 @@ private fun Step2UpfrontFrame(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Chưa có khung ảnh",
-                                style = MaterialTheme.typography.h5,
-                                fontWeight = FontWeight.Black,
-                                color = NeutralText
+                                text = "Chưa có mẫu khung để xem trước",
+                                style = MaterialTheme.typography.h6,
+                                fontWeight = FontWeight.Bold,
+                                color = NeutralText,
+                                textAlign = TextAlign.Center
                             )
                             Text(
-                                text = "Bạn vẫn có thể dùng khung mặc định của layout.",
-                                color = NeutralSecondary
+                                text = "Bố cục này vẫn dùng được. Bạn có thể tiếp tục với khung mặc định.",
+                                style = MaterialTheme.typography.body2,
+                                color = NeutralSecondary,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -226,13 +268,14 @@ private fun Step2UpfrontFrame(
                         columns = GridCells.Fixed(2),
                         modifier = Modifier.weight(1f).fillMaxWidth().kioskVerticalDrag(gridState),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(bottom = 8.dp)
                     ) {
-                        items(frames, key = { it.id }) { frame ->
-                            UpfrontFrameTile(
+                        items(previewFrames, key = { it.id }) { frame ->
+                            FramePreviewTile(
                                 frame = frame,
-                                selected = frame.id == selectedFrame.id,
-                                onClick = { onFrameSelect(frame.id) }
+                                isPreviewed = frame.id == activePreviewFrame.id,
+                                onClick = { onFramePreview(frame) }
                             )
                         }
                     }
@@ -243,100 +286,138 @@ private fun Step2UpfrontFrame(
 }
 
 @Composable
-private fun UpfrontFrameTile(
+private fun FramePreviewTile(
     frame: FramePack,
-    selected: Boolean,
+    isPreviewed: Boolean,
     onClick: () -> Unit
 ) {
     val interactionSource = remember(frame.id) { MutableInteractionSource() }
-    val plateVariant = if (selected) LiquidGlassPlateVariant.Selected else LiquidGlassPlateVariant.Standard
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = tween(durationMillis = 100)
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (isPreviewed) AccentNude else NeutralBorder,
+        animationSpec = tween(durationMillis = 150)
+    )
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isPreviewed) AccentNudeLight.copy(alpha = 0.35f) else Color.White,
+        animationSpec = tween(durationMillis = 150)
+    )
     val imageBitmap by produceState<ImageBitmap?>(initialValue = null, frame.customImagePath) {
         value = frame.customImagePath?.let { path ->
             withContext(Dispatchers.IO) { loadFrameThumbnail(path) }
         }
     }
 
+    val tileShape = RoundedCornerShape(LiquidGlassPlateMetrics.cardCornerRadius)
+    val borderWidth = if (isPreviewed) 2.dp else 1.dp
+    val accessibilityText = if (isPreviewed) "Đang xem trước ${frame.title}" else "Xem trước ${frame.title}"
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1.5f)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .shadow(4.dp, tileShape, clip = false)
+            .clip(tileShape)
+            .background(backgroundColor)
+            .border(borderWidth, borderColor, tileShape)
+            .semantics {
+                role = Role.Button
+                contentDescription = accessibilityText
+            }
             .bouncyClickable(interactionSource = interactionSource, onClick = onClick)
-            .liquidGlassPlate(
-                variant = plateVariant,
-                cornerRadius = LiquidGlassPlateMetrics.cardCornerRadius,
-                elevation = if (selected) 8.dp else 4.dp,
-                rimWidth = if (selected) LiquidGlassPlateMetrics.selectedRimWidth else LiquidGlassPlateMetrics.outerRimWidth
-            )
-            .padding(14.dp),
-        contentAlignment = Alignment.Center
     ) {
-        val customPath = frame.customImagePath
-        val bmp = imageBitmap
-        if (customPath != null) {
-            if (bmp != null) {
-                Image(
-                    bitmap = bmp,
-                    contentDescription = frame.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
+        // Inner photographic stage
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
+                .background(NeutralPanelAlt.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val customPath = frame.customImagePath
+            val bmp = imageBitmap
+            if (customPath != null) {
+                if (bmp != null) {
+                    Image(
+                        bitmap = bmp,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(Modifier.size(38.dp).clip(CircleShape).background(NeutralPanelAlt))
+                        Text(
+                            text = "Đang tải khung",
+                            color = NeutralMuted,
+                            style = MaterialTheme.typography.caption,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             } else {
                 Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Box(Modifier.size(38.dp).clip(CircleShape).background(NeutralPanelAlt))
                     Text(
-                        text = "Đang tải khung",
-                        color = NeutralMuted,
-                        style = MaterialTheme.typography.caption,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = frame.title,
-                    color = NeutralText,
-                    style = MaterialTheme.typography.h6,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (frame.description.isNotBlank()) {
-                    Text(
-                        text = frame.description,
-                        color = NeutralSecondary,
-                        style = MaterialTheme.typography.body2,
+                        text = frame.title,
+                        color = NeutralText,
+                        style = MaterialTheme.typography.h6,
+                        fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (frame.description.isNotBlank()) {
+                        Text(
+                            text = frame.description,
+                            color = NeutralSecondary,
+                            style = MaterialTheme.typography.body2,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
 
-        if (selected) {
-            Box(
+        if (isPreviewed) {
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(AccentNude)
-                    .border(1.5.dp, Color.White, CircleShape),
-                contentAlignment = Alignment.Center
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(AccentNudeLight)
+                    .border(1.dp, AccentNude.copy(alpha = 0.35f), RoundedCornerShape(50))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = "Đã chọn",
-                    tint = Color.White,
-                    modifier = Modifier.size(19.dp)
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(AccentNude)
+                )
+                Text(
+                    text = "ĐANG XEM",
+                    style = MaterialTheme.typography.caption,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentNudeDark
                 )
             }
         }

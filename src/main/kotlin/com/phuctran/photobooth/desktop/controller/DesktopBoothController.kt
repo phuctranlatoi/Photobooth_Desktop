@@ -104,9 +104,11 @@ class DesktopBoothController(
 
     private val _inactivityTimeLeft = MutableStateFlow<Int?>(null)
     val inactivityTimeLeft = _inactivityTimeLeft.asStateFlow()
+    private val inactivityTimerLock = Any()
     private var inactivityJob: kotlinx.coroutines.Job? = null
-    private var remainingPhotoTime: Int? = null
-    private var remainingFrameTime: Int? = null
+    private var inactivityTimerGeneration: Long = 0L
+    @Volatile private var remainingPhotoTime: Int? = null
+    @Volatile private var remainingFrameTime: Int? = null
 
     private val _isAppReady = MutableStateFlow(false)
     val isAppReady = _isAppReady.asStateFlow()
@@ -226,26 +228,19 @@ class DesktopBoothController(
     }
 
     fun transitionTo(newState: SessionState) {
-        stateMachine.transitionTo(newState)
+        synchronized(inactivityTimerLock) {
+            inactivityTimerGeneration++
+            stateMachine.transitionTo(newState)
+            when (newState) {
+                SessionState.SELECTING_PHOTOS,
+                SessionState.EDITING,
+                SessionState.PRINT_PENDING -> startInactivityTimerLocked(newState)
+                else -> stopInactivityTimerLocked()
+            }
+        }
         refreshStandaloneWatchdog(newState)
-        
-        // Handle inactivity timer
-        when (newState) {
-            SessionState.SELECTING_PHOTOS, SessionState.EDITING -> {
-                startInactivityTimer()
-            }
-            SessionState.PRINT_PENDING -> {
-                if (inactivityJob == null) {
-                    startInactivityTimer()
-                }
-            }
-            SessionState.IDLE -> {
-                stopInactivityTimer()
-                _availableEffects.value.firstOrNull { it.enabled }?.let { chooseEffect(it.id) }
-            }
-            else -> {
-                stopInactivityTimer()
-            }
+        if (newState == SessionState.IDLE) {
+            _availableEffects.value.firstOrNull { it.enabled }?.let { chooseEffect(it.id) }
         }
     }
 
@@ -299,7 +294,7 @@ class DesktopBoothController(
         val sessionId = currentSessionId
         captureJob?.cancel()
         paymentPollingJob?.cancel()
-        inactivityJob?.cancel()
+        stopInactivityTimer()
         standaloneWatchdogJob?.cancel()
         standaloneWatchdogJob = null
         val encodingJobs = _videoEncodingJobs.toList()
@@ -322,49 +317,79 @@ class DesktopBoothController(
         }
     }
 
-    private fun startInactivityTimer() {
-        inactivityJob?.cancel()
-        val timerState = stateMachine.currentState.value
+    private fun startInactivityTimerLocked(timerState: SessionState) {
         val timeoutSeconds = when (timerState) {
-            SessionState.SELECTING_PHOTOS -> (remainingPhotoTime ?: activeConfig.value.photoSelectionTimeoutSeconds).also {
-                remainingPhotoTime = it
-            }
-            SessionState.EDITING -> (remainingFrameTime ?: activeConfig.value.frameSelectionTimeoutSeconds).also {
-                remainingFrameTime = it
-            }
-            else -> activeConfig.value.postCaptureTimeoutSeconds
+            SessionState.SELECTING_PHOTOS -> remainingPhotoTime ?: activeConfig.value.photoSelectionTimeoutSeconds
+            SessionState.EDITING -> remainingFrameTime ?: activeConfig.value.frameSelectionTimeoutSeconds
+            SessionState.PRINT_PENDING -> activeConfig.value.postCaptureTimeoutSeconds
+            else -> return
+        }.coerceAtLeast(0)
+
+        val generation = ++inactivityTimerGeneration
+        inactivityJob?.cancel()
+
+        when (timerState) {
+            SessionState.SELECTING_PHOTOS -> remainingPhotoTime = timeoutSeconds
+            SessionState.EDITING -> remainingFrameTime = timeoutSeconds
+            else -> Unit
         }
         _inactivityTimeLeft.value = timeoutSeconds
+
         inactivityJob = scope.launch {
             for (i in timeoutSeconds downTo 1) {
-                delay(1000)
-                _inactivityTimeLeft.value = i - 1
-                when (timerState) {
-                    SessionState.SELECTING_PHOTOS -> remainingPhotoTime = i - 1
-                    SessionState.EDITING -> remainingFrameTime = i - 1
-                    else -> Unit
+                delay(1_000)
+                val stillActive = synchronized(inactivityTimerLock) {
+                    if (generation != inactivityTimerGeneration || stateMachine.currentState.value != timerState) {
+                        false
+                    } else {
+                        val remaining = i - 1
+                        _inactivityTimeLeft.value = remaining
+                        when (timerState) {
+                            SessionState.SELECTING_PHOTOS -> remainingPhotoTime = remaining
+                            SessionState.EDITING -> remainingFrameTime = remaining
+                            else -> Unit
+                        }
+                        true
+                    }
+                }
+                if (!stillActive) return@launch
+            }
+            val timedOut = synchronized(inactivityTimerLock) {
+                if (generation == inactivityTimerGeneration && stateMachine.currentState.value == timerState) {
+                    inactivityTimerGeneration++
+                    inactivityJob = null
+                    _inactivityTimeLeft.value = null
+                    stateMachine.transitionTo(SessionState.PRINTING)
+                    handleInactivityTimeout()
+                    true
+                } else {
+                    false
                 }
             }
-            // Timeout reached!
-            handleInactivityTimeout()
+            if (timedOut) {
+                refreshStandaloneWatchdog(SessionState.PRINTING)
+            }
         }
     }
 
-    private fun stopInactivityTimer() {
+    private fun stopInactivityTimerLocked() {
+        inactivityTimerGeneration++
         inactivityJob?.cancel()
         inactivityJob = null
         _inactivityTimeLeft.value = null
     }
 
+    private fun stopInactivityTimer() {
+        synchronized(inactivityTimerLock) {
+            stopInactivityTimerLocked()
+        }
+    }
+
     fun resetInactivityTimer() {
-        // Only reset if we are currently running the timer
-        if (_inactivityTimeLeft.value != null) {
-            when (stateMachine.currentState.value) {
-                SessionState.SELECTING_PHOTOS -> remainingPhotoTime = null
-                SessionState.EDITING -> remainingFrameTime = null
-                else -> Unit
+        synchronized(inactivityTimerLock) {
+            if (stateMachine.currentState.value == SessionState.PRINT_PENDING && _inactivityTimeLeft.value != null) {
+                startInactivityTimerLocked(SessionState.PRINT_PENDING)
             }
-            startInactivityTimer()
         }
     }
 
@@ -1074,7 +1099,7 @@ class DesktopBoothController(
         frozenPricingSnapshot = null
         val sessionId = currentSessionId
         captureJob?.cancel()
-        inactivityJob?.cancel()
+        stopInactivityTimer()
         val encodingJobs = _videoEncodingJobs.toList()
         encodingJobs.forEach { it.cancel() }
         _videoEncodingJobs.clear()
@@ -1116,8 +1141,14 @@ class DesktopBoothController(
         paymentPollingJob?.cancel()
         standaloneWatchdogJob?.cancel()
         standaloneWatchdogJob = null
-        remainingPhotoTime = null
-        remainingFrameTime = null
+        synchronized(inactivityTimerLock) {
+            inactivityTimerGeneration++
+            inactivityJob?.cancel()
+            inactivityJob = null
+            _inactivityTimeLeft.value = null
+            remainingPhotoTime = null
+            remainingFrameTime = null
+        }
         currentSessionId = null
         lastOrderCode = null
         cameraService.stopLiveView()

@@ -69,7 +69,13 @@ fun AppShell(
 
 /** Guest-facing, screen-local navigation; never displayed over the full-screen camera. */
 @Composable
-fun CompactLocalHeader(step: String, title: String, onBack: (() -> Unit)? = null, modifier: Modifier = Modifier) {
+fun CompactLocalHeader(
+    step: String,
+    title: String,
+    onBack: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier.fillMaxWidth().heightIn(min = 56.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -78,7 +84,14 @@ fun CompactLocalHeader(step: String, title: String, onBack: (() -> Unit)? = null
         if (onBack != null) KioskBackButton(onClick = onBack)
         Column {
             Text(step, style = MaterialTheme.typography.caption, color = AccentNude)
-            Text(title, style = MaterialTheme.typography.h4, color = NeutralText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = title,
+                modifier = titleModifier,
+                style = MaterialTheme.typography.h4,
+                color = NeutralText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -25,6 +25,7 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.45.3.0")
     implementation("org.postgresql:postgresql:42.7.2")
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     implementation("com.microsoft.onnxruntime:onnxruntime:1.18.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
 }
